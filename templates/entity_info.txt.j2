@@ -1,0 +1,38 @@
+{%- for area in areas() %}
+  {%- set area_entities = area_entities(area) %}
+  {%- if area_entities %}
+{{ area_name(area) }}:
+    {%- for entity_id in area_entities %}
+      {%- set state = states(entity_id) %}
+      {%- if state != 'unknown' and state != 'unavailable' %}
+  - {{ state_attr(entity_id, 'friendly_name') | default(entity_id, true) }}:
+        {%- if state is number %}
+    Value: {{ state | float | round(2) }}
+        {%- else %}
+    State: {{ state }}
+        {%- endif %}
+        {%- set unit = state_attr(entity_id, 'unit_of_measurement') %}
+        {%- if unit %}
+    Unit: {{ unit }}
+        {%- endif %}
+        {%- set device_class = state_attr(entity_id, 'device_class') %}
+        {%- if device_class %}
+    Device Class: {{ device_class }}
+        {%- endif %}
+        {%- set device_id = device_id(entity_id) %}
+        {%- if device_id %}
+          {%- set model = device_attr(device_id, 'model') %}
+          {%- set manufacturer = device_attr(device_id, 'manufacturer') %}
+    Device: {{ model | default('Unknown', true) }}
+    Manufacturer: {{ manufacturer | default('Unknown', true) }}
+        {%- endif %}
+        {%- set last_changed = state_attr(entity_id, 'last_changed') %}
+        {%- set last_updated = state_attr(entity_id, 'last_updated') %}
+        {%- if last_changed and last_updated %}
+    Last Changed: {{ relative_time(last_changed) }} ({{ as_local(last_changed).strftime("%Y-%m-%d %H:%M:%S") }})
+    Last Updated: {{ relative_time(last_updated) }} ({{ as_local(last_updated).strftime("%Y-%m-%d %H:%M:%S") }})
+        {%- endif %}
+      {%- endif %}
+    {%- endfor %}
+  {%- endif %}
+{%- endfor %}
