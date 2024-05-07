@@ -7,10 +7,9 @@ OpenAI's GPT-3.5-turbo model. It allows users to interact with an AI assistant
 through a chat interface.
 """
 
+import requests
 import os
 import time
-import logging
-import requests
 import streamlit as st
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 from langchain.memory import ConversationBufferWindowMemory
@@ -22,6 +21,10 @@ from langchain.chains import LLMChain
 from dotenv import load_dotenv
 # Custom imports
 from tools.homeassistant import HomeAssistant
+from utils.common import get_unique_timestamp
+from utils.common import get_logger
+
+logging = get_logger(name="ChatApp")
 
 
 load_dotenv()

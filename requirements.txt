@@ -13,3 +13,5 @@ flake8
 pylint
 Jinja2
 coloredlogs
+jq
+tiktoken
