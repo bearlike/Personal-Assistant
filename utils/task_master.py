@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
+
+# Standard library modules
 import warnings
 from typing import List
 import os
+
+# Third-party modules
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -9,14 +13,16 @@ from langchain_core.messages.ai import AIMessage
 from langchain.output_parsers import PydanticOutputParser
 from langchain_community.document_loaders import JSONLoader
 from langfuse.callback import CallbackHandler
-from dotenv import load_dotenv
 from langchain_core._api.beta_decorator import LangChainBetaWarning
+from dotenv import load_dotenv
 
 # User-defined modules
 from utils.classes import TaskQueue, get_task_master_examples
 from utils.common import get_unique_timestamp
 from utils.common import get_logger, get_system_prompt
 from utils.common import num_tokens_from_string
+from utils.homeassistant import HomeAssistant
+from utils.talk_to_user import TalkToUser
 
 logging = get_logger(name="task_master")
 
@@ -41,7 +47,7 @@ def generate_action_plan(
     langfuse_handler = CallbackHandler(
         user_id="homeassistant_kk",
         session_id=f"action-queue-id-{get_unique_timestamp()}",
-        trace_name="meeseeks-task-queue",
+        trace_name="meeseeks-task-master",
         version=os.getenv("VERSION", "Not Specified"),
         release=os.getenv("ENVMODE", "Not Specified")
     )
@@ -91,3 +97,26 @@ def generate_action_plan(
     action_plan.human_message = user_query
     logging.info("Action plan generated <%s>", action_plan)
     return action_plan
+
+
+def run_action_plan(task_queue: TaskQueue) -> TaskQueue:
+    """
+    Run the generated action plan.
+
+    Args:
+        task_queue (TaskQueue): The action plan to run.
+
+    Returns:
+        TaskQueue: The updated action plan after running.
+    """
+    tool_dict = {
+        "home_assistant_tool": HomeAssistant(),
+        "talk_to_user_tool": TalkToUser()
+    }
+    for idx, action_step in enumerate(task_queue.action_steps):
+        logging.debug(f"<ActionStep({action_step})>")
+        tool = tool_dict[action_step.action_consumer]
+        action_plan = tool.run(action_step)
+        task_queue.action_steps[idx].result = action_plan
+
+    return task_queue

@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
+import os
+import re
 import copy
 import json
-import os
 import time
+import functools
 import warnings
+from collections import namedtuple
 from typing import Optional, Tuple, List
 
 import requests
@@ -11,16 +14,17 @@ import tqdm
 from dotenv import load_dotenv
 from homeassistant_api import Client
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
-from langchain.output_parsers import PydanticOutputParser
-from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
-from langchain_community.document_loaders import DirectoryLoader, JSONLoader
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.messages.ai import AIMessage
 from langchain_core.pydantic_v1 import BaseModel, Field, validator
+from langchain.output_parsers import PydanticOutputParser
+from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
+from langchain_community.document_loaders import DirectoryLoader, JSONLoader
 from pprint import pprint
 
+from utils.common import get_mock_speaker, num_tokens_from_string
+from utils.common import get_logger, ha_render_system_prompt
 from utils.classes import AbstractTool, ActionStep, TaskQueue
-from utils.common import get_logger, ha_render_system_prompt, num_tokens_from_string
 
 logging = get_logger(name="utils.homeassistant")
 load_dotenv()
@@ -60,9 +64,10 @@ def cache_monitor(func):
             if entity['entity_id'].startswith('scene.'):
                 self.cache['entities'][idx].pop('state', None)
 
-            if entity['entity_id'].startswith('sensor.'):
+            if entity['entity_id'].startswith('sensor.') or entity['entity_id'].startswith('binary_sensor.'):
                 self.cache['sensors'].append(entity)
                 self.cache['entities'].pop(idx)
+
         self.cache['entities'] = sort_by_entity_id(self.cache['entities'])
         self.cache['sensors'] = sort_by_entity_id(self.cache['sensors'])
         return self.cache
@@ -71,15 +76,15 @@ def cache_monitor(func):
         result = func(self, *args, **kwargs)
 
         forbidden_prefixes = [
-            'person.', 'tts.', 'stt.', 'sun.', 'sensor.hacs',
-            'media_player.fire_tv_192_168_1_12', 'camera.', 'automation.',
-            'media_player.axios', 'media_player.axios_2', 'zone.home',
-            'media_player.chrome', 'binary_sensor.remote_ui', 'switch.adam',
-            'switch.', 'update.', 'sensor.sun', 'sensor.sonarr_commands',
-            'script.higher', 'conversation', 'remote.', 'sensor.uptimekuma_',
-            'alarm_control_panel.', 'sensor.kraken_raspberry_pi_5_', "climate",
-            'switch.bedroom_camera_camera_motion_detection', "sensor.hacs",
-            'device_tracker.kraken_raspberry_pi_5',
+            'alarm_control_panel.', 'automation.', 'binary_sensor.remote_ui',
+            'camera.', 'climate', 'conversation', 'device_tracker.kraken_raspberry_pi_5',
+            'media_player.axios', 'media_player.axios_2', 'media_player.chrome',
+            'media_player.fire_tv_192_168_1_12', 'person.', 'remote.',
+            'script.higher', 'sensor.hacs', 'sensor.hacs',
+            'sensor.kraken_raspberry_pi_5_', 'sensor.sonarr_commands',
+            'sensor.sun', 'sensor.uptimekuma_', 'stt.', 'sun.', 'switch.',
+            'switch.adam', 'switch.bedroom_camera_camera_motion_detection',
+            'tts.', 'update.', 'zone.home'
         ]
         forbidden_substrings = ['blink_kk_bedroom']
         self.cache["sensor"] = []
@@ -99,9 +104,10 @@ def cache_monitor(func):
             [item for item in self.cache['sensor_ids']])
 
         logging.info(
-            "Cache status: <Entity IDs: %s; Entities: %s; Sensors: %s; Services: %s;>",
-            len(self.cache['entity_ids']), len(self.cache['entities']),
-            len(self.cache['sensors']), len(self.cache['services'])
+            "`%s` modified cache to <(len) Entity IDs: %s; (len) Entities: %s; (len) Sensors: %s; (len) Services: %s;>",
+            func.__name__, len(self.cache['entity_ids']),
+            len(self.cache['entities']), len(self.cache['sensors']),
+            len(self.cache['services'])
         )
 
         return result
@@ -123,20 +129,20 @@ class HomeAssistantCall(BaseModel):
             self.cache: Optional[dict] = Field(
                 alias="_ha_cache", default=ha_cache)
 
-    @validator("entity_id")
+    @validator("entity_id", allow_reuse=True)
     def validate_entity_id(cls, entity_id, values, **kwargs):
-        # ! BUG: The entity_id is not being validated correctly as
-        # !     cache is not being passed to the validator.
+        # ! BUG: The entity_id may not be validated correctly as the cache
+        # !     is not passed to the validator.
         ha_cache = values.get("ha_cache")
         if ha_cache and entity_id not in ha_cache.cache["entity_ids"]:
             raise ValueError(
                 f"Entity ID '{entity_id}' is not in the Home Assistant cache.")
         return entity_id
 
-    @validator("domain")
+    @validator("domain", allow_reuse=True)
     def validate_domain(cls, domain, values, **kwargs):
-        # ! BUG: The entity_id is not being validated correctly as
-        # !     cache is not being passed to the validator.
+        # ! BUG: The entity_id may not be validated correctly as the cache
+        # !     is not passed to the validator.
         ha_cache = values.get("ha_cache")
         if ha_cache and domain not in ha_cache.cache["allowed_domains"]:
             raise ValueError(
@@ -160,7 +166,8 @@ class HomeAssistant(AbstractTool):
             "entities": [],
             "services": [],
             "sensors": [],
-            "allowed_domains": ["scene", "switch", "weather", "kodi", "automation"]
+            "allowed_domains": [
+                "scene", "switch", "weather", "kodi", "automation"]
         }
 
         if not self.base_url or not self._api_token:
@@ -181,7 +188,6 @@ class HomeAssistant(AbstractTool):
             response.raise_for_status()
             self.cache["services"] = response.json()
             self._save_json(self.cache["services"], "services.json")
-            logging.info("Services updated.")
             return True
         except requests.exceptions.RequestException as e:
             logging.error("Error: %s", e)
@@ -195,7 +201,6 @@ class HomeAssistant(AbstractTool):
             response = requests.get(url, headers=self.api_headers, timeout=30)
             response.raise_for_status()
             self.cache["entities"] = response.json()
-            logging.info("Entities updated.")
             return True
         except requests.exceptions.RequestException as e:
             logging.error("Error: %s", e)
@@ -204,10 +209,11 @@ class HomeAssistant(AbstractTool):
     @cache_monitor
     def update_entity_ids(self, is_blacklist=True):
         """Update the list of entity IDs from Home Assistant."""
+        # TODO: is_blacklist is not being used yet. Assumes blacklist by default.
         self.update_entities()
         entities = self.cache["entities"]
         if not entities:
-            raise ValueError("No entities found.")
+            raise ValueError("No entities found while updating entity IDs.")
         self.cache["entity_ids"] = [entity["entity_id"] for entity in entities]
         logging.info("Entity IDs updated.")
         return True
@@ -220,33 +226,10 @@ class HomeAssistant(AbstractTool):
         self._save_json(self.cache["entities"], "entities.json")
         self._save_json(self.cache["sensors"], "sensors.json")
 
-    def render_template(self, template_path, variables=None):
-        """Render a template with the provided variables."""
-        if not variables:
-            variables = {}
-
-        with open(template_path, "r", encoding="utf-8") as f:
-            template = f.read()
-
-        payload = {
-            "template": template,
-            "variables": variables
-        }
-
-        url = f"{self.base_url}/template"
-        try:
-            response = requests.post(
-                url, headers=self.api_headers, json=payload, timeout=30)
-            response.raise_for_status()
-            return response.text
-        except requests.exceptions.RequestException as e:
-            logging.error("Error: %s", e)
-            return False
-
     def call_service(self, domain: str, service: str, entity_id: str, data: Optional[dict] = None) -> Tuple[bool, list]:
         """Call a service in Home Assistant."""
         if domain not in self.cache["allowed_domains"]:
-            raise ValueError(f"Invalid domain: {domain}")
+            raise ValueError(f"Domain does not exist or blacklisted: {domain}")
 
         url = f"{self.base_url}/services/{domain}/{service}"
         payload = {"entity_id": entity_id}
@@ -265,7 +248,8 @@ class HomeAssistant(AbstractTool):
                 "Unable to call service <%s.%s> on entity <%s>: %s", domain, service, entity_id, e)
             return False, []
 
-    def _create_set_prompt(self, system_prompt: str, parser: PydanticOutputParser) -> ChatPromptTemplate:
+    @staticmethod
+    def _create_set_prompt(system_prompt: str, parser: PydanticOutputParser) -> ChatPromptTemplate:
         example = HomeAssistantCall(
             domain="scene", service="turn_on", entity_id="scene.lamp_power_on")
         prompt = ChatPromptTemplate(
@@ -283,7 +267,8 @@ class HomeAssistant(AbstractTool):
         )
         return prompt
 
-    def _create_get_prompt(self, system_prompt: str) -> ChatPromptTemplate:
+    @staticmethod
+    def _create_get_prompt(system_prompt: str) -> ChatPromptTemplate:
         prompt = ChatPromptTemplate(
             messages=[
                 SystemMessage(content=system_prompt),
@@ -297,7 +282,66 @@ class HomeAssistant(AbstractTool):
         )
         return prompt
 
-    def set_state(self, action_step: ActionStep) -> str:
+    @staticmethod
+    def _clean_answer(answer: str) -> str:
+        """Clean the answer by removing/replacing characters."""
+        replacements = {
+            # Common entities
+            "RealFeel": "Real Feel",
+            # Confident Abbreviations
+            "km/h": " kilometer per hour",
+            "°C": " degrees celsius",
+            "%": " percent",
+            "mm/h": " millimeter per hour",
+            "Gb/s": " gigabits per second",
+            "Mb/s": " megabits per second",
+            "Kb/s": " kilobits per second",
+            "GHz": "Gigahertz",
+            # Formatting
+            "\"": ""
+        }
+
+        # Replace using the dictionary
+        for old, new in replacements.items():
+            answer = answer.replace(old, new)
+
+        # Remove extra spaces and new lines, condense all multiple spaces
+        #   to a single space
+        answer = re.sub(r'\s+', ' ', answer).strip()
+
+        return answer
+
+    def _invoke_service_and_set_state(
+        self, chain: 'langchain_core.runnables.base.RunnableSequence',
+        rag_documents: list,
+        action_step: ActionStep
+    ) -> namedtuple:
+        """Invoke the service and set the state."""
+        MockSpeaker = get_mock_speaker()
+
+        try:
+            call_service_values = chain.invoke(
+                {
+                    "action_step": action_step.action_argument.strip(),
+                    "context": rag_documents,
+                    "cache": self.cache
+                },
+            )
+            status_bool, response_json = self.call_service(
+                domain=call_service_values.domain,
+                service=call_service_values.service,
+                entity_id=call_service_values.entity_id,
+            )
+            if status_bool:
+                tmp_return_message = f"Successfully called service: `{response_json}`"
+            else:
+                tmp_return_message = f"Failed to call service: `{response_json}`"
+        except Exception as err_mesaage:
+            logging.error("Error: %s", err_mesaage)
+            tmp_return_message = f"I received an error - `{err_mesaage}`"
+        return MockSpeaker(content=tmp_return_message)
+
+    def set_state(self, action_step: ActionStep) -> "MockSpeaker":
         """Perform the action defined by this service."""
         self.update_cache()
         rag_documents = self._load_rag_documents([
@@ -312,43 +356,10 @@ class HomeAssistant(AbstractTool):
 
         logging.info("Invoking `set` action chain using `%s`.",
                      self.model_name)
-        call_service_values = chain.invoke(
-            {
-                "action_step": action_step.action_argument.strip(),
-                "context": rag_documents,
-                "cache": self.cache
-            },
-        )
-        status_bool, response_json = self.call_service(
-            domain=call_service_values.domain,
-            service=call_service_values.service,
-            entity_id=call_service_values.entity_id,
-        )
-        if status_bool:
-            return f"Successfully called service: {response_json}"
-        else:
-            return f"Failed to call service: {response_json}"
+        return self._invoke_service_and_set_state(
+            chain, rag_documents, action_step)
 
-    @staticmethod
-    def _clean_answer(answer: str) -> str:
-        """Clean the answer by removing/replacing characters."""
-        # Replace confusing sensor names.
-        answer = answer.replace("RealFeel ", "")
-        # (confident) Abbreviations
-        answer = answer.replace("km/h", " kilometer per hour")
-        answer = answer.replace("°C", " degrees celsius")
-        answer = answer.replace("%", " percent")
-        answer = answer.replace("mm/h", " millimeter per hour")
-        answer = answer.replace("Gb/s", " gigabits per second")
-        answer = answer.replace("GHz", "Gigahertz")
-        # Remove extra spaces
-        answer = answer.replace("\n", " ")
-        answer = answer.replace("   ", " ")
-        answer = answer.replace("  ", " ")
-        answer = answer.replace("\"", "")
-        return answer
-
-    def get_state(self, action_step: ActionStep) -> str:
+    def get_state(self, action_step: ActionStep) -> "MockSpeaker":
         """Perform the action defined by this service."""
         self.update_cache()
         rag_documents = self._load_rag_documents(["sensors.json"])

@@ -2,30 +2,42 @@
 import time
 import os
 import tqdm
+from collections import namedtuple
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
-import logging as logging_real
 import coloredlogs
+import logging as logging_real
 import tiktoken
 
 
-def get_logger(name=None):
+def get_mock_speaker():
+    """ Return a mock speaker for testing. """
+    return namedtuple('MockSpeaker', 'content')
+
+
+def get_logger(name=None) -> logging_real.Logger:
+    """ Get the logger for the module.
+
+    Args:
+        name (str, optional): Name of the logger. Defaults to __name__.
+
+    Returns:
+        logging.Logger: The logger object.
+    """
     logging_real.basicConfig(level=logging_real.DEBUG,
-                        format='%(asctime)s - %(levelname)s - %(message)s')
-    logging_real.getLogger('request').setLevel(logging_real.ERROR)
-    logging_real.getLogger('httpcore').setLevel(logging_real.ERROR)
-    logging_real.getLogger(
-        'urllib3.connectionpool').setLevel(logging_real.ERROR)
-    logging_real.getLogger('LangChainDeprecationWarning').setLevel(logging_real.ERROR)
-    logging_real.getLogger('openai._base_client').setLevel(logging_real.ERROR)
-    logging_real.getLogger(
-        'aiohttp_client_cache.signatures').setLevel(logging_real.ERROR)
+                             format='%(asctime)s - %(levelname)s - %(message)s')
+    loggers_to_suppress = [
+        'request', 'httpcore', 'urllib3.connectionpool', 'openai._base_client',
+        'aiohttp_client_cache.signatures', 'LangChainDeprecationWarning',
+        'watchdog.observers.inotify_buffer', 'PIL.PngImagePlugin'
+    ]
+    for logger_name in loggers_to_suppress:
+        logging_real.getLogger(logger_name).setLevel(logging_real.ERROR)
 
     if not name:
         name = __name__
     logger = logging_real.getLogger(name)
 
-    coloredlogs.install(logger=logger)
-    coloredlogs.install(level='DEBUG')
+    coloredlogs.install(logger=logger, level='DEBUG')
     return logger
 
 
@@ -45,6 +57,7 @@ def num_tokens_from_string(string: str, encoding_name: str = "cl100k_base") -> i
 
 
 def get_unique_timestamp():
+    """ Get a unique timestamp for the task queue. """
     # Get the number of seconds since epoch (Jan 1, 1970) as a float
     current_timestamp = int(time.time())
     # Convert it to string for uniqueness and consistency
@@ -53,7 +66,7 @@ def get_unique_timestamp():
     return int(''.join(str(x) for x in map(int, unique_timestamp)))
 
 
-def get_system_prompt(name="action-planner") -> str:
+def get_system_prompt(name: str = "action-planner") -> str:
     """ Get the system prompt for the task queue.
 
     Returns:
@@ -69,7 +82,8 @@ def get_system_prompt(name="action-planner") -> str:
     return system_prompt.strip()
 
 
-def ha_render_system_prompt(all_entities=None, name="homeassistant-set-state") -> str:
+def ha_render_system_prompt(
+        all_entities=None, name="homeassistant-set-state") -> str:
     """ Render the system j2 prompt. Need to make it more generic.
 
     Returns:
