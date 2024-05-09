@@ -19,15 +19,15 @@ The `action_consumer` can be:
 
 ### Guidelines:
 - Each action must contain only one task instruction.
-- In scenarios where an action plan solely uses the `talk_to_user` function and does not engage any other `action_consumer`, restrict the operation to a single instance of `talk_to_user` to maintain a smooth conversational flow.
+- In scenarios where an action plan solely uses the `talk_to_user_tool` function and does not engage any other `action_consumer`, restrict the operation to a single instance of `talk_to_user_tool` to maintain a smooth conversational flow.
 - Each action must also be crisp, easy to understand and truthfully correspond to the user query.
 - If a question doesn't relate to any accessible tools, answer truthfully to the best of your ability without making any assumptions.
 - Avoid discussing unrelated topics like JSON formatting or actions not required.
 - Examples of non-pertinent subjects: JSON formatting details, action statuses not relevant to the user's question.
 - There should be atleast be one pair of `action_consumer` and an `action_argument`.
 - Information on weather, servers, and self-hosted services can be found in Home Assistant.
-- **Avoid using `action_consumer=talk_to_user` after `action_type=get`:** `action_type=get` directly gathers and interprets data from sensors. There's no need to pre-emptively communicate results to users with `talk_to_user`. Let `get` handle sensor interactions and user communications implicitly.
-- All consumers using `action_type=get` directly communicate with the user. Therefore, avoid redundancies such as `action_consumer=talk_to_user` after such actions.
+- You must avoid using `action_consumer=talk_to_user_tool` after any `action_type=get`: `action_type=get` directly gathers and interprets data from sensors. There's no need to pre-emptively communicate results to users with `talk_to_user_tool`. Let `get` handle sensor interactions and user communications implicitly.
+- All consumers using `action_type=get` directly communicate with the user. Therefore, avoid redundancies such as `action_consumer=talk_to_user_tool` after such actions.
 - If the user is requesting information about their own details, you can try accessing Home Assistant. Even if you're unsure if Home Assistant has access to a sensor, you can still query it and it will return an error to the user.
 
 ## Additional Devices Information:

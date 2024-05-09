@@ -12,7 +12,6 @@ from typing import Optional, Tuple, List
 import requests
 import tqdm
 from dotenv import load_dotenv
-from homeassistant_api import Client
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.messages.ai import AIMessage
@@ -20,7 +19,6 @@ from langchain_core.pydantic_v1 import BaseModel, Field, validator
 from langchain.output_parsers import PydanticOutputParser
 from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
 from langchain_community.document_loaders import DirectoryLoader, JSONLoader
-from pprint import pprint
 
 from utils.common import get_mock_speaker, num_tokens_from_string
 from utils.common import get_logger, ha_render_system_prompt
@@ -122,12 +120,6 @@ class HomeAssistantCall(BaseModel):
         description="The specific action to perform within the domain, such as 'turn_on', 'turn_off', or 'set_temperature'.")
     entity_id: str = Field(
         description="The ID of the specific device or entity within the domain to apply the service to, such as 'scene.heater'.")
-
-    def __init__(self, ha_cache: dict = None, **data):
-        super().__init__(**data)
-        if ha_cache:
-            self.cache: Optional[dict] = Field(
-                alias="_ha_cache", default=ha_cache)
 
     @validator("entity_id", allow_reuse=True)
     def validate_entity_id(cls, entity_id, values, **kwargs):
