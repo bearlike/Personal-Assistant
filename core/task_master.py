@@ -6,14 +6,13 @@ from typing import List
 import os
 
 # Third-party modules
-from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
+from langchain.output_parsers import PydanticOutputParser
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.messages.ai import AIMessage
-from langchain.output_parsers import PydanticOutputParser
-from langchain_community.document_loaders import JSONLoader
-from langfuse.callback import CallbackHandler
 from langchain_core._api.beta_decorator import LangChainBetaWarning
+from langchain_openai import ChatOpenAI
+from langfuse.callback import CallbackHandler
 from dotenv import load_dotenv
 
 # User-defined modules
@@ -26,7 +25,7 @@ from tools.core.talk_to_user import TalkToUser
 
 logging = get_logger(name="core.task_master")
 
-
+# C0116,
 # Filter out LangChainBetaWarning specifically
 warnings.simplefilter("ignore", LangChainBetaWarning)
 load_dotenv()
@@ -75,11 +74,11 @@ def generate_action_plan(
             HumanMessage(
                 content="Turn on strip lights and heater."
             ),
-            AIMessage(get_task_master_examples(id=0)),
+            AIMessage(get_task_master_examples(example_id=0)),
             HumanMessage(
                 content="What is the weather today?"
             ),
-            AIMessage(get_task_master_examples(id=1)),
+            AIMessage(get_task_master_examples(example_id=1)),
             HumanMessagePromptTemplate.from_template(
                 "## Format Instructions\n{format_instructions}\n## Generate a task queue for the user query\n{user_query}"
             ),

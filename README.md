@@ -4,7 +4,9 @@
 > Look at me, I'm Mr Meeseeks.
 
 
-![Screenshot of Meeseks WebUI](docs/screenshot_chat_app_1.png)
+<p align="center">
+    <img src="docs/screenshot_chat_app_1.png" alt="Screenshot of Meeseks WebUI" height="512px">
+</p>
 
 ## Project Motivation 🚀
 Meeseeks is an AI assistant powered by a multi-agent large language model (LLM) architecture that breaks down complex problems into smaller, more manageable tasks. These tasks are then handled by autonomous agents, which leverage the reasoning capabilities of LLMs. By decomposing problems into smaller queries, Meeseeks significantly improves caching efficiency, especially when combined with semantic caching techniques.
@@ -16,20 +18,21 @@ Meeseeks builds upon recent advancements in LLM-based multi-agent systems, which
 ## Features 🔥
 | Completed | In-Progress | Planned | Scoping |
 | :-------: | :---------: | :-----: | :-----: |
-|     ✅     |      🚧      |    📅    |    🧐    |
+|     ✅    |    🚧      |   📅    |    🧐   |
 
 
-| Status | Feature                                                                                                                                                                                                 |
-| :----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Status | Feature                                                                                                                                                                                                  |
+| :----: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |   ✅    | [LangFuse](https://github.com/langfuse/langfuse) integrations to accurate log and monitor chains.                                                                                                       |
 |   ✅    | Use natural language to interact with integrations and tools.                                                                                                                                           |
+|   🚧    | Simple REST API interface for interfacing with the system. Used by the the `HA Conversation Integration`.                                                                                               |
 |   ✅    | Decomposes user queries to a `TaskQueue` with a list of `ActionSteps`.                                                                                                                                  |
 |   🚧    | Custom [Home Assistant Conversation Integration](https://www.home-assistant.io/integrations/conversation/) to allow voice assistance via [**HA Assist**](https://www.home-assistant.io/voice_control/). |
 |   🧐    | **(Extras - Quality)** Use CRITIC reflection framework to reflect on a response to a task/query using external tools via `llama_index.agent.introspective.ToolInteractiveReflectionAgentWorker`.        |
 |   📅    | **(Extras - Privacy)** Integrate with [microsoft/presidio](https://github.com/microsoft/presidio) for customizable PII de-identification.                                                               |
 |   ✅    | A chat Interface using `streamlit` that shows the action plan, user types, and response from the LLM.                                                                                                   |
 
-### Integrations
+### Integrations 📦
 
 | Status |             Integration Name             | Description                                                                                                                       |
 | :----: | :--------------------------------------: | --------------------------------------------------------------------------------------------------------------------------------- |
@@ -43,36 +46,63 @@ Meeseeks builds upon recent advancements in LLM-based multi-agent systems, which
 |   🧐    |         Android Debugging Shell          | Use Home Assistant ADB Integrations to perform actions on Android TV Variants via `integrations.HomeAssistant`.                   |
 
 
-
 ## Project Setup 🛠️
 
-1. **Environment Setup**: This project requires Python 3.7 or later. It is recommended to use a virtual environment to manage the project dependencies. You can create a virtual environment using the following command:
+This project is composed of multiple modules, each with its own set of dependencies. Follow the steps below to set up the project on your local machine.
 
-    ```sh
-    python3 -m venv env
+### Prerequisites
+
+- Python 3.10 or higher
+- [Poetry](https://python-poetry.org/docs/#installation) - Simplifies managing Python packages and dependencies.
+
+
+> [!NOTE]
+>  **Quick Installation for Mac and Linux Users:** Clone the repository, navigate to the project root and run the below script:
+> ```bash
+> chmod +x build-install.sh
+> ./build-install.sh fallback-install
+> ```
+
+
+### Manual Installation
+
+1. Clone the repository:
+
+    ```bash
+    git clone https://github.com/bearlike/Personal-Assistant.git
     ```
 
-2. **Activate the Virtual Environment**: Activate the virtual environment using the following command:
+2. Navigate to the root directory of the project and install the main module's dependencies:
 
-    ```sh
-    source env/bin/activate  # On Windows use `env\Scripts\activate`
+    ```bash
+    cd Personal-Assistant
+    poetry install
     ```
 
-3. **Install Dependencies**: Install the project dependencies from the [``requirements.txt``](requirements.txt) file using the following command:
+3. To install the optional and development dependencies, navigate to the submodule directories (`meeseeks-api` and `meeseeks-chat`), and install their dependencies:
 
-    ```sh
-    pip install -r requirements.txt
+    ```bash
+    poetry install --dev
+    cd ../meeseeks-api
+    poetry install
+    cd ../meeseeks-chat
+    poetry install
     ```
 
-4. **Environment Variables**: Copy the [``.env.example``](.env.example") file to a new file named ``.env`` and fill in the necessary environment variables.
+4. **Environment Variables**: Copy the [``.env.example``](.env.example) file to a new file named ``.env`` and modify in the necessary environment variables.
 
-## Running the Streamlit Web Interface
 
-To run the Streamlit app [``chat_master.py``](chat_master.py"), use the following command:
 
-```sh
-streamlit run chat_master.py
+## Running the Meeseeks Chat Interface 🤖
+
+After installing the dependencies, you can run the application with the following command:
+
+```bash
+streamlit run main.py
 ```
+
+
+---
 
 ## Contributing 👏
 
@@ -88,6 +118,8 @@ To contribute to Meeseeks, please follow these steps:
 ## Bug Reports and Feature Requests 🐞
 
 If you encounter any bugs or have ideas for new features, please open an issue on our [issue tracker](https://github.com/bearlike/Personal-Assistant/issues). We appreciate detailed bug reports that include steps to reproduce the issue and any relevant error messages.
+
+Thank you for considering contributing to Meeseeks! Let's build cool stuff!
 
 
 Thank you for considering contributing to Meeseeks! Let's build cool stuff!

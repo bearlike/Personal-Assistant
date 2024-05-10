@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 import time
 import os
-import tqdm
 from collections import namedtuple
-from jinja2 import Environment, FileSystemLoader, TemplateNotFound
-import coloredlogs
 import logging as logging_real
+from jinja2 import Environment, FileSystemLoader
+import coloredlogs
 import tiktoken
 
 
@@ -79,13 +78,13 @@ def get_system_prompt(name: str = "action-planner") -> str:
         os.path.dirname(__file__), "..", "prompts", f"{name}.txt")
     with open(system_prompt_path, "r", encoding="utf-8") as system_prompt_file:
         system_prompt = system_prompt_file.read()
-    logging.debug(f"Getting system prompt from `{system_prompt_path}`")
+    logging.debug("Getting system prompt from `%s`", system_prompt_path)
     del logging
     return system_prompt.strip()
 
 
 def ha_render_system_prompt(
-        all_entities=None, name="homeassistant-set-state") -> str:
+        all_entities=None, env="prompts", name="homeassistant-set-state") -> str:
     """ Render the system j2 prompt. Need to make it more generic.
 
     Returns:
@@ -94,8 +93,14 @@ def ha_render_system_prompt(
     if all_entities is not None:
         all_entities = str(all_entities).strip()
     logging = get_logger(name="core.common.render_system_prompt")
-    env = Environment(loader=FileSystemLoader("prompts"))
+
+    template_root = os.path.join(__name__, "..", "..", "prompts")
+    template_root = os.path.abspath(template_root)
+    logging.debug("Compiling %s from %s.", name, template_root)
+    # TODO: Catch and log TemplateNotFound when necessary.
+    env = Environment(loader=FileSystemLoader(template_root))
     template = env.get_template(f"{name}.txt")
-    logging.debug(f"Render system prompt for `{name}`")
+    logging.debug("Render system prompt for `%s`", name)
     del logging
+
     return template.render(ALL_ENTITIES=all_entities)

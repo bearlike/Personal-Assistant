@@ -10,29 +10,23 @@ through a chat interface.
 # streamlit run chat_master.py
 """
 # Standard library modules
-import requests
 import time
 import os
+import sys
 # Third-party modules
 import streamlit as st
-from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 from langchain.memory import ConversationBufferWindowMemory
-from langfuse.callback import CallbackHandler
-from langchain.prompts.chat import HumanMessagePromptTemplate
-from langchain.prompts.chat import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
-from langchain.chains import LLMChain
-from dotenv import load_dotenv
-# Custom imports
+
+# TODO: Need to package the application and import it as module
+# Adding the parent directory to the path before importing the custom modules
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+
+# Custom imports - Meeseeks core modules
 from core.task_master import generate_action_plan, run_action_plan
-from core.common import get_unique_timestamp, get_logger
+from core.common import get_logger
 from core.classes import TaskQueue
-import subprocess
-import sys
 
 logging = get_logger(name="Meeseeks-Chat")
-
-load_dotenv()
 
 
 def generate_action_plan_helper(user_input: str):
@@ -41,7 +35,8 @@ def generate_action_plan_helper(user_input: str):
     for action_step in task_queue.action_steps:
         # * Append action step to the action plan list
         action_plan_list.append(
-            f"Using `{action_step.action_consumer}` with `{action_step.action_type}` to `{action_step.action_argument}`"
+            f"Using `{action_step.action_consumer}` with "
+            f"`{action_step.action_type}` to `{action_step.action_argument}`"
         )
     return action_plan_list, task_queue
 
@@ -67,8 +62,9 @@ def main():
     image_path = os.path.join("static", "img", "banner.png")
     css_path = os.path.join("static", "css", "streamlit_custom.css")
     st.image(image_path, use_column_width=True)
+
     # Load css file as string into page_bg_img
-    with open(css_path) as f:
+    with open(css_path, encoding="utf-8") as f:
         page_bg_img = f.read()
     st.markdown(f"<style>{page_bg_img}</style>", unsafe_allow_html=True)
 
@@ -111,8 +107,7 @@ def main():
                 action_plan_list, task_queue = generate_action_plan_helper(
                     user_input)
                 action_plan_caption = ""
-                for action_plan in action_plan_list:
-                    action_plan_caption += f"\n* {action_plan}"
+                action_plan_caption = "\n* ".join(action_plan_list)
                 if action_plan_list:
                     st.session_state.messages.append(
                         {"role": "thought",

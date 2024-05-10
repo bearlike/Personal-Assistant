@@ -1,28 +1,20 @@
 #!/usr/bin/env python3
 import os
 import re
-import copy
-import json
-import time
-import functools
-import warnings
 from collections import namedtuple
 from typing import Optional, Tuple, List
 
 import requests
-import tqdm
 from dotenv import load_dotenv
-from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.messages.ai import AIMessage
 from langchain_core.pydantic_v1 import BaseModel, Field, validator
 from langchain.output_parsers import PydanticOutputParser
 from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
-from langchain_community.document_loaders import DirectoryLoader, JSONLoader
 
-from core.common import get_mock_speaker, num_tokens_from_string
+from core.common import get_mock_speaker
 from core.common import get_logger, ha_render_system_prompt
-from core.classes import AbstractTool, ActionStep, TaskQueue
+from core.classes import AbstractTool, ActionStep
 
 logging = get_logger(name="tools.integration.homeassistant")
 load_dotenv()
@@ -96,10 +88,8 @@ def cache_monitor(func):
         ]
 
         # Retrieve entity and sensor IDs
-        self.cache['entity_ids'] = sorted(
-            [item for item in self.cache['entity_ids']])
-        self.cache['sensor_ids'] = sorted(
-            [item for item in self.cache['sensor_ids']])
+        self.cache['entity_ids'] = sorted(self.cache['entity_ids'])
+        self.cache['sensor_ids'] = sorted(self.cache['sensor_ids'])
 
         logging.info(
             "`%s` modified cache to <(len) Entity IDs: %s; (len) Entities: %s; (len) Sensors: %s; (len) Services: %s;>",
@@ -122,6 +112,7 @@ class HomeAssistantCall(BaseModel):
         description="The ID of the specific device or entity within the domain to apply the service to, such as 'scene.heater'.")
 
     @validator("entity_id", allow_reuse=True)
+    # pylint: disable=E0213,W0613
     def validate_entity_id(cls, entity_id, values, **kwargs):
         # ! BUG: The entity_id may not be validated correctly as the cache
         # !     is not passed to the validator.
@@ -132,6 +123,7 @@ class HomeAssistantCall(BaseModel):
         return entity_id
 
     @validator("domain", allow_reuse=True)
+    # pylint: disable=E0213,W0613
     def validate_domain(cls, domain, values, **kwargs):
         # ! BUG: The entity_id may not be validated correctly as the cache
         # !     is not passed to the validator.
@@ -199,9 +191,9 @@ class HomeAssistant(AbstractTool):
             return False
 
     @cache_monitor
-    def update_entity_ids(self, is_blacklist=True):
+    def update_entity_ids(self):
         """Update the list of entity IDs from Home Assistant."""
-        # TODO: is_blacklist is not being used yet. Assumes blacklist by default.
+        # TODO: Always assumes blacklist by default due to cache_monitor.
         self.update_entities()
         entities = self.cache["entities"]
         if not entities:
@@ -321,8 +313,8 @@ class HomeAssistant(AbstractTool):
                 },
             )
             logging.debug(
-                "Call Service Values for `{action_step_curr}`: `%s`",
-                call_service_values
+                "Call Service Values for `%s`: `%s`",
+                action_step_curr, call_service_values
             )
             status_bool, response_json = self.call_service(
                 domain=call_service_values.domain,

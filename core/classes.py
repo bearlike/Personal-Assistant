@@ -5,7 +5,7 @@ import json
 from typing import Optional
 from typing import List, Any
 # Third-party modules
-from langchain_community.document_loaders import DirectoryLoader, JSONLoader
+from langchain_community.document_loaders import JSONLoader
 from langchain_openai import ChatOpenAI
 from langchain_core.pydantic_v1 import BaseModel, Field, validator
 from langfuse.callback import CallbackHandler
@@ -43,6 +43,7 @@ class TaskQueue(BaseModel):
     action_steps: Optional[List[ActionStep]] = None
 
     @validator("action_steps", allow_reuse=True)
+    # pylint: disable=E0213,W0613
     def validate_actions(cls, field):
         for action in field:
             # Normalize once and store it
@@ -74,8 +75,7 @@ class TaskQueue(BaseModel):
             if error_msg_list:
                 error_msg = "\n".join(error_msg_list)
                 for msg in error_msg_list:
-                    logging.error(msg)  # Log each error message
-                raise ValueError(error_msg)
+                    logging.error(msg)  # Log
 
         return field
 
@@ -107,9 +107,14 @@ class AbstractTool(abc.ABC):
             model=self.model_name,
             temperature=temperature
         )
-        cache_dir = os.path.join(os.path.dirname(
-            __file__), "..", ".cache", self._id)
+
+        root_cache_dir = os.getenv("CACHE_DIR", None)
+        if root_cache_dir is None:
+            raise ValueError("CACHE_DIR environment variable is not set.")
+
+        cache_dir = os.path.join(root_cache_dir, "..", ".cache", self._id)
         self.cache_dir = os.path.abspath(cache_dir)
+        logging.debug("%s cache directory is %s.", self._id, self.cache_dir)
 
     def _save_json(self, data, filename):
         """Save a dictionary to a JSON file."""
@@ -174,10 +179,9 @@ class AbstractTool(abc.ABC):
         """
         if action_step.action_type == "set":
             return self.set_state(action_step)
-        elif action_step.action_type == "get":
+        if action_step.action_type == "get":
             return self.get_state(action_step)
-        else:
-            raise ValueError(f"Invalid action type: {action_step.action_type}")
+        raise ValueError(f"Invalid action type: {action_step.action_type}")
 
 
 def create_task_queue(
@@ -195,7 +199,7 @@ def create_task_queue(
         A TaskQueue object with the provided action steps.
     """
     if action_data is None:
-        ValueError("Action data cannot be None.")
+        raise ValueError("Action data cannot be None.")
 
     # Convert the input data to ActionStep objects
     action_steps = [
@@ -211,7 +215,7 @@ def create_task_queue(
     return task_queue
 
 
-def get_task_master_examples(id: int = 0):
+def get_task_master_examples(example_id: int = 0):
     """Get the example task queue data."""
     examples = [
         [
@@ -227,7 +231,7 @@ def get_task_master_examples(id: int = 0):
                 "action_argument": "Get today's weather."},
         ]
     ]
-    if id not in range(0, len(examples)):
-        raise ValueError(f"Invalid example ID: {id}")
+    if example_id not in range(0, len(examples)):
+        raise ValueError(f"Invalid example ID: {example_id}")
 
-    return create_task_queue(action_data=examples[id], is_example=True).json()
+    return create_task_queue(action_data=examples[example_id], is_example=True).json()

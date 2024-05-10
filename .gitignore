@@ -1,3 +1,6 @@
+# Ignore Repo to Prompt
+repo-to-prompt.codemod.js
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

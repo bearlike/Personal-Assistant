@@ -14,8 +14,10 @@ from core.classes import ActionStep, AbstractTool
 load_dotenv()
 logging = get_logger(name="tools.core.talk_to_user")
 
+
 class TalkToUser(AbstractTool):
     """A service to manage and interact with Home Assistant."""
+
     def __init__(self):
         super().__init__(
             name="Talk to User",
@@ -32,3 +34,6 @@ class TalkToUser(AbstractTool):
         """
         MockSpeaker = get_mock_speaker()
         return MockSpeaker(content=action_step.action_argument)
+
+    def get_state(self, *args, **kwargs):
+        raise NotImplementedError("This method is not supported by TalkToUser.")
