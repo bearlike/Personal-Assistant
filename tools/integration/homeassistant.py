@@ -20,11 +20,11 @@ from langchain.output_parsers import PydanticOutputParser
 from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
 from langchain_community.document_loaders import DirectoryLoader, JSONLoader
 
-from utils.common import get_mock_speaker, num_tokens_from_string
-from utils.common import get_logger, ha_render_system_prompt
-from utils.classes import AbstractTool, ActionStep, TaskQueue
+from core.common import get_mock_speaker, num_tokens_from_string
+from core.common import get_logger, ha_render_system_prompt
+from core.classes import AbstractTool, ActionStep, TaskQueue
 
-logging = get_logger(name="utils.homeassistant")
+logging = get_logger(name="tools.integration.homeassistant")
 load_dotenv()
 
 
@@ -250,7 +250,7 @@ class HomeAssistant(AbstractTool):
                 HumanMessage(content="Turn on the lamp lights."),
                 AIMessage(example.json()),
                 HumanMessagePromptTemplate.from_template(
-                    "The user asked you to `{action_step}`. You must use the information provided to pick the right Home Assistant service call values.\n\n## Format Instructions\n{format_instructions}\n\n## Home Assistant Entities and Domain-Services\n```\n{context}```\n"
+                    "The user asked you to `{action_step}`. You must use the information provided to pick the right Home Assistant service call values only considering the current user query.\n\n## Format Instructions\n{format_instructions}\n\n## Home Assistant Entities and Domain-Services\n```\n{context}```\n"
                 ),
             ],
             partial_variables={
@@ -312,12 +312,17 @@ class HomeAssistant(AbstractTool):
         MockSpeaker = get_mock_speaker()
 
         try:
+            action_step_curr = action_step.action_argument.strip()
             call_service_values = chain.invoke(
                 {
-                    "action_step": action_step.action_argument.strip(),
+                    "action_step": action_step_curr,
                     "context": rag_documents,
                     "cache": self.cache
                 },
+            )
+            logging.debug(
+                "Call Service Values for `{action_step_curr}`: `%s`",
+                call_service_values
             )
             status_bool, response_json = self.call_service(
                 domain=call_service_values.domain,
@@ -346,8 +351,8 @@ class HomeAssistant(AbstractTool):
         prompt = self._create_set_prompt(system_prompt, parser)
         chain = prompt | self.model | parser
 
-        logging.info("Invoking `set` action chain using `%s`.",
-                     self.model_name)
+        logging.info("Invoking `set` action chain using `%s` for `%s`.",
+                     self.model_name, action_step)
         return self._invoke_service_and_set_state(
             chain, rag_documents, action_step)
 

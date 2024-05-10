@@ -11,10 +11,10 @@ from langchain_core.pydantic_v1 import BaseModel, Field, validator
 from langfuse.callback import CallbackHandler
 from dotenv import load_dotenv
 # User-defined modules
-from utils.common import get_logger, get_unique_timestamp, get_mock_speaker
+from core.common import get_logger, get_unique_timestamp, get_mock_speaker
 
 load_dotenv()
-logging = get_logger(name="classes")
+logging = get_logger(name="core.classes")
 AVAILABLE_TOOLS = ["home_assistant_tool", "talk_to_user_tool"]
 
 
@@ -81,7 +81,7 @@ class TaskQueue(BaseModel):
 
 
 class AbstractTool(abc.ABC):
-    def __init__(self, name, description, model_name=None):
+    def __init__(self, name, description, model_name=None, temperature=0.2):
         # Data Validation
         if model_name is None:
             default_model = os.getenv("DEFAULT_MODEL", "gpt-3.5-turbo")
@@ -96,16 +96,16 @@ class AbstractTool(abc.ABC):
         session_id = f"{self._id}-tool-id-{get_unique_timestamp()}"
         logging.info(f"Tool created <name={name}; session_id={session_id};>")
         self.langfuse_handler = CallbackHandler(
-            user_id="homeassistant_kk",
+            user_id=f"meeseeks-{name}",
             session_id=session_id,
-            trace_name=f"meeseeks-{self._id}-tool",
+            trace_name=f"meeseeks-{self._id}",
             version=os.getenv("VERSION", "Not Specified"),
             release=os.getenv("ENVMODE", "Not Specified")
         )
         self.model = ChatOpenAI(
             openai_api_base=os.getenv("OPENAI_API_BASE"),
             model=self.model_name,
-            temperature=0.3
+            temperature=temperature
         )
         cache_dir = os.path.join(os.path.dirname(
             __file__), "..", ".cache", self._id)

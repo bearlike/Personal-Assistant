@@ -2,9 +2,12 @@
 """
 Streamlit Chat App
 
-This module implements a chat application using Streamlit, Langchain, and
-OpenAI's GPT-3.5-turbo model. It allows users to interact with an AI assistant
+This module implements a chat application using Streamlit and Meeseeks.
+It allows users to interact with an AI assistant
 through a chat interface.
+
+# Please start Meeseeks Chat using the following command:
+# streamlit run chat_master.py
 """
 # Standard library modules
 import requests
@@ -21,12 +24,13 @@ from langchain_openai import ChatOpenAI
 from langchain.chains import LLMChain
 from dotenv import load_dotenv
 # Custom imports
-from utils.task_master import generate_action_plan, run_action_plan
-from utils.homeassistant import HomeAssistant
-from utils.common import get_unique_timestamp, get_logger
-from utils.classes import TaskQueue
+from core.task_master import generate_action_plan, run_action_plan
+from core.common import get_unique_timestamp, get_logger
+from core.classes import TaskQueue
+import subprocess
+import sys
 
-logging = get_logger(name="Meeseeks")
+logging = get_logger(name="Meeseeks-Chat")
 
 load_dotenv()
 
@@ -60,9 +64,11 @@ def main():
         page_title="Meeseeks | Bedroom AI",
         page_icon=":speech_balloon:",
     )
-    st.image("assets/img/banner.png", use_column_width=True)
+    image_path = os.path.join("static", "img", "banner.png")
+    css_path = os.path.join("static", "css", "streamlit_custom.css")
+    st.image(image_path, use_column_width=True)
     # Load css file as string into page_bg_img
-    with open("assets/css/streamlit_custom.css") as f:
+    with open(css_path) as f:
         page_bg_img = f.read()
     st.markdown(f"<style>{page_bg_img}</style>", unsafe_allow_html=True)
 
@@ -87,7 +93,8 @@ def main():
 
         if message["role"] == "thought":
             with st.chat_message("thought", avatar="🧠"):
-                st.caption(message["content"])
+                with st.expander("**Action Plan (Click to Expand)**"):
+                    st.caption(message["content"])
 
     user_input = st.chat_input("Ask me anything ✏️")
     if user_input:
@@ -103,14 +110,16 @@ def main():
                 # * User query is processed here
                 action_plan_list, task_queue = generate_action_plan_helper(
                     user_input)
-                action_plan_caption = "> **Action Plan**"
+                action_plan_caption = ""
                 for action_plan in action_plan_list:
-                    action_plan_caption += f"\n> * {action_plan}"
-                    st.session_state.messages.append(
-                        {"role": "thought", "content": f":grey[{action_plan}]"}
-                    )
+                    action_plan_caption += f"\n* {action_plan}"
                 if action_plan_list:
-                    st.caption(action_plan_caption)
+                    st.session_state.messages.append(
+                        {"role": "thought",
+                            "content": action_plan_caption}
+                    )
+                    with st.expander("**Action Plan (Click to Expand)**"):
+                        st.caption(action_plan_caption)
 
         with st.chat_message("assistant", avatar="🤖"):
             with st.spinner("Running Action Plan ..."):

@@ -17,14 +17,14 @@ from langchain_core._api.beta_decorator import LangChainBetaWarning
 from dotenv import load_dotenv
 
 # User-defined modules
-from utils.classes import TaskQueue, get_task_master_examples
-from utils.common import get_unique_timestamp
-from utils.common import get_logger, get_system_prompt
-from utils.common import num_tokens_from_string
-from utils.homeassistant import HomeAssistant
-from utils.talk_to_user import TalkToUser
+from core.classes import TaskQueue, get_task_master_examples
+from core.common import get_unique_timestamp
+from core.common import get_logger, get_system_prompt
+from core.common import num_tokens_from_string
+from tools.integration.homeassistant import HomeAssistant
+from tools.core.talk_to_user import TalkToUser
 
-logging = get_logger(name="task_master")
+logging = get_logger(name="core.task_master")
 
 
 # Filter out LangChainBetaWarning specifically

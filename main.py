@@ -21,8 +21,8 @@ from langchain.chains import LLMChain
 from dotenv import load_dotenv
 # Custom imports
 from tools.homeassistant import HomeAssistant
-from utils.common import get_unique_timestamp
-from utils.common import get_logger
+from core.common import get_unique_timestamp
+from core.common import get_logger
 
 logging = get_logger(name="ChatApp")
 
