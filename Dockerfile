@@ -4,9 +4,14 @@ FROM python:3.11-buster
 
 # Set the title, GitHub repo URL, version, and author
 ARG TITLE="Meeseeks Chat: Personal Assistant" \
-    VERSION="0.1.0" \
-    GITHUB_REPO_URL="https://github.com/bearlike/Personal-Assistant" \
+    VERSION="1.0.0" \
     AUTHOR="Krishnakanth Alagiri"
+
+LABEL org.opencontainers.image.source="https://github.com/bearlike/Personal-Assistant" \
+    org.opencontainers.image.version=$VERSION \
+    org.opencontainers.image.vendor=$AUTHOR \
+    org.opencontainers.image.licenses="mail@kanth.tech" \
+    org.opencontainers.image.licenses="MIT"
 
 LABEL maintainer=$AUTHOR \
     title=$TITLE \
@@ -20,11 +25,11 @@ ENV POETRY_NO_INTERACTION=1 \
 
 # Update and install necessary software
 RUN apt-get update && apt-get install -y \
-        build-essential \
-        curl \
-        software-properties-common \
-        git \
-        && rm -rf /var/lib/apt/lists/*
+    build-essential \
+    curl \
+    software-properties-common \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory to /app (assuming project root)
 WORKDIR /app
