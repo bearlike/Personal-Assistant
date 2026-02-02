@@ -19,7 +19,7 @@
 </p>
 
 # Project Motivation 🚀
-Meeseeks is an innovative AI assistant built on a multi-agent large language model (LLM) architecture. It tackles complex problems by breaking them down into atomic, reproducible tasks, each handled by autonomous agents powered by LLMs. This approach, combined with semantic caching, significantly enhances efficiency and reduces LLM calls. It is also tested to work with OpenAI-compatible endpoints [`[*]`](https://github.com/bearlike/Personal-Assistant/wiki/Additional-Resources). Meeseeks can also call different endpoints for different tools.
+Meeseeks is a personal assistant built on an LLM-driven orchestration loop. It breaks a request into atomic steps, runs tools, and returns a clean summary. The core loop can replan after tool failures and keep short-term state while sessions persist on disk for continuity.
 
 
 <details>
@@ -52,6 +52,9 @@ Meeseeks is an innovative AI assistant built on a multi-agent large language mod
 - (✅) Handles complex user queries by breaking them into actionable steps, executing these steps, and then summarizing on the results.
 - (✅) Custom [Home Assistant Conversation Integration](https://www.home-assistant.io/integrations/conversation/) to allow voice assistance via [**HA Assist**](https://www.home-assistant.io/voice_control/).
 - (✅) A chat Interface using `streamlit` that shows the action plan, user types, and response from the LLM.
+- (✅) Plan -> act -> observe loop with re-planning on tool failures.
+- (✅) Session transcripts with lightweight compaction for long-running chats.
+- (✅) Tool registry with optional MCP tool support via manifest.
 
 ## Extras 👽
 Optional feature that users can choose to install to further optimize their experience.
@@ -64,9 +67,33 @@ Optional feature that users can choose to install to further optimize their expe
 - (🚧) Google Search, Search recent ArXiv papers and summaries, Yahoo Finance, Yelp
 - (🧐) Android Debugging Shell
 
-## Installating and Running Meeseeks
+## Monorepo layout 🧭
+- `core/`: orchestration loop, schemas, session storage, compaction, tool registry.
+- `tools/`: tool implementations and integrations (including Home Assistant and MCP).
+- `meeseeks-api/`: Flask REST API for programmatic access.
+- `meeseeks-chat/`: Streamlit UI for interactive chat.
+- `meeseeks_ha_conversation/`: Home Assistant integration that routes voice to the API.
+- `prompts/`: planner prompt and examples.
+
+## Architecture (short) 🧩
+Requests flow through a single core engine used by every interface, so behavior stays consistent across UI, API, and voice.
+
+```mermaid
+flowchart LR
+  User --> Chat
+  User --> API
+  HA --> API
+  Chat --> Core
+  API --> Core
+  Core --> Tools
+  Tools --> HomeAssistant
+  Tools --> MCP
+  Core --> SessionStore
+```
+
+## Installing and Running Meeseeks
 > [!IMPORTANT]
-> For Docker or manual installation, running, and configuring Meeseeks, visit [**Installation - Wiki**](https://github.com/bearlike/Personal-Assistant/wiki/Installation).
+> For Docker or manual installation, running, and configuring Meeseeks, visit [**Installation - Wiki**](https://github.com/bearlike/Personal-Assistant/wiki/Installation) or read `docs/README.md` for a quick local/deploy overview.
 
 ---
 
@@ -86,4 +113,3 @@ To contribute to Meeseeks, please follow these steps:
 If you encounter any bugs or have ideas for new features, please open an issue on our [issue tracker](https://github.com/bearlike/Personal-Assistant/issues). We appreciate detailed bug reports that include steps to reproduce the issue and any relevant error messages.
 
 Thank you for considering contributing to Meeseeks! Let's build cool stuff!
-
