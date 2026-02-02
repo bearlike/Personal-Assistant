@@ -53,6 +53,7 @@ Meeseeks is a personal assistant built on an LLM-driven orchestration loop. It b
 - (✅) Custom [Home Assistant Conversation Integration](https://www.home-assistant.io/integrations/conversation/) to allow voice assistance via [**HA Assist**](https://www.home-assistant.io/voice_control/).
 - (✅) A chat Interface using `streamlit` that shows the action plan, user types, and response from the LLM.
 - (✅) Terminal CLI for interactive sessions with plan + tool result visibility.
+- (✅) MCP tool visibility and model switch wizard in the CLI.
 - (✅) Plan -> act -> observe loop with re-planning on tool failures.
 - (✅) Session transcripts with lightweight compaction for long-running chats.
 - (✅) Tool registry with optional MCP tool support via manifest.

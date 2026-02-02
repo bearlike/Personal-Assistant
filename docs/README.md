@@ -45,6 +45,13 @@ flowchart LR
 - Run the chat UI: `streamlit run meeseeks-chat/chat_master.py`.
 - Run the CLI: `python meeseeks-cli/cli_master.py`.
 
+## CLI quick commands
+- `/help` show commands
+- `/models` pick a model from your API
+- `/mcp` list MCP servers/tools
+- `/summarize` compact the session
+- `/new` start a fresh session
+
 ## Deployment (Docker)
 - Dockerfiles are provided for the API and chat UI.
 - Provide the same environment values as local install.
