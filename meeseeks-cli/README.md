@@ -16,6 +16,10 @@ poetry run python cli_master.py
 ## Common commands
 - `/help` list commands
 - `/plan on|off` toggle plan display
-- `/compact` compact the session transcript
+- `/summarize` compact the session transcript
 - `/tag NAME` tag a session
 - `/fork [TAG]` fork the current session
+- `/new` start a new session
+- `/mcp` list MCP tools and servers
+- `/models` switch models using a wizard
+- `/quit` exit the CLI

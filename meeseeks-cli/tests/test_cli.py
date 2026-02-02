@@ -7,8 +7,16 @@ sys.path.append(os.path.join(test_dir, ".."))
 sys.path.append(os.path.join(test_dir, "..", ".."))
 
 from core.session_store import SessionStore  # noqa: E402
+from core.tool_registry import load_registry  # noqa: E402
+from rich.console import Console  # noqa: E402
 
-from cli_master import _format_steps, _parse_command, _resolve_session_id  # noqa: E402
+from cli_master import (  # noqa: E402
+    CliState,
+    _format_steps,
+    _handle_command,
+    _parse_command,
+    _resolve_session_id,
+)
 
 
 class DummyStep:
@@ -38,3 +46,23 @@ def test_resolve_session_id(tmp_path):
 
     forked_id = _resolve_session_id(store, None, None, session_id)
     assert forked_id != session_id
+
+
+def test_handle_new_session_command(tmp_path):
+    store = SessionStore(root_dir=str(tmp_path))
+    console = Console(record=True)
+    tool_registry = load_registry()
+    session_id = store.create_session()
+    state = CliState(session_id=session_id, show_plan=True)
+
+    _handle_command(
+        console,
+        store,
+        state,
+        "/new",
+        [],
+        tool_registry,
+        prompt_func=None,
+    )
+
+    assert state.session_id != session_id
