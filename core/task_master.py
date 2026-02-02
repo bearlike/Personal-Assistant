@@ -2,7 +2,7 @@
 
 # Standard library modules
 import warnings
-from typing import List
+from typing import List, Tuple, Union
 import os
 
 # Third-party modules
@@ -16,7 +16,7 @@ from langfuse.callback import CallbackHandler
 from dotenv import load_dotenv
 
 # User-defined modules
-from core.classes import TaskQueue, get_task_master_examples
+from core.classes import TaskQueue, get_task_master_examples, OrchestrationState
 from core.common import get_unique_timestamp
 from core.common import get_logger, get_system_prompt
 from core.common import num_tokens_from_string
@@ -134,5 +134,58 @@ def run_action_plan(task_queue: TaskQueue) -> TaskQueue:
             action_step.result = None
 
     task_queue.task_result = " ".join(results).strip()
+
+    return task_queue
+
+
+def _action_steps_complete(task_queue: TaskQueue) -> bool:
+    return all(step.result is not None for step in task_queue.action_steps)
+
+
+def orchestrate_session(
+    user_query: str,
+    model_name: str = None,
+    max_iters: int = 3,
+    initial_task_queue: TaskQueue = None,
+    return_state: bool = False,
+) -> Union[TaskQueue, Tuple[TaskQueue, OrchestrationState]]:
+    """
+    Orchestrate a session using a plan-act-observe-decide loop.
+    """
+    state = OrchestrationState(goal=user_query)
+    if state.tool_results is None:
+        state.tool_results = []
+    if state.open_questions is None:
+        state.open_questions = []
+    if initial_task_queue is None:
+        task_queue = generate_action_plan(
+            user_query=user_query, model_name=model_name)
+    else:
+        task_queue = initial_task_queue
+    state.plan = task_queue.action_steps
+
+    for iteration in range(max_iters):
+        task_queue = run_action_plan(task_queue)
+        state.tool_results.append(task_queue.task_result or "")
+
+        if _action_steps_complete(task_queue):
+            state.done = True
+            state.done_reason = "completed"
+            break
+
+        if iteration < max_iters - 1:
+            revised_query = (
+                f"{user_query}\n\nPrevious tool results:\n{task_queue.task_result or ''}\n"
+                "Please revise the action plan to resolve remaining tasks."
+            )
+            task_queue = generate_action_plan(
+                user_query=revised_query, model_name=model_name)
+            state.plan = task_queue.action_steps
+
+    if not state.done:
+        state.done_reason = "max_iterations_reached"
+
+    if return_state:
+        return task_queue, state
 
     return task_queue

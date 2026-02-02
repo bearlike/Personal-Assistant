@@ -87,6 +87,17 @@ class TaskQueue(BaseModel):
         return field
 
 
+class OrchestrationState(BaseModel):
+    """Track state for the orchestration loop."""
+    goal: str
+    plan: List[ActionStep] = Field(default_factory=list)
+    tool_results: List[str] = Field(default_factory=list)
+    open_questions: List[str] = Field(default_factory=list)
+    done: bool = False
+    done_reason: Optional[str] = None
+    summary: Optional[str] = None
+
+
 class AbstractTool(abc.ABC):
     """Abstract base class for tools, providing common features and requiring specific methods."""
 

@@ -24,7 +24,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 # Custom imports - Meeseeks core modules
 if True:
-    from core.task_master import generate_action_plan, run_action_plan
+    from core.task_master import orchestrate_session
     from core.classes import TaskQueue
     from core.common import get_logger
 
@@ -128,10 +128,7 @@ class MeeseeksQuery(Resource):
         logging.info("Received user query: %s", user_query)
 
         # Generate action plan from user query
-        task_queue: TaskQueue = generate_action_plan(user_query=user_query)
-
-        # Execute action plan
-        task_queue = run_action_plan(task_queue)
+        task_queue: TaskQueue = orchestrate_session(user_query=user_query)
         # Deep copy the variable into another variable
         task_result = deepcopy(task_queue.task_result)
         to_return = task_queue.dict()
