@@ -4,7 +4,7 @@ Meeseeks is a personal assistant that breaks a request into small actions, runs 
 
 ## Features (quick view)
 - Plan -> act -> observe loop to keep work grounded in tool results.
-- Multiple interfaces (chat UI, REST API, Home Assistant) backed by one core engine.
+- Multiple interfaces (chat UI, REST API, Home Assistant, terminal CLI) backed by one core engine.
 - Tool registry for local tools plus optional MCP tools.
 - Session transcripts with lightweight compaction for long runs.
 
@@ -13,6 +13,7 @@ Meeseeks is a personal assistant that breaks a request into small actions, runs 
 - `tools/`: tool implementations and integrations.
 - `meeseeks-api/`: Flask API that exposes the assistant over HTTP.
 - `meeseeks-chat/`: Streamlit UI for interactive chat.
+- `meeseeks-cli/`: Terminal CLI for interactive sessions.
 - `meeseeks_ha_conversation/`: Home Assistant integration that routes voice requests to the API.
 - `prompts/`: planner prompt and examples.
 
@@ -26,8 +27,10 @@ flowchart LR
   User --> Chat
   User --> API
   HA --> API
+  User --> CLI
   Chat --> Core
   API --> Core
+  CLI --> Core
   Core --> Tools
   Tools --> HomeAssistant
   Tools --> MCP
@@ -40,6 +43,7 @@ flowchart LR
 - Copy `.env.example` to `.env` and set the required values.
 - Run the API: `python meeseeks-api/backend.py`.
 - Run the chat UI: `streamlit run meeseeks-chat/chat_master.py`.
+- Run the CLI: `python meeseeks-cli/cli_master.py`.
 
 ## Deployment (Docker)
 - Dockerfiles are provided for the API and chat UI.

@@ -10,6 +10,7 @@ typecheck:
 	poetry run mypy
 	cd meeseeks-api && poetry run mypy
 	cd meeseeks-chat && poetry run mypy
+	cd meeseeks-cli && poetry run mypy
 
 precommit-install:
 	poetry run pre-commit install

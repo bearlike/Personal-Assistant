@@ -52,6 +52,7 @@ Meeseeks is a personal assistant built on an LLM-driven orchestration loop. It b
 - (✅) Handles complex user queries by breaking them into actionable steps, executing these steps, and then summarizing on the results.
 - (✅) Custom [Home Assistant Conversation Integration](https://www.home-assistant.io/integrations/conversation/) to allow voice assistance via [**HA Assist**](https://www.home-assistant.io/voice_control/).
 - (✅) A chat Interface using `streamlit` that shows the action plan, user types, and response from the LLM.
+- (✅) Terminal CLI for interactive sessions with plan + tool result visibility.
 - (✅) Plan -> act -> observe loop with re-planning on tool failures.
 - (✅) Session transcripts with lightweight compaction for long-running chats.
 - (✅) Tool registry with optional MCP tool support via manifest.
@@ -72,6 +73,7 @@ Optional feature that users can choose to install to further optimize their expe
 - `tools/`: tool implementations and integrations (including Home Assistant and MCP).
 - `meeseeks-api/`: Flask REST API for programmatic access.
 - `meeseeks-chat/`: Streamlit UI for interactive chat.
+- `meeseeks-cli/`: Terminal CLI frontend for interactive sessions.
 - `meeseeks_ha_conversation/`: Home Assistant integration that routes voice to the API.
 - `prompts/`: planner prompt and examples.
 
@@ -83,8 +85,10 @@ flowchart LR
   User --> Chat
   User --> API
   HA --> API
+  User --> CLI
   Chat --> Core
   API --> Core
+  CLI --> Core
   Core --> Tools
   Tools --> HomeAssistant
   Tools --> MCP
