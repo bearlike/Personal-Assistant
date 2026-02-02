@@ -51,22 +51,29 @@ def _build_direct_response(message: str) -> TaskQueue:
     return task_queue
 
 
-def _augment_system_prompt(system_prompt: str, tool_registry: ToolRegistry | None) -> str:
-    if tool_registry is None:
-        return system_prompt
-    catalog = tool_registry.tool_catalog()
-    if not catalog:
-        return system_prompt
-    tool_lines = "\n".join(
-        f"- {tool['tool_id']}: {tool['description']}" for tool in catalog
-    )
-    return f"{system_prompt}\n\nAvailable tools:\n{tool_lines}"
+def _augment_system_prompt(
+    system_prompt: str,
+    tool_registry: ToolRegistry | None,
+    session_summary: str | None = None,
+) -> str:
+    sections = [system_prompt]
+    if session_summary:
+        sections.append(f"Session summary:\n{session_summary}")
+    if tool_registry is not None:
+        catalog = tool_registry.tool_catalog()
+        if catalog:
+            tool_lines = "\n".join(
+                f"- {tool['tool_id']}: {tool['description']}" for tool in catalog
+            )
+            sections.append(f"Available tools:\n{tool_lines}")
+    return "\n\n".join(sections)
 
 
 def generate_action_plan(
     user_query: str,
     model_name: str | None = None,
     tool_registry: ToolRegistry | None = None,
+    session_summary: str | None = None,
 ) -> TaskQueue:
     """
     Use the LangChain pipeline to generate an action plan based on the user query.
@@ -114,7 +121,11 @@ def generate_action_plan(
     prompt = ChatPromptTemplate(
         messages=[
             SystemMessage(
-                content=_augment_system_prompt(get_system_prompt(), tool_registry)
+                content=_augment_system_prompt(
+                    get_system_prompt(),
+                    tool_registry,
+                    session_summary=session_summary,
+                )
             ),
             HumanMessage(content="Turn on strip lights and heater."),
             AIMessage(content=get_task_master_examples(example_id=0)),
@@ -267,6 +278,7 @@ def orchestrate_session(
             user_query=user_query,
             model_name=model_name,
             tool_registry=tool_registry,
+            session_summary=state.summary,
         )
     else:
         task_queue = initial_task_queue
@@ -310,6 +322,7 @@ def orchestrate_session(
                 user_query=revised_query,
                 model_name=model_name,
                 tool_registry=tool_registry,
+                session_summary=state.summary,
             )
             state.plan = task_queue.action_steps
             session_store.append_event(

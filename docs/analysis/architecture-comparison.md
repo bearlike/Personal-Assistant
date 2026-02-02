@@ -132,3 +132,10 @@ The DeepWiki architecture overview for Claude Code describes a layered system de
 2. What are the **minimum permissions** that must require human confirmation (e.g., `set` vs. `get`)?
 3. Do we need **session persistence** across chat and API immediately, or only for chat?
 4. Should tool discovery stay **static** for now, or move to a **manifest-driven registry** in Phase 4?
+
+## Implementation Status (Feb 2, 2026)
+- Phase 1: Loop-based orchestration is live (`core/task_master.py`) with replanning and state tracking.
+- Phase 2: MCP tool runner + manifest wiring added (`tools/integration/mcp.py`, `core/tool_registry.py`).
+- Phase 3: Transcript persistence + compaction helpers wired in (`core/session_store.py`, `core/compaction.py`).
+- Phase 4: Session fork/tag/resume support in API/chat (`meeseeks-api/backend.py`, `meeseeks-chat/chat_master.py`).
+- Phase 5: Tool registry/manifest entry point in place for local/MCP tools (`core/tool_registry.py`).

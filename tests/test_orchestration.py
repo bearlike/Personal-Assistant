@@ -201,6 +201,35 @@ def test_orchestrate_session_replans_on_failure(monkeypatch, tmp_path):
     assert run_calls.count == 2
 
 
+def test_orchestrate_session_passes_summary(monkeypatch, tmp_path):
+    captured = {}
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
+    session_store.save_summary(session_id, "previous summary")
+
+    def fake_generate(*args, **kwargs):
+        captured["summary"] = kwargs.get("session_summary")
+        return make_task_queue("say hi")
+
+    def fake_run(task_queue, **kwargs):
+        MockSpeaker = get_mock_speaker()
+        task_queue.action_steps[0].result = MockSpeaker(content="ok")
+        task_queue.task_result = "ok"
+        return task_queue
+
+    monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
+    monkeypatch.setattr(task_master, "run_action_plan", fake_run)
+
+    task_master.orchestrate_session(
+        "hello",
+        max_iters=1,
+        session_id=session_id,
+        session_store=session_store,
+    )
+
+    assert captured["summary"] == "previous summary"
+
+
 def test_orchestrate_session_max_iters(monkeypatch, tmp_path):
     generate_calls = Counter()
     run_calls = Counter()
