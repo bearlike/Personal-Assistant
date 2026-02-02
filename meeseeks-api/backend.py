@@ -26,6 +26,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 if True:
     from core.classes import TaskQueue
     from core.common import get_logger
+    from core.session_store import SessionStore
     from core.task_master import orchestrate_session
 
 # Load environment variables
@@ -43,6 +44,7 @@ logging.debug("Starting API server with API token: %s", MASTER_API_TOKEN)
 
 # Create Flask application
 app = Flask(__name__)
+session_store = SessionStore()
 
 authorizations = {
     'apikey': {
@@ -62,6 +64,8 @@ ns = api.namespace('api', description='Meeseeks operations')
 
 # Define API model for request and response
 task_queue_model = api.model('TaskQueue', {
+    'session_id': fields.String(
+        required=False, description='Session identifier for transcript storage'),
     'human_message': fields.String(
         required=True, description='The original user query'),
     'task_result': fields.String(
@@ -97,8 +101,12 @@ class MeeseeksQuery(Resource):
     """
 
     @api.doc(security='apikey')
-    @api.expect(api.model('Query', {'query': fields.String(
-        required=True, description='The user query')}))
+    @api.expect(api.model('Query', {
+        'query': fields.String(required=True, description='The user query'),
+        'session_id': fields.String(required=False, description='Existing session id'),
+        'session_tag': fields.String(required=False, description='Human-friendly tag'),
+        'fork_from': fields.String(required=False, description='Session id or tag to fork'),
+    }))
     @api.response(200, 'Success', task_queue_model)
     @api.response(400, 'Invalid input')
     @api.response(401, 'Unauthorized')
@@ -125,17 +133,36 @@ class MeeseeksQuery(Resource):
         user_query = request_data.get('query')
         if not user_query:
             return {"message": "Invalid input: 'query' is required"}, 400
+        session_id = request_data.get('session_id')
+        session_tag = request_data.get('session_tag')
+        fork_from = request_data.get('fork_from')
+
+        if fork_from:
+            source_session_id = session_store.resolve_tag(fork_from) or fork_from
+            session_id = session_store.fork_session(source_session_id)
+        if session_tag and not session_id:
+            resolved = session_store.resolve_tag(session_tag)
+            session_id = resolved if resolved else None
+        if not session_id:
+            session_id = session_store.create_session()
+        if session_tag:
+            session_store.tag_session(session_id, session_tag)
 
         logging.info("Received user query: %s", user_query)
 
         # Generate action plan from user query
-        task_queue: TaskQueue = orchestrate_session(user_query=user_query)
+        task_queue: TaskQueue = orchestrate_session(
+            user_query=user_query,
+            session_id=session_id,
+            session_store=session_store,
+        )
         # Deep copy the variable into another variable
         task_result = deepcopy(task_queue.task_result)
         to_return = task_queue.dict()
         to_return["task_result"] = task_result
         # Return TaskQueue as JSON
         logging.info("Returning executed action plan.")
+        to_return["session_id"] = session_id
         return to_return, 200
 
 

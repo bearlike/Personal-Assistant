@@ -17,10 +17,17 @@ from langchain_openai import ChatOpenAI
 from langfuse.callback import CallbackHandler
 
 # User-defined modules
-from core.classes import OrchestrationState, TaskQueue, get_task_master_examples
-from core.common import get_logger, get_system_prompt, get_unique_timestamp, num_tokens_from_string
-from tools.core.talk_to_user import TalkToUser
-from tools.integration.homeassistant import HomeAssistant
+from core.classes import ActionStep, OrchestrationState, TaskQueue, get_task_master_examples
+from core.common import (
+    get_logger,
+    get_mock_speaker,
+    get_system_prompt,
+    get_unique_timestamp,
+    num_tokens_from_string,
+)
+from core.compaction import should_compact, summarize_events
+from core.session_store import SessionStore
+from core.tool_registry import ToolRegistry, load_registry
 
 logging = get_logger(name="core.task_master")
 
@@ -30,7 +37,37 @@ warnings.simplefilter("ignore", LangChainBetaWarning)
 load_dotenv()
 
 
-def generate_action_plan(user_query: str, model_name: str | None = None) -> TaskQueue:
+def _build_direct_response(message: str) -> TaskQueue:
+    """Create a TaskQueue with a direct talk-to-user response."""
+    step = ActionStep(
+        action_consumer="talk_to_user_tool",
+        action_type="set",
+        action_argument=message,
+    )
+    task_queue = TaskQueue(action_steps=[step])
+    MockSpeaker = get_mock_speaker()
+    step.result = MockSpeaker(content=message)
+    task_queue.task_result = message
+    return task_queue
+
+
+def _augment_system_prompt(system_prompt: str, tool_registry: ToolRegistry | None) -> str:
+    if tool_registry is None:
+        return system_prompt
+    catalog = tool_registry.tool_catalog()
+    if not catalog:
+        return system_prompt
+    tool_lines = "\n".join(
+        f"- {tool['tool_id']}: {tool['description']}" for tool in catalog
+    )
+    return f"{system_prompt}\n\nAvailable tools:\n{tool_lines}"
+
+
+def generate_action_plan(
+    user_query: str,
+    model_name: str | None = None,
+    tool_registry: ToolRegistry | None = None,
+) -> TaskQueue:
     """
     Use the LangChain pipeline to generate an action plan based on the user query.
 
@@ -40,6 +77,9 @@ def generate_action_plan(user_query: str, model_name: str | None = None) -> Task
     Returns:
         List[dict]: The generated action plan as a list of dictionaries.
     """
+    if tool_registry is None:
+        tool_registry = load_registry()
+
     user_id = "meeseeks-task-master"
     session_id = f"action-queue-id-{get_unique_timestamp()}"
     trace_name = user_id
@@ -73,7 +113,9 @@ def generate_action_plan(user_query: str, model_name: str | None = None) -> Task
 
     prompt = ChatPromptTemplate(
         messages=[
-            SystemMessage(content=get_system_prompt()),
+            SystemMessage(
+                content=_augment_system_prompt(get_system_prompt(), tool_registry)
+            ),
             HumanMessage(content="Turn on strip lights and heater."),
             AIMessage(content=get_task_master_examples(example_id=0)),
             HumanMessage(content="What is the weather today?"),
@@ -104,7 +146,11 @@ def generate_action_plan(user_query: str, model_name: str | None = None) -> Task
     return action_plan
 
 
-def run_action_plan(task_queue: TaskQueue) -> TaskQueue:
+def run_action_plan(
+    task_queue: TaskQueue,
+    tool_registry: ToolRegistry | None = None,
+    event_logger=None,
+) -> TaskQueue:
     """
     Run the generated action plan.
 
@@ -114,16 +160,14 @@ def run_action_plan(task_queue: TaskQueue) -> TaskQueue:
     Returns:
         TaskQueue: The updated action plan after running.
     """
-    tool_dict = {
-        "home_assistant_tool": HomeAssistant(),
-        "talk_to_user_tool": TalkToUser()
-    }
+    if tool_registry is None:
+        tool_registry = load_registry()
 
     results = []
 
     for action_step in task_queue.action_steps:
         logging.debug(f"Processing ActionStep: {action_step}")
-        tool = tool_dict.get(action_step.action_consumer)
+        tool = tool_registry.get(action_step.action_consumer)
 
         if tool is None:
             logging.error(
@@ -135,9 +179,34 @@ def run_action_plan(task_queue: TaskQueue) -> TaskQueue:
             action_step.result = action_result
             results.append(
                 action_result.content if action_result.content is not None else "")
+            if event_logger is not None:
+                event_logger(
+                    {
+                        "type": "tool_result",
+                        "payload": {
+                            "action_consumer": action_step.action_consumer,
+                            "action_type": action_step.action_type,
+                            "action_argument": action_step.action_argument,
+                            "result": action_result.content,
+                        },
+                    }
+                )
         except Exception as e:
             logging.error(f"Error processing action step: {e}")
             action_step.result = None
+            if event_logger is not None:
+                event_logger(
+                    {
+                        "type": "tool_result",
+                        "payload": {
+                            "action_consumer": action_step.action_consumer,
+                            "action_type": action_step.action_type,
+                            "action_argument": action_step.action_argument,
+                            "result": None,
+                            "error": str(e),
+                        },
+                    }
+                )
 
     task_queue.task_result = " ".join(results).strip()
 
@@ -154,24 +223,77 @@ def orchestrate_session(
     max_iters: int = 3,
     initial_task_queue: TaskQueue | None = None,
     return_state: bool = False,
+    session_id: str | None = None,
+    session_store: SessionStore | None = None,
+    tool_registry: ToolRegistry | None = None,
 ) -> TaskQueue | tuple[TaskQueue, OrchestrationState]:
     """
     Orchestrate a session using a plan-act-observe-decide loop.
     """
-    state = OrchestrationState(goal=user_query)
+    if tool_registry is None:
+        tool_registry = load_registry()
+
+    if session_store is None:
+        session_store = SessionStore()
+
+    if session_id is None:
+        session_id = session_store.create_session()
+
+    state = OrchestrationState(goal=user_query, session_id=session_id)
+    state.summary = session_store.load_summary(session_id)
     if state.tool_results is None:
         state.tool_results = []
     if state.open_questions is None:
         state.open_questions = []
+
+    session_store.append_event(session_id, {"type": "user", "payload": {"text": user_query}})
+
+    if user_query.strip() == "/compact":
+        events = session_store.load_transcript(session_id)
+        summary = summarize_events(events)
+        session_store.save_summary(session_id, summary)
+        state.summary = summary
+        state.done = True
+        state.done_reason = "compacted"
+        task_queue = _build_direct_response(
+            f"Compaction complete. Summary: {summary}"
+        )
+        if return_state:
+            return task_queue, state
+        return task_queue
+
     if initial_task_queue is None:
         task_queue = generate_action_plan(
-            user_query=user_query, model_name=model_name)
+            user_query=user_query,
+            model_name=model_name,
+            tool_registry=tool_registry,
+        )
     else:
         task_queue = initial_task_queue
     state.plan = task_queue.action_steps
+    session_store.append_event(
+        session_id,
+        {
+            "type": "action_plan",
+            "payload": {
+                "steps": [
+                    {
+                        "action_consumer": step.action_consumer,
+                        "action_type": step.action_type,
+                        "action_argument": step.action_argument,
+                    }
+                    for step in task_queue.action_steps
+                ]
+            },
+        },
+    )
 
     for iteration in range(max_iters):
-        task_queue = run_action_plan(task_queue)
+        task_queue = run_action_plan(
+            task_queue,
+            tool_registry=tool_registry,
+            event_logger=lambda event: session_store.append_event(session_id, event),
+        )
         state.tool_results.append(task_queue.task_result or "")
 
         if _action_steps_complete(task_queue):
@@ -185,11 +307,48 @@ def orchestrate_session(
                 "Please revise the action plan to resolve remaining tasks."
             )
             task_queue = generate_action_plan(
-                user_query=revised_query, model_name=model_name)
+                user_query=revised_query,
+                model_name=model_name,
+                tool_registry=tool_registry,
+            )
             state.plan = task_queue.action_steps
+            session_store.append_event(
+                session_id,
+                {
+                    "type": "action_plan",
+                    "payload": {
+                        "steps": [
+                            {
+                                "action_consumer": step.action_consumer,
+                                "action_type": step.action_type,
+                                "action_argument": step.action_argument,
+                            }
+                            for step in task_queue.action_steps
+                        ]
+                    },
+                },
+            )
 
     if not state.done:
         state.done_reason = "max_iterations_reached"
+
+    session_store.append_event(
+        session_id,
+        {
+            "type": "completion",
+            "payload": {
+                "done": state.done,
+                "done_reason": state.done_reason,
+                "task_result": task_queue.task_result,
+            },
+        },
+    )
+
+    events = session_store.load_transcript(session_id)
+    if should_compact(events):
+        summary = summarize_events(events)
+        session_store.save_summary(session_id, summary)
+        state.summary = summary
 
     if return_state:
         return task_queue, state

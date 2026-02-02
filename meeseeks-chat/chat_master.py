@@ -25,6 +25,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 # Custom imports - Meeseeks core modules
 from core.classes import TaskQueue
 from core.common import get_logger
+from core.session_store import SessionStore
 from core.task_master import generate_action_plan, orchestrate_session
 
 logging = get_logger(name="Meeseeks-Chat")
@@ -48,6 +49,8 @@ def run_action_plan_helper(task_queue: TaskQueue):
         user_query=task_queue.human_message or "",
         model_name=None,
         initial_task_queue=task_queue,
+        session_id=st.session_state.session_id,
+        session_store=st.session_state.session_store,
     )
     for action_step in task_queue.action_steps:
         responses.append(action_step.result.content)
@@ -76,6 +79,10 @@ def main():
         st.session_state.conversation_memory = ConversationBufferWindowMemory(
             k=5)
     conversation_memory = st.session_state.conversation_memory
+    if "session_store" not in st.session_state:
+        st.session_state.session_store = SessionStore()
+    if "session_id" not in st.session_state:
+        st.session_state.session_id = st.session_state.session_store.create_session()
 
     if "messages" not in st.session_state:
         st.session_state.messages = [

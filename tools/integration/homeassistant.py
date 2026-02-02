@@ -3,7 +3,7 @@ import os
 import re
 from typing import Any
 
-import requests  # type: ignore[import-untyped]
+import requests
 from dotenv import load_dotenv
 from langchain.output_parsers import PydanticOutputParser
 from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate

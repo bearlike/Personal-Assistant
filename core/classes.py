@@ -20,6 +20,12 @@ logging = get_logger(name="core.classes")
 AVAILABLE_TOOLS = ["home_assistant_tool", "talk_to_user_tool"]
 
 
+def set_available_tools(tool_ids: list[str]) -> None:
+    """Update the global tool list for ActionStep validation."""
+    global AVAILABLE_TOOLS
+    AVAILABLE_TOOLS = tool_ids
+
+
 class ActionStep(BaseModel):
     """Defines an action step within a task queue with validation."""
     action_consumer: str = Field(
@@ -36,7 +42,7 @@ class ActionStep(BaseModel):
     )
     result: Any | None = Field(
         alias="_result",
-        default="Not executed yet.",
+        default=None,
         description='Private field to persist the action status and other data.'
     )
 
@@ -51,7 +57,7 @@ class TaskQueue(BaseModel):
     action_steps: list[ActionStep] = Field(default_factory=list)
     task_result: str | None = Field(
         alias="_task_result",
-        default="Not executed yet.",
+        default=None,
         description='Store the result for the entire task queue'
     )
 
@@ -75,7 +81,7 @@ class TaskQueue(BaseModel):
                 error_msg_list.append(error_msg)
 
             # Specific checks for "talk_to_user" consumer
-            if action.action_consumer == "talk_to_user" and \
+            if action.action_consumer == "talk_to_user_tool" and \
                     action.action_type == "get":
                 error_msg = f"`{action.action_consumer}` does not support 'get' action type."
                 error_msg_list.append(error_msg)
@@ -96,6 +102,7 @@ class TaskQueue(BaseModel):
 class OrchestrationState(BaseModel):
     """Track state for the orchestration loop."""
     goal: str
+    session_id: str | None = None
     plan: list[ActionStep] = Field(default_factory=list)
     tool_results: list[str] = Field(default_factory=list)
     open_questions: list[str] = Field(default_factory=list)

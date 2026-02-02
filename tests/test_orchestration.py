@@ -25,22 +25,26 @@ langchain_core_messages_ai = types.ModuleType("langchain_core.messages.ai")
 langchain_core_api = types.ModuleType("langchain_core._api.beta_decorator")
 langchain_core_pydantic = types.ModuleType("langchain_core.pydantic_v1")
 
-try:
-    from pydantic import BaseModel, Field, validator  # type: ignore
-except Exception:  # pragma: no cover
-    class BaseModel:
-        def __init__(self, **kwargs):
-            for key, value in kwargs.items():
-                setattr(self, key, value)
+dummy_pydantic = types.ModuleType("pydantic")
 
-    def Field(*args, **kwargs):  # noqa: N802 - mimic pydantic API
-        return None
+class BaseModel:
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
-    def validator(*args, **kwargs):  # noqa: N802 - mimic pydantic API
-        def wrapper(func):
-            return func
+def Field(*args, **kwargs):  # noqa: N802 - mimic pydantic API
+    return None
 
-        return wrapper
+def validator(*args, **kwargs):  # noqa: N802 - mimic pydantic API
+    def wrapper(func):
+        return func
+
+    return wrapper
+
+dummy_pydantic.BaseModel = BaseModel
+dummy_pydantic.Field = Field
+dummy_pydantic.validator = validator
+sys.modules["pydantic"] = dummy_pydantic
 
 langchain_core_pydantic.BaseModel = BaseModel
 langchain_core_pydantic.Field = Field
@@ -109,6 +113,7 @@ sys.modules["requests"] = requests
 from core import task_master  # noqa: E402
 from core.classes import ActionStep, TaskQueue  # noqa: E402
 from core.common import get_mock_speaker  # noqa: E402
+from core.session_store import SessionStore  # noqa: E402
 
 
 class Counter:
@@ -128,15 +133,17 @@ def make_task_queue(message: str) -> TaskQueue:
     return TaskQueue(action_steps=[step])
 
 
-def test_orchestrate_session_completes(monkeypatch):
+def test_orchestrate_session_completes(monkeypatch, tmp_path):
     generate_calls = Counter()
     run_calls = Counter()
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
 
     def fake_generate(*args, **kwargs):
         generate_calls.bump()
         return make_task_queue("say hi")
 
-    def fake_run(task_queue):
+    def fake_run(task_queue, **kwargs):
         run_calls.bump()
         MockSpeaker = get_mock_speaker()
         task_queue.action_steps[0].result = MockSpeaker(content="done")
@@ -146,22 +153,29 @@ def test_orchestrate_session_completes(monkeypatch):
     monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
     monkeypatch.setattr(task_master, "run_action_plan", fake_run)
 
-    task_queue = task_master.orchestrate_session("hello", max_iters=3)
+    task_queue = task_master.orchestrate_session(
+        "hello",
+        max_iters=3,
+        session_id=session_id,
+        session_store=session_store,
+    )
 
     assert task_queue.task_result == "done"
     assert generate_calls.count == 1
     assert run_calls.count == 1
 
 
-def test_orchestrate_session_replans_on_failure(monkeypatch):
+def test_orchestrate_session_replans_on_failure(monkeypatch, tmp_path):
     generate_calls = Counter()
     run_calls = Counter()
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
 
     def fake_generate(*args, **kwargs):
         generate_calls.bump()
         return make_task_queue("say hi")
 
-    def fake_run(task_queue):
+    def fake_run(task_queue, **kwargs):
         run_calls.bump()
         if run_calls.count == 1:
             task_queue.action_steps[0].result = None
@@ -175,22 +189,29 @@ def test_orchestrate_session_replans_on_failure(monkeypatch):
     monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
     monkeypatch.setattr(task_master, "run_action_plan", fake_run)
 
-    task_queue = task_master.orchestrate_session("hello", max_iters=2)
+    task_queue = task_master.orchestrate_session(
+        "hello",
+        max_iters=2,
+        session_id=session_id,
+        session_store=session_store,
+    )
 
     assert task_queue.task_result == "ok"
     assert generate_calls.count == 2
     assert run_calls.count == 2
 
 
-def test_orchestrate_session_max_iters(monkeypatch):
+def test_orchestrate_session_max_iters(monkeypatch, tmp_path):
     generate_calls = Counter()
     run_calls = Counter()
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
 
     def fake_generate(*args, **kwargs):
         generate_calls.bump()
         return make_task_queue("say hi")
 
-    def fake_run(task_queue):
+    def fake_run(task_queue, **kwargs):
         run_calls.bump()
         task_queue.action_steps[0].result = None
         task_queue.task_result = "failed"
@@ -203,6 +224,8 @@ def test_orchestrate_session_max_iters(monkeypatch):
         "hello",
         max_iters=1,
         return_state=True,
+        session_id=session_id,
+        session_store=session_store,
     )
 
     assert task_queue.task_result == "failed"
@@ -210,3 +233,23 @@ def test_orchestrate_session_max_iters(monkeypatch):
     assert state.done_reason == "max_iterations_reached"
     assert generate_calls.count == 1
     assert run_calls.count == 1
+
+
+def test_orchestrate_session_compact(tmp_path):
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
+    session_store.append_event(
+        session_id,
+        {"type": "user", "payload": {"text": "hello"}},
+    )
+
+    task_queue, state = task_master.orchestrate_session(
+        "/compact",
+        return_state=True,
+        session_id=session_id,
+        session_store=session_store,
+    )
+
+    assert state.done is True
+    assert state.done_reason == "compacted"
+    assert task_queue.task_result is not None
