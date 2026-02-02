@@ -106,9 +106,9 @@ requests.post = lambda *args, **kwargs: types.SimpleNamespace(
 )
 sys.modules["requests"] = requests
 
-from core.classes import ActionStep, TaskQueue
-from core.common import get_mock_speaker
-from core import task_master
+from core import task_master  # noqa: E402
+from core.classes import ActionStep, TaskQueue  # noqa: E402
+from core.common import get_mock_speaker  # noqa: E402
 
 
 class Counter:

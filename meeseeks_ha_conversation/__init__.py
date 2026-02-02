@@ -18,19 +18,17 @@ from homeassistant.util import ulid
 
 from .api import MeeseeksApiClient
 from .const import (
-    DOMAIN, LOGGER,
     CONF_BASE_URL,
     CONF_TIMEOUT,
     DEFAULT_TIMEOUT,
+    DOMAIN,
+    LOGGER,
 )
+
 # User-defined imports
 from .coordinator import MeeseeksDataUpdateCoordinator
-from .exceptions import (
-    ApiClientError,
-    ApiCommError,
-    ApiJsonError,
-    ApiTimeoutError
-)
+from .exceptions import ApiClientError
+
 # from .helpers import get_exposed_entities
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

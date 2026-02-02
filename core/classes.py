@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 import abc
-import os
 import json
-from typing import Optional, List, Any
+import os
+from typing import Any, cast
+
+from dotenv import load_dotenv
 
 # Third-party modules
 from langchain_community.document_loaders import JSONLoader
-from langchain_openai import ChatOpenAI
 from langchain_core.pydantic_v1 import BaseModel, Field, validator
+from langchain_openai import ChatOpenAI
 from langfuse.callback import CallbackHandler
-from dotenv import load_dotenv
+
 # User-defined modules
-from core.common import get_logger, get_unique_timestamp, get_mock_speaker
+from core.common import MockSpeaker, get_logger, get_mock_speaker, get_unique_timestamp
 
 load_dotenv()
 logging = get_logger(name="core.classes")
@@ -27,9 +29,12 @@ class ActionStep(BaseModel):
         description="Specify either 'get' or 'set' to indicate the action type."
     )
     action_argument: str = Field(
-        description="Provide details for the action. If 'task', specify the task to perform. If 'talk', include the message to speak to the user."
+        description=(
+            "Provide details for the action. If 'task', specify the task to perform. "
+            "If 'talk', include the message to speak to the user."
+        )
     )
-    result: Optional[Any] = Field(
+    result: Any | None = Field(
         alias="_result",
         default="Not executed yet.",
         description='Private field to persist the action status and other data.'
@@ -38,12 +43,13 @@ class ActionStep(BaseModel):
 
 class TaskQueue(BaseModel):
     """Manages a queue of actions to be performed, tracking their results."""
-    human_message: Optional[str] = Field(
+    human_message: str | None = Field(
         alias="_human_message",
+        default=None,
         description='Human message associated with the task queue.'
     )
-    action_steps: List[ActionStep] = Field(default_factory=list)
-    task_result: Optional[str] = Field(
+    action_steps: list[ActionStep] = Field(default_factory=list)
+    task_result: str | None = Field(
         alias="_task_result",
         default="Not executed yet.",
         description='Store the result for the entire task queue'
@@ -90,12 +96,12 @@ class TaskQueue(BaseModel):
 class OrchestrationState(BaseModel):
     """Track state for the orchestration loop."""
     goal: str
-    plan: List[ActionStep] = Field(default_factory=list)
-    tool_results: List[str] = Field(default_factory=list)
-    open_questions: List[str] = Field(default_factory=list)
+    plan: list[ActionStep] = Field(default_factory=list)
+    tool_results: list[str] = Field(default_factory=list)
+    open_questions: list[str] = Field(default_factory=list)
     done: bool = False
-    done_reason: Optional[str] = None
-    summary: Optional[str] = None
+    done_reason: str | None = None
+    summary: str | None = None
 
 
 class AbstractTool(abc.ABC):
@@ -111,10 +117,20 @@ class AbstractTool(abc.ABC):
         os.makedirs(cache_path, exist_ok=True)
         return os.path.abspath(cache_path)
 
-    def __init__(self, name: str, description: str, model_name: Optional[str] = None, temperature: float = 0.3):
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        model_name: str | None = None,
+        temperature: float = 0.3,
+    ):
         """Initialize the tool with optional model configuration."""
-        self.model_name = model_name or os.getenv(
-            "TOOL_MODEL", os.getenv("DEFAULT_MODEL", "gpt-3.5-turbo"))
+        self.model_name = cast(
+            str,
+            model_name
+            or os.getenv("TOOL_MODEL")
+            or os.getenv("DEFAULT_MODEL", "gpt-3.5-turbo"),
+        )
         self.name = name
         self.description = description
         self._id = f"{name.lower().replace(' ', '_')}_tool"
@@ -128,7 +144,7 @@ class AbstractTool(abc.ABC):
             release=os.getenv("ENVMODE", "Not Specified")
         )
         self.model = ChatOpenAI(
-            openai_api_base=os.getenv("OPENAI_API_BASE"),
+            openai_api_base=os.getenv("OPENAI_API_BASE"),  # type: ignore[call-arg]
             model=self.model_name,
             temperature=temperature
         )
@@ -162,14 +178,14 @@ class AbstractTool(abc.ABC):
         data = loader.load()
         return data
 
-    def _load_rag_documents(self, filenames: List[str]) -> list:
+    def _load_rag_documents(self, filenames: list[str]) -> list:
         rag_documents = []
         for rag_file in filenames:
             data = self._load_rag_json(rag_file)
             rag_documents.extend(data)
         return rag_documents
 
-    def set_state(self, action_step: ActionStep = None) -> "MockSpeaker":
+    def set_state(self, action_step: ActionStep | None = None) -> MockSpeaker:
         """
         An abstract method that subclasses should implement,
         performing the desired action.
@@ -180,7 +196,7 @@ class AbstractTool(abc.ABC):
         MockSpeaker = get_mock_speaker()
         return MockSpeaker(content="Not implemented yet.")
 
-    def get_state(self, action_step: ActionStep = None) -> "MockSpeaker":
+    def get_state(self, action_step: ActionStep | None = None) -> MockSpeaker:
         """
         An abstract method that subclasses should implement,
         performing the desired action.
@@ -191,7 +207,7 @@ class AbstractTool(abc.ABC):
         MockSpeaker = get_mock_speaker()
         return MockSpeaker(content="Not implemented yet.")
 
-    def run(self, action_step: ActionStep) -> str:
+    def run(self, action_step: ActionStep) -> MockSpeaker:
         """
         Executes the action based on the action type.
 
@@ -209,7 +225,7 @@ class AbstractTool(abc.ABC):
 
 
 def create_task_queue(
-    action_data: List[dict] = None, is_example=True
+    action_data: list[dict] | None = None, is_example=True
 ) -> TaskQueue:
     """
     Creates a new TaskQueue object and assigns values from action_data.
@@ -248,7 +264,10 @@ def get_task_master_examples(example_id: int = 0):
             {"action_consumer": "home_assistant_tool", "action_type": "set",
                 "action_argument": "Power on the Heater."},
             {"action_consumer": "talk_to_user_tool", "action_type": "set",
-                "action_argument": "Got it, boss! I'm using Home Assistant to power on the strip lights and the heater."}
+                "action_argument": (
+                    "Got it, boss! I'm using Home Assistant to power on the strip lights "
+                    "and the heater."
+                )}
         ],
         [
             {"action_consumer": "home_assistant_tool", "action_type": "get",

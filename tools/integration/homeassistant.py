@@ -1,20 +1,18 @@
 #!/usr/bin/env python3
 import os
 import re
-from collections import namedtuple
-from typing import Optional, Tuple, List
+from typing import Any
 
-import requests
+import requests  # type: ignore[import-untyped]
 from dotenv import load_dotenv
-from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_core.messages.ai import AIMessage
-from langchain_core.pydantic_v1 import BaseModel, Field, validator
 from langchain.output_parsers import PydanticOutputParser
 from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages.ai import AIMessage
+from langchain_core.pydantic_v1 import BaseModel, Field, validator
 
-from core.common import get_mock_speaker
-from core.common import get_logger, ha_render_system_prompt
 from core.classes import AbstractTool, ActionStep
+from core.common import MockSpeaker, get_logger, get_mock_speaker, ha_render_system_prompt
 
 logging = get_logger(name="tools.integration.homeassistant")
 load_dotenv()
@@ -26,7 +24,7 @@ load_dotenv()
 def cache_monitor(func):
     """Decorator to monitor and update the cache."""
     @staticmethod
-    def sort_by_entity_id(dict_list: List[dict]) -> List[dict]:
+    def sort_by_entity_id(dict_list: list[dict]) -> list[dict]:
         return sorted(dict_list, key=lambda x: x['entity_id'])
 
     def clean_entities(self, forbidden_prefixes, forbidden_substrings):
@@ -57,7 +55,9 @@ def cache_monitor(func):
             if entity['entity_id'].startswith('scene.'):
                 self.cache['entities'][idx].pop('state', None)
 
-            if entity['entity_id'].startswith('sensor.') or entity['entity_id'].startswith('binary_sensor.'):
+            if entity['entity_id'].startswith('sensor.') or entity['entity_id'].startswith(
+                'binary_sensor.'
+            ):
                 self.cache['sensors'].append(entity)
                 self.cache['entities'].pop(idx)
 
@@ -87,7 +87,9 @@ def cache_monitor(func):
 
         # Clean services
         self.cache['services'] = [
-            service for service in self.cache['services'] if service['domain'] in self.cache["allowed_domains"]
+            service
+            for service in self.cache['services']
+            if service['domain'] in self.cache["allowed_domains"]
         ]
 
         # Retrieve entity and sensor IDs
@@ -95,10 +97,15 @@ def cache_monitor(func):
         self.cache['sensor_ids'] = sorted(self.cache['sensor_ids'])
 
         logging.info(
-            "`%s` modified cache to <(len) Entity IDs: %s; (len) Entities: %s; (len) Sensors: %s; (len) Services: %s;>",
-            func.__name__, len(self.cache['entity_ids']),
-            len(self.cache['entities']), len(self.cache['sensors']),
-            len(self.cache['services'])
+            (
+                "`%s` modified cache to <(len) Entity IDs: %s; (len) Entities: %s; "
+                "(len) Sensors: %s; (len) Services: %s;>"
+            ),
+            func.__name__,
+            len(self.cache['entity_ids']),
+            len(self.cache['entities']),
+            len(self.cache['sensors']),
+            len(self.cache['services']),
         )
 
         return result
@@ -106,13 +113,24 @@ def cache_monitor(func):
 
 
 class HomeAssistantCall(BaseModel):
-    cache: Optional[dict] = Field(alias="_ha_cache", default={})
+    cache: dict | None = Field(alias="_ha_cache", default={})
     domain: str = Field(
-        description="The category of the service to call, such as 'light', 'switch', or 'scene'.")
+        description=(
+            "The category of the service to call, such as 'light', 'switch', or 'scene'."
+        )
+    )
     service: str = Field(
-        description="The specific action to perform within the domain, such as 'turn_on', 'turn_off', or 'set_temperature'.")
+        description=(
+            "The specific action to perform within the domain, such as 'turn_on', "
+            "'turn_off', or 'set_temperature'."
+        )
+    )
     entity_id: str = Field(
-        description="The ID of the specific device or entity within the domain to apply the service to, such as 'scene.heater'.")
+        description=(
+            "The ID of the specific device or entity within the domain to apply the "
+            "service to, such as 'scene.heater'."
+        )
+    )
 
     @validator("entity_id", allow_reuse=True)
     # pylint: disable=E0213,W0613
@@ -213,7 +231,13 @@ class HomeAssistant(AbstractTool):
         self._save_json(self.cache["entities"], "entities.json")
         self._save_json(self.cache["sensors"], "sensors.json")
 
-    def call_service(self, domain: str, service: str, entity_id: str, data: Optional[dict] = None) -> Tuple[bool, list]:
+    def call_service(
+        self,
+        domain: str,
+        service: str,
+        entity_id: str,
+        data: dict | None = None,
+    ) -> tuple[bool, list]:
         """Call a service in Home Assistant."""
         if domain not in self.cache["allowed_domains"]:
             raise ValueError(f"Domain does not exist or blacklisted: {domain}")
@@ -243,9 +267,13 @@ class HomeAssistant(AbstractTool):
             messages=[
                 SystemMessage(content=system_prompt),
                 HumanMessage(content="Turn on the lamp lights."),
-                AIMessage(example.json()),
+                AIMessage(content=example.json()),
                 HumanMessagePromptTemplate.from_template(
-                    "The user asked you to `{action_step}`. You must use the information provided to pick the right Home Assistant service call values only considering the current user query.\n\n## Format Instructions\n{format_instructions}\n\n## Home Assistant Entities and Domain-Services\n```\n{context}```\n"
+                    "The user asked you to `{action_step}`. You must use the information "
+                    "provided to pick the right Home Assistant service call values only "
+                    "considering the current user query.\n\n"
+                    "## Format Instructions\n{format_instructions}\n\n"
+                    "## Home Assistant Entities and Domain-Services\n```\n{context}```\n"
                 ),
             ],
             partial_variables={
@@ -260,9 +288,19 @@ class HomeAssistant(AbstractTool):
             messages=[
                 SystemMessage(content=system_prompt),
                 HumanMessage(content="How is the air quality today?"),
-                AIMessage(content="AccuWeather reported today's air quality in your home as good. This level of air quality ensures that the environment is healthy, supporting your daily activities and wellbeing without any air quality-related risks."),
+                AIMessage(
+                    content=(
+                        "AccuWeather reported today's air quality in your home as good. "
+                        "This level of air quality ensures that the environment is healthy, "
+                        "supporting your daily activities and wellbeing without any air "
+                        "quality-related risks."
+                    )
+                ),
                 HumanMessagePromptTemplate.from_template(
-                    "The user asked you to `{action_step}`. You must use the sensor information to answer the user's query. Keep your answer analytical, brief and useful.\n\n## Home Assistant Sensors\n```\n{context}```\n"
+                    "The user asked you to `{action_step}`. You must use the sensor "
+                    "information to answer the user's query. Keep your answer "
+                    "analytical, brief and useful.\n\n"
+                    "## Home Assistant Sensors\n```\n{context}```\n"
                 ),
             ],
             input_variables=["action_step"]
@@ -299,10 +337,10 @@ class HomeAssistant(AbstractTool):
         return answer
 
     def _invoke_service_and_set_state(
-        self, chain: 'langchain_core.runnables.base.RunnableSequence',
+        self, chain: Any,
         rag_documents: list,
         action_step: ActionStep
-    ) -> namedtuple:
+    ) -> MockSpeaker:
         """Invoke the service and set the state."""
         MockSpeaker = get_mock_speaker()
 
@@ -333,7 +371,7 @@ class HomeAssistant(AbstractTool):
             tmp_return_message = f"I received an error - `{err_mesaage}`"
         return MockSpeaker(content=tmp_return_message)
 
-    def set_state(self, action_step: ActionStep) -> "MockSpeaker":
+    def set_state(self, action_step: ActionStep | None = None) -> MockSpeaker:
         """ Predict and call a service for a given action step based
                 on sensor information.
         Args:
@@ -342,6 +380,8 @@ class HomeAssistant(AbstractTool):
         Returns:
             Response from the chain.
         """
+        if action_step is None:
+            raise ValueError("Action step cannot be None.")
         self.update_cache()
         rag_documents = self._load_rag_documents([
             "entities.json", "services.json"
@@ -349,7 +389,7 @@ class HomeAssistant(AbstractTool):
         system_prompt = ha_render_system_prompt(
             name="homeassistant-set-state", all_entities=self.cache["entity_ids"])
 
-        parser = PydanticOutputParser(pydantic_object=HomeAssistantCall)
+        parser = PydanticOutputParser(pydantic_object=HomeAssistantCall)  # type: ignore[type-var]
         prompt = self._create_set_prompt(system_prompt, parser)
         chain = prompt | self.model | parser
 
@@ -359,7 +399,7 @@ class HomeAssistant(AbstractTool):
         return self._invoke_service_and_set_state(
             chain, rag_documents, action_step)
 
-    def get_state(self, action_step: ActionStep) -> "MockSpeaker":
+    def get_state(self, action_step: ActionStep | None = None) -> MockSpeaker:
         """ Generate response for a given action step based
                 on sensor information.
         Args:
@@ -368,6 +408,8 @@ class HomeAssistant(AbstractTool):
         Returns:
             Response from the chain.
         """
+        if action_step is None:
+            raise ValueError("Action step cannot be None.")
         self.update_cache()
         rag_documents = self._load_rag_documents(["sensors.json"])
 
@@ -384,9 +426,9 @@ class HomeAssistant(AbstractTool):
                 "context": rag_documents,
             },
         )
-        # Remove newline characters in the message.content
-        message.content = self._clean_answer(message.content)
-        return message
+        cleaned_message = self._clean_answer(str(message.content))
+        MockSpeaker = get_mock_speaker()
+        return MockSpeaker(content=cleaned_message)
 
 
 def test_homeassistant():

@@ -1,27 +1,26 @@
 #!/usr/bin/env python3
 
 # Standard library modules
-import warnings
-from typing import List, Tuple, Union
 import os
+import warnings
+from typing import cast
+
+from dotenv import load_dotenv
+from langchain.output_parsers import PydanticOutputParser
 
 # Third-party modules
 from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
-from langchain.output_parsers import PydanticOutputParser
-from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_core.messages.ai import AIMessage
 from langchain_core._api.beta_decorator import LangChainBetaWarning
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages.ai import AIMessage
 from langchain_openai import ChatOpenAI
 from langfuse.callback import CallbackHandler
-from dotenv import load_dotenv
 
 # User-defined modules
-from core.classes import TaskQueue, get_task_master_examples, OrchestrationState
-from core.common import get_unique_timestamp
-from core.common import get_logger, get_system_prompt
-from core.common import num_tokens_from_string
-from tools.integration.homeassistant import HomeAssistant
+from core.classes import OrchestrationState, TaskQueue, get_task_master_examples
+from core.common import get_logger, get_system_prompt, get_unique_timestamp, num_tokens_from_string
 from tools.core.talk_to_user import TalkToUser
+from tools.integration.homeassistant import HomeAssistant
 
 logging = get_logger(name="core.task_master")
 
@@ -31,7 +30,7 @@ warnings.simplefilter("ignore", LangChainBetaWarning)
 load_dotenv()
 
 
-def generate_action_plan(user_query: str, model_name: str = None) -> List[dict]:
+def generate_action_plan(user_query: str, model_name: str | None = None) -> TaskQueue:
     """
     Use the LangChain pipeline to generate an action plan based on the user query.
 
@@ -55,16 +54,20 @@ def generate_action_plan(user_query: str, model_name: str = None) -> List[dict]:
         release=release
     )
 
-    model_name = model_name or os.getenv(
-        "ACTION_PLAN_MODEL", os.getenv("DEFAULT_MODEL", "gpt-3.5-turbo"))
+    model_name = cast(
+        str,
+        model_name
+        or os.getenv("ACTION_PLAN_MODEL")
+        or os.getenv("DEFAULT_MODEL", "gpt-3.5-turbo"),
+    )
 
     model = ChatOpenAI(
-        openai_api_base=os.getenv("OPENAI_API_BASE"),
+        openai_api_base=os.getenv("OPENAI_API_BASE"),  # type: ignore[call-arg]
         model=model_name,
         temperature=0.4
     )
 
-    parser = PydanticOutputParser(pydantic_object=TaskQueue)
+    parser = PydanticOutputParser(pydantic_object=TaskQueue)  # type: ignore[type-var]
     logging.debug(
         "Generating action plan <model='%s'; user_query='%s'>", model_name, user_query)
 
@@ -72,11 +75,14 @@ def generate_action_plan(user_query: str, model_name: str = None) -> List[dict]:
         messages=[
             SystemMessage(content=get_system_prompt()),
             HumanMessage(content="Turn on strip lights and heater."),
-            AIMessage(get_task_master_examples(example_id=0)),
+            AIMessage(content=get_task_master_examples(example_id=0)),
             HumanMessage(content="What is the weather today?"),
-            AIMessage(get_task_master_examples(example_id=1)),
+            AIMessage(content=get_task_master_examples(example_id=1)),
             HumanMessagePromptTemplate.from_template(
-                "## Format Instructions\n{format_instructions}\n## Generate a task queue for the user query\n{user_query}"
+                
+                    "## Format Instructions\n{format_instructions}\n"
+                    "## Generate a task queue for the user query\n{user_query}"
+                
             ),
         ],
         partial_variables={
@@ -144,11 +150,11 @@ def _action_steps_complete(task_queue: TaskQueue) -> bool:
 
 def orchestrate_session(
     user_query: str,
-    model_name: str = None,
+    model_name: str | None = None,
     max_iters: int = 3,
-    initial_task_queue: TaskQueue = None,
+    initial_task_queue: TaskQueue | None = None,
     return_state: bool = False,
-) -> Union[TaskQueue, Tuple[TaskQueue, OrchestrationState]]:
+) -> TaskQueue | tuple[TaskQueue, OrchestrationState]:
     """
     Orchestrate a session using a plan-act-observe-decide loop.
     """

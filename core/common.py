@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
-import time
-import os
-from collections import namedtuple
 import logging as logging_real
-from jinja2 import Environment, FileSystemLoader
+import os
+import time
+from typing import NamedTuple
+
 import coloredlogs
 import tiktoken
+from jinja2 import Environment, FileSystemLoader
 
 
-def get_mock_speaker() -> namedtuple:
-    """ Return a mock speaker for testing. """
-    return namedtuple('MockSpeaker', 'content')
+class MockSpeaker(NamedTuple):
+    content: str
+
+
+def get_mock_speaker() -> type[MockSpeaker]:
+    """Return a mock speaker for testing."""
+    return MockSpeaker
 
 
 def get_logger(name=None) -> logging_real.Logger:
@@ -76,7 +81,7 @@ def get_system_prompt(name: str = "action-planner") -> str:
     logging = get_logger(name="core.common.get_system_prompt")
     system_prompt_path = os.path.join(
         os.path.dirname(__file__), "..", "prompts", f"{name}.txt")
-    with open(system_prompt_path, "r", encoding="utf-8") as system_prompt_file:
+    with open(system_prompt_path, encoding="utf-8") as system_prompt_file:
         system_prompt = system_prompt_file.read()
     logging.debug("Getting system prompt from `%s`", system_prompt_path)
     del logging

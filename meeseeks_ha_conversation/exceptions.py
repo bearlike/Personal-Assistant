@@ -1,6 +1,7 @@
 """The exceptions used by Extended OpenAI Conversation."""
 from homeassistant.exceptions import HomeAssistantError
 
+
 class ApiClientError(HomeAssistantError):
     """Exception to indicate a general API error."""
 

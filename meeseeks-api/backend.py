@@ -12,21 +12,21 @@ as a JSON response.
 import os
 import sys
 from copy import deepcopy
-from typing import Dict
+
+from dotenv import load_dotenv
 
 # Third-party modules
 from flask import Flask, request
 from flask_restx import Api, Resource, fields
-from dotenv import load_dotenv
 
 # Adding the parent directory to the path before importing the custom modules
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 # Custom imports - Meeseeks core modules
 if True:
-    from core.task_master import orchestrate_session
     from core.classes import TaskQueue
     from core.common import get_logger
+    from core.task_master import orchestrate_session
 
 # Load environment variables
 load_dotenv()
@@ -102,7 +102,7 @@ class MeeseeksQuery(Resource):
     @api.response(200, 'Success', task_queue_model)
     @api.response(400, 'Invalid input')
     @api.response(401, 'Unauthorized')
-    def post(self) -> Dict:
+    def post(self) -> tuple[dict, int]:
         """
         Process a user query, generate and execute the action plan,
         and return the result as a JSON.
@@ -121,7 +121,8 @@ class MeeseeksQuery(Resource):
             return {"message": "Unauthorized"}, 401
 
         # Get user query from request data
-        user_query = request.json.get('query')
+        request_data = request.get_json(silent=True) or {}
+        user_query = request_data.get('query')
         if not user_query:
             return {"message": "Invalid input: 'query' is required"}, 400
 

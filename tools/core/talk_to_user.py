@@ -7,9 +7,11 @@
 
 # Third-party modules
 from dotenv import load_dotenv
+
+from core.classes import AbstractTool, ActionStep
+
 # User-defined modules
-from core.common import get_logger, get_mock_speaker
-from core.classes import ActionStep, AbstractTool
+from core.common import MockSpeaker, get_logger, get_mock_speaker
 
 load_dotenv()
 logging = get_logger(name="tools.core.talk_to_user")
@@ -24,7 +26,7 @@ class TalkToUser(AbstractTool):
             description="Directly talk to the user."
         )
 
-    def set_state(self, action_step: ActionStep) -> "MockSpeaker":
+    def set_state(self, action_step: ActionStep | None = None) -> MockSpeaker:
         """
         An abstract method that subclasses should implement,
         performing the desired action.
@@ -32,6 +34,8 @@ class TalkToUser(AbstractTool):
         Returns:
             str: A message indicating the result of the action.
         """
+        if action_step is None:
+            raise ValueError("Action step cannot be None.")
         MockSpeaker = get_mock_speaker()
         return MockSpeaker(content=action_step.action_argument)
 

@@ -1,18 +1,16 @@
 """ Meeseeks API Client. """
 from __future__ import annotations
 
+import json
+from typing import Any
+
 import aiohttp
 import async_timeout
-import json
+
+from .const import LOGGER
 
 # User-defined imports
-from .exceptions import (
-    ApiClientError,
-    ApiCommError,
-    ApiJsonError,
-    ApiTimeoutError
-)
-from .const import LOGGER
+from .exceptions import ApiJsonError
 
 
 class MeeseeksApiClient:
@@ -35,7 +33,7 @@ class MeeseeksApiClient:
         # TODO: Implement a heartbeat check
         return True
 
-    async def async_get_models(self) -> any:
+    async def async_get_models(self) -> Any:
         """Get models from the API."""
         # TODO: This is monkey-patched for now
         response_data = {
@@ -50,8 +48,10 @@ class MeeseeksApiClient:
         }
         return json.dumps(response_data)
 
-    async def async_generate(self, data: dict | None = None,) -> any:
+    async def async_generate(self, data: dict | None = None) -> Any:
         """Generate a completion from the API."""
+        if not data or "prompt" not in data:
+            raise ValueError("Missing prompt in request data.")
         url_query = f"{self._base_url}/api/query"
         data_custom = {
             'query': str(data["prompt"]).strip(),
@@ -71,7 +71,7 @@ class MeeseeksApiClient:
         data: dict | None = None,
         headers: dict | None = None,
         decode_json: bool = True,
-    ) -> any:
+    ) -> Any:
         """Get information from the API."""
         if headers is None:
             headers = {

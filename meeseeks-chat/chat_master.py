@@ -10,9 +10,10 @@ through a chat interface.
 # streamlit run chat_master.py
 """
 # Standard library modules
-import time
 import os
 import sys
+import time
+
 # Third-party modules
 import streamlit as st
 from langchain.memory import ConversationBufferWindowMemory
@@ -22,9 +23,9 @@ from langchain.memory import ConversationBufferWindowMemory
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 # Custom imports - Meeseeks core modules
-from core.task_master import generate_action_plan, orchestrate_session
-from core.common import get_logger
 from core.classes import TaskQueue
+from core.common import get_logger
+from core.task_master import generate_action_plan, orchestrate_session
 
 logging = get_logger(name="Meeseeks-Chat")
 
@@ -42,17 +43,16 @@ def generate_action_plan_helper(user_input: str):
 
 
 def run_action_plan_helper(task_queue: TaskQueue):
-    ai_response = []
+    responses: list[str] = []
     task_queue = orchestrate_session(
         user_query=task_queue.human_message or "",
         model_name=None,
         initial_task_queue=task_queue,
     )
     for action_step in task_queue.action_steps:
-        ai_response.append(action_step.result.content)
+        responses.append(action_step.result.content)
 
-    ai_response = " ".join(ai_response)
-    return ai_response
+    return " ".join(responses)
 
 
 def main():

@@ -3,63 +3,30 @@ from __future__ import annotations
 
 import types
 from typing import Any
-import voluptuous as vol
 
+import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
-from homeassistant.helpers.selector import (
-    NumberSelector,
-    NumberSelectorConfig,
-    TemplateSelector,
-    SelectSelector,
-    SelectSelectorConfig,
-    SelectSelectorMode,
-    SelectOptionDict
-)
+
 # User-defined imports
 from .api import MeeseeksApiClient
 from .const import (
-    DOMAIN, LOGGER,
-    MENU_OPTIONS,
-
-    CONF_BASE_URL,
     CONF_API_KEY,
-    CONF_TIMEOUT,
+    CONF_BASE_URL,
     CONF_MODEL,
-    CONF_CTX_SIZE,
-    CONF_MAX_TOKENS,
-    CONF_MIROSTAT_MODE,
-    CONF_MIROSTAT_ETA,
-    CONF_MIROSTAT_TAU,
-    CONF_TEMPERATURE,
-    CONF_REPEAT_PENALTY,
-    CONF_TOP_K,
-    CONF_TOP_P,
     CONF_PROMPT_SYSTEM,
-
-    DEFAULT_BASE_URL,
+    CONF_TIMEOUT,
     DEFAULT_API_KEY,
-    DEFAULT_TIMEOUT,
+    DEFAULT_BASE_URL,
     DEFAULT_MODEL,
-    DEFAULT_CTX_SIZE,
-    DEFAULT_MAX_TOKENS,
-    DEFAULT_MIROSTAT_MODE,
-    DEFAULT_MIROSTAT_ETA,
-    DEFAULT_MIROSTAT_TAU,
-    DEFAULT_TEMPERATURE,
-    DEFAULT_REPEAT_PENALTY,
-    DEFAULT_TOP_K,
-    DEFAULT_TOP_P,
-    DEFAULT_PROMPT_SYSTEM
+    DEFAULT_PROMPT_SYSTEM,
+    DEFAULT_TIMEOUT,
+    DOMAIN,
+    LOGGER,
+    MENU_OPTIONS,
 )
-from .exceptions import (
-    ApiClientError,
-    ApiCommError,
-    ApiTimeoutError
-)
-
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
@@ -80,7 +47,7 @@ DEFAULT_OPTIONS = types.MappingProxyType(
 )
 
 
-class MeeseeksConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class MeeseeksConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
     """Handle a config flow for Meeseeks Conversation. Handles UI wizard."""
 
     VERSION = 1

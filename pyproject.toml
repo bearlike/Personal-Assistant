@@ -29,6 +29,36 @@ flake8 = "^7.0.0"
 pytest = "^8.2.0"
 autopep8 = "^2.1.0"
 pylint = "^3.1.0"
+ruff = "^0.6.9"
+mypy = "^1.11.2"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = [
+  "meeseeks_ha_conversation/translations",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+fixable = ["ALL"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+
+[tool.mypy]
+files = [
+  "core/**/*.py",
+  "tools/**/*.py",
+  "meeseeks_ha_conversation/**/*.py",
+]
+explicit_package_bases = true
+mypy_path = ["."]
+python_version = "3.10"
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
 
 [tool.poetry.extras]
 api = ["meeseeks-api"]
