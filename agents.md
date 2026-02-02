@@ -19,9 +19,12 @@ Meeseeks is a multi‑agent LLM personal assistant that decomposes user requests
 
 ## Engineering principles (project‑specific)
 - KISS and DRY: prefer small, obvious changes; remove redundancy instead of adding layers.
+- KRY: keep requirements and acceptance criteria in view; do not drift.
 - Keep tool contracts stable (`AbstractTool`, `ActionStep`, `TaskQueue`).
 - Favor composition and reuse across interfaces; avoid duplicating core logic.
 - Add or improve tests for non‑trivial behavior; expand coverage when touching core logic or tools.
+ - Use Gitmoji + Conventional Commit format (e.g., `✨ feat: add session summary pass-through`).
+ - Do not push unless explicitly requested.
 
 ## Testing & running (common paths)
 - Tests live under `tests/` (use `pytest`).
