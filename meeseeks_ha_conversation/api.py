@@ -56,6 +56,9 @@ class MeeseeksApiClient:
         data_custom = {
             'query': str(data["prompt"]).strip(),
         }
+        session_id = data.get("session_id") if isinstance(data, dict) else None
+        if session_id:
+            data_custom["session_id"] = session_id
         # Pass headers as None to use the default headers
         return await self._meeseeks_api_wrapper(
             method="post",

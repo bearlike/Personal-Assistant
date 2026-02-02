@@ -108,6 +108,7 @@ class MeeseeksAgent(conversation.AbstractConversationAgent):
             messages = {
                 "system": system_prompt,
                 "context": None,
+                "session_id": None,
             }
 
         messages["prompt"] = user_input.text
@@ -127,6 +128,7 @@ class MeeseeksAgent(conversation.AbstractConversationAgent):
             )
 
         messages["context"] = response["context"]
+        messages["session_id"] = response.get("session_id")
         self.history[conversation_id] = messages
 
         intent_response = intent.IntentResponse(language=user_input.language)
@@ -160,6 +162,7 @@ class MeeseeksAgent(conversation.AbstractConversationAgent):
             "context": messages["context"],
             "system": messages["system"],
             "prompt": messages["prompt"],
+            "session_id": messages.get("session_id"),
         })
         response: str = result["task_result"]
         LOGGER.debug("Response %s", response)
