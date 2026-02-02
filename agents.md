@@ -32,6 +32,8 @@ Meeseeks is a multi‑agent LLM personal assistant that decomposes user requests
 - Primary linting uses `ruff` (root + subpackages). Auto-fix with `poetry run ruff check --fix .`.
 - Type checking uses `mypy`. Run from repo root for core/tools/HA, and run inside `meeseeks-api/` or `meeseeks-chat/` for those components.
 - `flake8`, `pylint`, and `autopep8` are still available as dev tools (legacy or ad‑hoc use).
+- Helper targets: `make lint`, `make lint-fix`, and `make typecheck`.
+- Pre-commit hooks are defined in `.pre-commit-config.yaml` (install with `make precommit-install`).
 
 ## Expectations for agents
 - Start with DeepWiki for overview, then verify details in code.
