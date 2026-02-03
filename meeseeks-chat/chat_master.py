@@ -25,6 +25,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 # Custom imports - Meeseeks core modules
 from core.classes import TaskQueue
 from core.common import get_logger
+from core.permissions import auto_approve
 from core.session_store import SessionStore
 from core.task_master import generate_action_plan, orchestrate_session
 
@@ -51,6 +52,7 @@ def run_action_plan_helper(task_queue: TaskQueue):
         initial_task_queue=task_queue,
         session_id=st.session_state.session_id,
         session_store=st.session_state.session_store,
+        approval_callback=auto_approve,
     )
     for action_step in task_queue.action_steps:
         responses.append(action_step.result.content)

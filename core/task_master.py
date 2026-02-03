@@ -3,6 +3,7 @@
 # Standard library modules
 import os
 import warnings
+from collections.abc import Callable
 from typing import cast
 
 from dotenv import load_dotenv
@@ -26,7 +27,15 @@ from core.common import (
     num_tokens_from_string,
 )
 from core.compaction import should_compact, summarize_events
+from core.hooks import HookManager, default_hook_manager
+from core.permissions import (
+    PermissionDecision,
+    PermissionPolicy,
+    approval_callback_from_env,
+    load_permission_policy,
+)
 from core.session_store import SessionStore
+from core.token_budget import get_token_budget
 from core.tool_registry import ToolRegistry, load_registry
 
 logging = get_logger(name="core.task_master")
@@ -161,6 +170,9 @@ def run_action_plan(
     task_queue: TaskQueue,
     tool_registry: ToolRegistry | None = None,
     event_logger=None,
+    permission_policy: PermissionPolicy | None = None,
+    approval_callback: Callable[[ActionStep], bool] | None = None,
+    hook_manager: HookManager | None = None,
 ) -> TaskQueue:
     """
     Run the generated action plan.
@@ -173,23 +185,76 @@ def run_action_plan(
     """
     if tool_registry is None:
         tool_registry = load_registry()
+    if permission_policy is None:
+        permission_policy = load_permission_policy()
+    if approval_callback is None:
+        approval_callback = approval_callback_from_env()
+    if hook_manager is None:
+        hook_manager = default_hook_manager()
 
     results = []
 
-    for action_step in task_queue.action_steps:
-        logging.debug(f"Processing ActionStep: {action_step}")
+    for idx, action_step in enumerate(task_queue.action_steps):
+        logging.debug("Processing ActionStep: %s", action_step)
+        decision = permission_policy.decide(action_step)
+        decision = hook_manager.run_permission_request(action_step, decision)
+        decision_logged = False
+        if decision == PermissionDecision.ASK:
+            approved = approval_callback(action_step) if approval_callback else False
+            decision = PermissionDecision.ALLOW if approved else PermissionDecision.DENY
+            if event_logger is not None:
+                event_logger(
+                    {
+                        "type": "permission",
+                        "payload": {
+                            "action_consumer": action_step.action_consumer,
+                            "action_type": action_step.action_type,
+                            "action_argument": action_step.action_argument,
+                            "decision": decision.value,
+                        },
+                    }
+                )
+                decision_logged = True
+        if decision == PermissionDecision.DENY:
+            MockSpeaker = get_mock_speaker()
+            message = (
+                "Permission denied for "
+                f"{action_step.action_consumer}:{action_step.action_type}."
+            )
+            action_step.result = MockSpeaker(content=message)
+            results.append(message)
+            if event_logger is not None and not decision_logged:
+                event_logger(
+                    {
+                        "type": "permission",
+                        "payload": {
+                            "action_consumer": action_step.action_consumer,
+                            "action_type": action_step.action_type,
+                            "action_argument": action_step.action_argument,
+                            "decision": decision.value,
+                        },
+                    }
+                )
+            continue
+
+        action_step = hook_manager.run_pre_tool_use(action_step)
+        task_queue.action_steps[idx] = action_step
         tool = tool_registry.get(action_step.action_consumer)
 
         if tool is None:
             logging.error(
-                f"No tool found for consumer: {action_step.action_consumer}")
+                "No tool found for consumer: %s", action_step.action_consumer
+            )
             continue
 
         try:
             action_result = tool.run(action_step)
+            action_result = hook_manager.run_post_tool_use(action_step, action_result)
             action_step.result = action_result
-            results.append(
-                action_result.content if action_result.content is not None else "")
+            content = getattr(action_result, "content", None)
+            if content is None:
+                content = "" if action_result is None else str(action_result)
+            results.append(content)
             if event_logger is not None:
                 event_logger(
                     {
@@ -198,7 +263,7 @@ def run_action_plan(
                             "action_consumer": action_step.action_consumer,
                             "action_type": action_step.action_type,
                             "action_argument": action_step.action_argument,
-                            "result": action_result.content,
+                            "result": content,
                         },
                     }
                 )
@@ -228,6 +293,23 @@ def _action_steps_complete(task_queue: TaskQueue) -> bool:
     return all(step.result is not None for step in task_queue.action_steps)
 
 
+def _maybe_auto_compact(
+    session_store: SessionStore,
+    session_id: str,
+    model_name: str | None,
+    hook_manager: HookManager,
+) -> str | None:
+    events = session_store.load_transcript(session_id)
+    events = hook_manager.run_pre_compact(events)
+    summary = session_store.load_summary(session_id)
+    budget = get_token_budget(events, summary, model_name)
+    if budget.needs_compact or should_compact(events):
+        summary = summarize_events(events)
+        session_store.save_summary(session_id, summary)
+        return summary
+    return None
+
+
 def orchestrate_session(
     user_query: str,
     model_name: str | None = None,
@@ -237,6 +319,9 @@ def orchestrate_session(
     session_id: str | None = None,
     session_store: SessionStore | None = None,
     tool_registry: ToolRegistry | None = None,
+    permission_policy: PermissionPolicy | None = None,
+    approval_callback: Callable[[ActionStep], bool] | None = None,
+    hook_manager: HookManager | None = None,
 ) -> TaskQueue | tuple[TaskQueue, OrchestrationState]:
     """
     Orchestrate a session using a plan-act-observe-decide loop.
@@ -256,8 +341,19 @@ def orchestrate_session(
         state.tool_results = []
     if state.open_questions is None:
         state.open_questions = []
+    if hook_manager is None:
+        hook_manager = default_hook_manager()
 
     session_store.append_event(session_id, {"type": "user", "payload": {"text": user_query}})
+
+    updated_summary = _maybe_auto_compact(
+        session_store,
+        session_id,
+        model_name,
+        hook_manager,
+    )
+    if updated_summary:
+        state.summary = updated_summary
 
     if user_query.strip() == "/compact":
         events = session_store.load_transcript(session_id)
@@ -305,6 +401,9 @@ def orchestrate_session(
             task_queue,
             tool_registry=tool_registry,
             event_logger=lambda event: session_store.append_event(session_id, event),
+            permission_policy=permission_policy,
+            approval_callback=approval_callback,
+            hook_manager=hook_manager,
         )
         state.tool_results.append(task_queue.task_result or "")
 
@@ -358,10 +457,14 @@ def orchestrate_session(
     )
 
     events = session_store.load_transcript(session_id)
-    if should_compact(events):
-        summary = summarize_events(events)
-        session_store.save_summary(session_id, summary)
-        state.summary = summary
+    updated_summary = _maybe_auto_compact(
+        session_store,
+        session_id,
+        model_name,
+        hook_manager,
+    )
+    if updated_summary:
+        state.summary = updated_summary
 
     if return_state:
         return task_queue, state

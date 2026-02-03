@@ -26,6 +26,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 if True:
     from core.classes import TaskQueue
     from core.common import get_logger
+    from core.permissions import auto_approve
     from core.session_store import SessionStore
     from core.task_master import orchestrate_session
 
@@ -155,6 +156,7 @@ class MeeseeksQuery(Resource):
             user_query=user_query,
             session_id=session_id,
             session_store=session_store,
+            approval_callback=auto_approve,
         )
         # Deep copy the variable into another variable
         task_result = deepcopy(task_queue.task_result)

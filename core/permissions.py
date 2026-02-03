@@ -1,0 +1,164 @@
+#!/usr/bin/env python3
+"""Permission policies for tool execution."""
+from __future__ import annotations
+
+import json
+import os
+from collections.abc import Callable
+from dataclasses import dataclass
+from enum import Enum
+from fnmatch import fnmatch
+
+import tomllib
+
+from core.classes import ActionStep
+from core.common import get_logger
+
+logging = get_logger(name="core.permissions")
+
+
+class PermissionDecision(str, Enum):
+    ALLOW = "allow"
+    DENY = "deny"
+    ASK = "ask"
+
+
+@dataclass(frozen=True)
+class PermissionRule:
+    tool_id: str = "*"
+    action_type: str = "*"
+    decision: PermissionDecision = PermissionDecision.ASK
+
+    def matches(self, action_step: ActionStep) -> bool:
+        return fnmatch(action_step.action_consumer, self.tool_id) and fnmatch(
+            action_step.action_type, self.action_type
+        )
+
+
+class PermissionPolicy:
+    def __init__(
+        self,
+        rules: list[PermissionRule] | None = None,
+        default_by_action: dict[str, PermissionDecision] | None = None,
+        default_decision: PermissionDecision = PermissionDecision.ASK,
+    ) -> None:
+        self._rules = rules or []
+        self._default_by_action = default_by_action or {}
+        self._default_decision = default_decision
+
+    def decide(self, action_step: ActionStep) -> PermissionDecision:
+        for rule in self._rules:
+            if rule.matches(action_step):
+                return rule.decision
+        action_decision = self._default_by_action.get(action_step.action_type)
+        if action_decision is not None:
+            return action_decision
+        return self._default_decision
+
+
+def _parse_decision(value: str | None) -> PermissionDecision | None:
+    if value is None:
+        return None
+    value = value.strip().lower()
+    for decision in PermissionDecision:
+        if decision.value == value:
+            return decision
+    return None
+
+
+def _default_policy() -> PermissionPolicy:
+    rules = [
+        PermissionRule(
+            tool_id="talk_to_user_tool",
+            action_type="*",
+            decision=PermissionDecision.ALLOW,
+        )
+    ]
+    default_by_action = {
+        "get": PermissionDecision.ALLOW,
+        "set": PermissionDecision.ASK,
+    }
+    return PermissionPolicy(
+        rules=rules,
+        default_by_action=default_by_action,
+        default_decision=PermissionDecision.ASK,
+    )
+
+
+def _load_policy_data(path: str) -> dict:
+    with open(path, "rb") as handle:
+        if path.endswith(".toml"):
+            return tomllib.load(handle)
+        return json.load(handle)
+
+
+def load_permission_policy(path: str | None = None) -> PermissionPolicy:
+    if path is None:
+        path = os.getenv("MESEEKS_PERMISSION_POLICY")
+    if not path:
+        return _default_policy()
+    if not os.path.exists(path):
+        logging.warning("Permission policy file not found: %s", path)
+        return _default_policy()
+    try:
+        payload = _load_policy_data(path)
+    except (json.JSONDecodeError, OSError, tomllib.TOMLDecodeError) as exc:
+        logging.warning("Failed to load permission policy: %s", exc)
+        return _default_policy()
+
+    rules: list[PermissionRule] = []
+    for rule_data in payload.get("rules", []):
+        decision = _parse_decision(rule_data.get("decision"))
+        if decision is None:
+            continue
+        rules.append(
+            PermissionRule(
+                tool_id=str(rule_data.get("tool_id", "*")),
+                action_type=str(rule_data.get("action_type", "*")),
+                decision=decision,
+            )
+        )
+
+    default_by_action: dict[str, PermissionDecision] = {}
+    for key, value in payload.get("default_by_action", {}).items():
+        parsed = _parse_decision(str(value))
+        if parsed is not None:
+            default_by_action[str(key)] = parsed
+
+    default_decision = _parse_decision(payload.get("default_decision"))
+    if default_decision is None:
+        default_decision = PermissionDecision.ASK
+
+    return PermissionPolicy(
+        rules=rules,
+        default_by_action=default_by_action,
+        default_decision=default_decision,
+    )
+
+
+def approval_callback_from_env() -> Callable[[ActionStep], bool] | None:
+    mode = os.getenv("MESEEKS_APPROVAL_MODE", "").strip().lower()
+    if mode in {"allow", "auto", "approve", "yes"}:
+        return lambda _: True
+    if mode in {"deny", "never", "no"}:
+        return lambda _: False
+    return None
+
+
+def auto_approve(_: ActionStep) -> bool:
+    return True
+
+
+def auto_deny(_: ActionStep) -> bool:
+    return False
+
+
+__all__ = [
+    "PermissionDecision",
+    "PermissionPolicy",
+    "PermissionRule",
+    "approval_callback_from_env",
+    "auto_approve",
+    "auto_deny",
+    "load_permission_policy",
+]
