@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 import re
 from collections.abc import Callable
-from typing import Any, Concatenate, ParamSpec, Protocol, TypedDict, TypeVar
+from typing import Any, Concatenate, ParamSpec, Protocol, TypedDict, TypeVar, runtime_checkable
 
 import requests
 from dotenv import load_dotenv
@@ -41,6 +41,7 @@ class HomeAssistantCache(TypedDict):
     sensor: NotRequired[list[dict[str, Any]]]
 
 
+@runtime_checkable
 class CacheHolder(Protocol):
     cache: HomeAssistantCache
 
