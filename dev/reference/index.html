@@ -13048,9 +13048,7 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>core/task_master.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">533</span>
-<span class="normal">534</span>
-<span class="normal">535</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">535</span>
 <span class="normal">536</span>
 <span class="normal">537</span>
 <span class="normal">538</span>
@@ -13173,7 +13171,9 @@
 <span class="normal">655</span>
 <span class="normal">656</span>
 <span class="normal">657</span>
-<span class="normal">658</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">generate_action_plan</span><span class="p">(</span>
+<span class="normal">658</span>
+<span class="normal">659</span>
+<span class="normal">660</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">generate_action_plan</span><span class="p">(</span>
     <span class="n">user_query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">tool_registry</span><span class="p">:</span> <span class="n">ToolRegistry</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -13563,9 +13563,7 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>core/task_master.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 878</span>
-<span class="normal"> 879</span>
-<span class="normal"> 880</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 880</span>
 <span class="normal"> 881</span>
 <span class="normal"> 882</span>
 <span class="normal"> 883</span>
@@ -13811,7 +13809,9 @@
 <span class="normal">1123</span>
 <span class="normal">1124</span>
 <span class="normal">1125</span>
-<span class="normal">1126</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">orchestrate_session</span><span class="p">(</span>
+<span class="normal">1126</span>
+<span class="normal">1127</span>
+<span class="normal">1128</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">orchestrate_session</span><span class="p">(</span>
     <span class="n">user_query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">max_iters</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
@@ -14237,9 +14237,7 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>core/task_master.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">661</span>
-<span class="normal">662</span>
-<span class="normal">663</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">663</span>
 <span class="normal">664</span>
 <span class="normal">665</span>
 <span class="normal">666</span>
@@ -14411,7 +14409,9 @@
 <span class="normal">832</span>
 <span class="normal">833</span>
 <span class="normal">834</span>
-<span class="normal">835</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">run_action_plan</span><span class="p">(</span>
+<span class="normal">835</span>
+<span class="normal">836</span>
+<span class="normal">837</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">run_action_plan</span><span class="p">(</span>
     <span class="n">task_queue</span><span class="p">:</span> <span class="n">TaskQueue</span><span class="p">,</span>
     <span class="n">tool_registry</span><span class="p">:</span> <span class="n">ToolRegistry</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">event_logger</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Event</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -17546,9 +17546,7 @@ It serves as a minimal example and can be extended with filters or validators.</
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>tools/core/talk_to_user.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">22</span>
-<span class="normal">23</span>
-<span class="normal">24</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">24</span>
 <span class="normal">25</span>
 <span class="normal">26</span>
 <span class="normal">27</span>
@@ -17583,7 +17581,12 @@ It serves as a minimal example and can be extended with filters or validators.</
 <span class="normal">56</span>
 <span class="normal">57</span>
 <span class="normal">58</span>
-<span class="normal">59</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">TalkToUser</span><span class="p">(</span><span class="n">AbstractTool</span><span class="p">):</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">TalkToUser</span><span class="p">(</span><span class="n">AbstractTool</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Tool that returns the user&#39;s message back as the response.&quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -17608,8 +17611,11 @@ It serves as a minimal example and can be extended with filters or validators.</
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">action_step</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Action step cannot be None.&quot;</span><span class="p">)</span>
+        <span class="n">content</span> <span class="o">=</span> <span class="n">action_step</span><span class="o">.</span><span class="n">action_argument</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">content</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">MockSpeaker</span> <span class="o">=</span> <span class="n">get_mock_speaker</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">MockSpeaker</span><span class="p">(</span><span class="n">content</span><span class="o">=</span><span class="n">action_step</span><span class="o">.</span><span class="n">action_argument</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">MockSpeaker</span><span class="p">(</span><span class="n">content</span><span class="o">=</span><span class="n">content</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">get_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action_step</span><span class="p">:</span> <span class="n">ActionStep</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MockSpeaker</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;TalkToUser does not support read operations.</span>
@@ -17653,13 +17659,13 @@ It serves as a minimal example and can be extended with filters or validators.</
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>tools/core/talk_to_user.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">25</span>
-<span class="normal">26</span>
-<span class="normal">27</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">27</span>
 <span class="normal">28</span>
 <span class="normal">29</span>
 <span class="normal">30</span>
-<span class="normal">31</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Initialize the tool metadata.&quot;&quot;&quot;</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
         <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Talk to User&quot;</span><span class="p">,</span>
@@ -17742,16 +17748,16 @@ It serves as a minimal example and can be extended with filters or validators.</
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>tools/core/talk_to_user.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">50</span>
-<span class="normal">51</span>
-<span class="normal">52</span>
-<span class="normal">53</span>
-<span class="normal">54</span>
-<span class="normal">55</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">55</span>
 <span class="normal">56</span>
 <span class="normal">57</span>
 <span class="normal">58</span>
-<span class="normal">59</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action_step</span><span class="p">:</span> <span class="n">ActionStep</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MockSpeaker</span><span class="p">:</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action_step</span><span class="p">:</span> <span class="n">ActionStep</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MockSpeaker</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;TalkToUser does not support read operations.</span>
 
 <span class="sd">    Args:</span>
@@ -17860,9 +17866,7 @@ It serves as a minimal example and can be extended with filters or validators.</
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>tools/core/talk_to_user.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">33</span>
-<span class="normal">34</span>
-<span class="normal">35</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">35</span>
 <span class="normal">36</span>
 <span class="normal">37</span>
 <span class="normal">38</span>
@@ -17875,7 +17879,12 @@ It serves as a minimal example and can be extended with filters or validators.</
 <span class="normal">45</span>
 <span class="normal">46</span>
 <span class="normal">47</span>
-<span class="normal">48</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">set_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action_step</span><span class="p">:</span> <span class="n">ActionStep</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MockSpeaker</span><span class="p">:</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">set_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action_step</span><span class="p">:</span> <span class="n">ActionStep</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MockSpeaker</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the action argument as the response content.</span>
 
 <span class="sd">    Args:</span>
@@ -17889,8 +17898,11 @@ It serves as a minimal example and can be extended with filters or validators.</
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">action_step</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Action step cannot be None.&quot;</span><span class="p">)</span>
+    <span class="n">content</span> <span class="o">=</span> <span class="n">action_step</span><span class="o">.</span><span class="n">action_argument</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">content</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">MockSpeaker</span> <span class="o">=</span> <span class="n">get_mock_speaker</span><span class="p">()</span>
-    <span class="k">return</span> <span class="n">MockSpeaker</span><span class="p">(</span><span class="n">content</span><span class="o">=</span><span class="n">action_step</span><span class="o">.</span><span class="n">action_argument</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">MockSpeaker</span><span class="p">(</span><span class="n">content</span><span class="o">=</span><span class="n">content</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -18718,7 +18730,7 @@ It serves as a minimal example and can be extended with filters or validators.</
         <span class="n">MockSpeaker</span> <span class="o">=</span> <span class="n">get_mock_speaker</span><span class="p">()</span>
 
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">action_step_curr</span> <span class="o">=</span> <span class="n">action_step</span><span class="o">.</span><span class="n">action_argument</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="n">action_step_curr</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">action_step</span><span class="o">.</span><span class="n">action_argument</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
             <span class="n">call_service_values</span> <span class="o">=</span> <span class="n">chain</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span>
                 <span class="p">{</span>
                     <span class="s2">&quot;action_step&quot;</span><span class="p">:</span> <span class="n">action_step_curr</span><span class="p">,</span>
@@ -18807,7 +18819,7 @@ It serves as a minimal example and can be extended with filters or validators.</
                      <span class="bp">self</span><span class="o">.</span><span class="n">model_name</span><span class="p">)</span>
         <span class="n">message</span> <span class="o">=</span> <span class="n">chain</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span>
             <span class="p">{</span>
-                <span class="s2">&quot;action_step&quot;</span><span class="p">:</span> <span class="n">action_step</span><span class="o">.</span><span class="n">action_argument</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span>
+                <span class="s2">&quot;action_step&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">action_step</span><span class="o">.</span><span class="n">action_argument</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span>
                 <span class="s2">&quot;context&quot;</span><span class="p">:</span> <span class="n">rag_documents</span><span class="p">,</span>
             <span class="p">},</span>
         <span class="p">)</span>
@@ -19298,7 +19310,7 @@ It serves as a minimal example and can be extended with filters or validators.</
                  <span class="bp">self</span><span class="o">.</span><span class="n">model_name</span><span class="p">)</span>
     <span class="n">message</span> <span class="o">=</span> <span class="n">chain</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span>
         <span class="p">{</span>
-            <span class="s2">&quot;action_step&quot;</span><span class="p">:</span> <span class="n">action_step</span><span class="o">.</span><span class="n">action_argument</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span>
+            <span class="s2">&quot;action_step&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">action_step</span><span class="o">.</span><span class="n">action_argument</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span>
             <span class="s2">&quot;context&quot;</span><span class="p">:</span> <span class="n">rag_documents</span><span class="p">,</span>
         <span class="p">},</span>
     <span class="p">)</span>
