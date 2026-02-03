@@ -10,8 +10,6 @@
       
       
       
-        <link rel="canonical" href="https://bearlike.github.io/personal-assistant/dev/getting-started/">
-      
       
         <link rel="prev" href="..">
       
@@ -488,8 +486,8 @@
 <h1 id="getting-started">Getting Started</h1>
 <h2 id="prerequisites">Prerequisites</h2>
 <ul>
-<li>Python 3.10+</li>
-<li>A virtual environment tool of your choice</li>
+<li>Python 3.11+</li>
+<li>Poetry (or pip + a virtual environment)</li>
 </ul>
 <h2 id="install-documentation-dependencies">Install documentation dependencies</h2>
 <pre><code class="language-bash">pip install -r requirements-docs.txt
@@ -498,10 +496,10 @@
 <pre><code class="language-bash">export PYTHONPATH=&quot;$PWD&quot;
 mkdocs serve
 </code></pre>
-<p>The documentation will be available at <a href="http://127.0.0.1:8000/">http://127.0.0.1:8000/</a>.</p>
+<p>The documentation will be available at http://127.0.0.1:8000/.</p>
 <h2 id="build-the-docs">Build the docs</h2>
 <pre><code class="language-bash">export PYTHONPATH=&quot;$PWD&quot;
-mkdocs build --strict
+mkdocs build
 </code></pre>
 
 

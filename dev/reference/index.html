@@ -10,8 +10,6 @@
       
       
       
-        <link rel="canonical" href="https://bearlike.github.io/personal-assistant/dev/reference/">
-      
       
         <link rel="prev" href="../getting-started/">
       
@@ -364,6 +362,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#core.common.MockSpeaker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MockSpeaker
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#core.common.get_logger" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -486,6 +495,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#core.common.MockSpeaker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MockSpeaker
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#core.common.get_logger" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -582,6 +602,8 @@
 <a id="core.common"></a>
     <div class="doc doc-contents first">
 
+        <p>Common helpers shared across the assistant runtime.</p>
+
 
 
 
@@ -600,6 +622,96 @@
 
 
 
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="core.common.MockSpeaker" class="doc doc-heading">
+            <code>MockSpeaker</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="typing.NamedTuple">NamedTuple</span></code></p>
+
+
+
+        <p>Simple mock response container used across tools and tests.</p>
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="core.common.MockSpeaker.content">content</span></code></td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Text content returned by a tool.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+              <details class="mkdocstrings-source">
+                <summary>Source code in <code>core/common.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">MockSpeaker</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Simple mock response container used across tools and tests.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        content: Text content returned by a tool.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">content</span><span class="p">:</span> <span class="nb">str</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
 
 
 <div class="doc doc-object doc-function">
@@ -632,11 +744,11 @@
                 <code>name</code>
             </td>
             <td>
-                  <code><span title="str">str</span></code>
+                  <code><span title="str">str</span> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Name of the logger. Defaults to <strong>name</strong>.</p>
+                <p>Name of the logger, defaults to <strong>name</strong>.</p>
               </div>
             </td>
             <td>
@@ -658,11 +770,10 @@
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="logging.Logger">Logger</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>logging.Logger: The logger object.</p>
+                <p>Logger configured with colored output.</p>
               </div>
             </td>
           </tr>
@@ -672,55 +783,31 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>core/common.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">16</span>
-<span class="normal">17</span>
-<span class="normal">18</span>
-<span class="normal">19</span>
-<span class="normal">20</span>
-<span class="normal">21</span>
-<span class="normal">22</span>
-<span class="normal">23</span>
-<span class="normal">24</span>
-<span class="normal">25</span>
-<span class="normal">26</span>
-<span class="normal">27</span>
-<span class="normal">28</span>
-<span class="normal">29</span>
-<span class="normal">30</span>
-<span class="normal">31</span>
-<span class="normal">32</span>
-<span class="normal">33</span>
-<span class="normal">34</span>
-<span class="normal">35</span>
-<span class="normal">36</span>
-<span class="normal">37</span>
-<span class="normal">38</span>
-<span class="normal">39</span>
-<span class="normal">40</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_logger</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">logging_real</span><span class="o">.</span><span class="n">Logger</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot; Get the logger for the module.</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">84</span>
+<span class="normal">85</span>
+<span class="normal">86</span>
+<span class="normal">87</span>
+<span class="normal">88</span>
+<span class="normal">89</span>
+<span class="normal">90</span>
+<span class="normal">91</span>
+<span class="normal">92</span>
+<span class="normal">93</span>
+<span class="normal">94</span>
+<span class="normal">95</span>
+<span class="normal">96</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_logger</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the logger for the module.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        name (str, optional): Name of the logger. Defaults to __name__.</span>
+<span class="sd">        name: Name of the logger, defaults to __name__.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        logging.Logger: The logger object.</span>
+<span class="sd">        Logger configured with colored output.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">logging_real</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">logging_real</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span>
-                             <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">%(asctime)s</span><span class="s1"> - </span><span class="si">%(levelname)s</span><span class="s1"> - </span><span class="si">%(message)s</span><span class="s1">&#39;</span><span class="p">)</span>
-    <span class="n">loggers_to_suppress</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="s1">&#39;request&#39;</span><span class="p">,</span> <span class="s1">&#39;httpcore&#39;</span><span class="p">,</span> <span class="s1">&#39;urllib3.connectionpool&#39;</span><span class="p">,</span> <span class="s1">&#39;openai._base_client&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;aiohttp_client_cache.signatures&#39;</span><span class="p">,</span> <span class="s1">&#39;LangChainDeprecationWarning&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;watchdog.observers.inotify_buffer&#39;</span><span class="p">,</span> <span class="s1">&#39;PIL.PngImagePlugin&#39;</span>
-    <span class="p">]</span>
-    <span class="k">for</span> <span class="n">logger_name</span> <span class="ow">in</span> <span class="n">loggers_to_suppress</span><span class="p">:</span>
-        <span class="n">logging_real</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">logger_name</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging_real</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span>
-
+    <span class="n">_configure_logging</span><span class="p">()</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="p">:</span>
         <span class="n">name</span> <span class="o">=</span> <span class="vm">__name__</span>
-    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging_real</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
-
-    <span class="n">coloredlogs</span><span class="o">.</span><span class="n">install</span><span class="p">(</span><span class="n">logger</span><span class="o">=</span><span class="n">logger</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;LOG_LEVEL&quot;</span><span class="p">,</span> <span class="s2">&quot;ERROR&quot;</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">logger</span>
+    <span class="k">return</span> <span class="n">loguru_logger</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -741,13 +828,44 @@
         <p>Return a mock speaker for testing.</p>
 
 
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="type">type</span>[<a class="autorefs autorefs-internal" title="MockSpeaker (core.common.MockSpeaker)" href="#core.common.MockSpeaker">MockSpeaker</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>MockSpeaker class for constructing responses.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
             <details class="mkdocstrings-source">
               <summary>Source code in <code>core/common.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_mock_speaker</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">namedtuple</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot; Return a mock speaker for testing. &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;MockSpeaker&#39;</span><span class="p">,</span> <span class="s1">&#39;content&#39;</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_mock_speaker</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">type</span><span class="p">[</span><span class="n">MockSpeaker</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a mock speaker for testing.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        MockSpeaker class for constructing responses.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">MockSpeaker</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -768,22 +886,76 @@
         <p>Get the system prompt for the task queue.</p>
 
 
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>name</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Prompt file name without extension.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;action-planner&#39;</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
     <p><span class="doc-section-title">Returns:</span></p>
     <table>
       <thead>
         <tr>
-<th>Name</th>          <th>Type</th>
+          <th>Type</th>
           <th>Description</th>
         </tr>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-<td><code>str</code></td>            <td>
+            <td>
                   <code><span title="str">str</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The system prompt for the task queue.</p>
+                <p>System prompt string.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="OSError">OSError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the prompt file cannot be read.</p>
               </div>
             </td>
           </tr>
@@ -793,31 +965,43 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>core/common.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">70</span>
-<span class="normal">71</span>
-<span class="normal">72</span>
-<span class="normal">73</span>
-<span class="normal">74</span>
-<span class="normal">75</span>
-<span class="normal">76</span>
-<span class="normal">77</span>
-<span class="normal">78</span>
-<span class="normal">79</span>
-<span class="normal">80</span>
-<span class="normal">81</span>
-<span class="normal">82</span>
-<span class="normal">83</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_system_prompt</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;action-planner&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot; Get the system prompt for the task queue.</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span>
+<span class="normal">140</span>
+<span class="normal">141</span>
+<span class="normal">142</span>
+<span class="normal">143</span>
+<span class="normal">144</span>
+<span class="normal">145</span>
+<span class="normal">146</span>
+<span class="normal">147</span>
+<span class="normal">148</span>
+<span class="normal">149</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_system_prompt</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;action-planner&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the system prompt for the task queue.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name: Prompt file name without extension.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        str: The system prompt for the task queue.</span>
+<span class="sd">        System prompt string.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        OSError: If the prompt file cannot be read.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">logging</span> <span class="o">=</span> <span class="n">get_logger</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;core.common.get_system_prompt&quot;</span><span class="p">)</span>
     <span class="n">system_prompt_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
         <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="s2">&quot;..&quot;</span><span class="p">,</span> <span class="s2">&quot;prompts&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.txt&quot;</span><span class="p">)</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">system_prompt_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">system_prompt_file</span><span class="p">:</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">system_prompt_path</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">system_prompt_file</span><span class="p">:</span>
         <span class="n">system_prompt</span> <span class="o">=</span> <span class="n">system_prompt_file</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Getting system prompt from `</span><span class="si">%s</span><span class="s2">`&quot;</span><span class="p">,</span> <span class="n">system_prompt_path</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Getting system prompt from `</span><span class="si">{}</span><span class="s2">`&quot;</span><span class="p">,</span> <span class="n">system_prompt_path</span><span class="p">)</span>
     <span class="k">del</span> <span class="n">logging</span>
     <span class="k">return</span> <span class="n">system_prompt</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
@@ -840,17 +1024,48 @@
         <p>Get a unique timestamp for the task queue.</p>
 
 
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Integer timestamp suitable for unique IDs.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
             <details class="mkdocstrings-source">
               <summary>Source code in <code>core/common.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">60</span>
-<span class="normal">61</span>
-<span class="normal">62</span>
-<span class="normal">63</span>
-<span class="normal">64</span>
-<span class="normal">65</span>
-<span class="normal">66</span>
-<span class="normal">67</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_unique_timestamp</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot; Get a unique timestamp for the task queue. &quot;&quot;&quot;</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_unique_timestamp</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get a unique timestamp for the task queue.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Integer timestamp suitable for unique IDs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Get the number of seconds since epoch (Jan 1, 1970) as a float</span>
     <span class="n">current_timestamp</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span>
     <span class="c1"># Convert it to string for uniqueness and consistency</span>
@@ -874,25 +1089,88 @@
 
     <div class="doc doc-contents ">
 
-        <p>Render the system j2 prompt. Need to make it more generic.</p>
+        <p>Render the Home Assistant Jinja2 system prompt.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>all_entities</code>
+            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional entity list for template substitution.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>env</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Template root directory name.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;prompts&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>name</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Template file name without extension.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;homeassistant-set-state&#39;</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     <p><span class="doc-section-title">Returns:</span></p>
     <table>
       <thead>
         <tr>
-<th>Name</th>          <th>Type</th>
+          <th>Type</th>
           <th>Description</th>
         </tr>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-<td><code>str</code></td>            <td>
+            <td>
                   <code><span title="str">str</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The system prompt for the task queue.</p>
+                <p>Rendered system prompt string.</p>
               </div>
             </td>
           </tr>
@@ -902,32 +1180,48 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>core/common.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 86</span>
-<span class="normal"> 87</span>
-<span class="normal"> 88</span>
-<span class="normal"> 89</span>
-<span class="normal"> 90</span>
-<span class="normal"> 91</span>
-<span class="normal"> 92</span>
-<span class="normal"> 93</span>
-<span class="normal"> 94</span>
-<span class="normal"> 95</span>
-<span class="normal"> 96</span>
-<span class="normal"> 97</span>
-<span class="normal"> 98</span>
-<span class="normal"> 99</span>
-<span class="normal">100</span>
-<span class="normal">101</span>
-<span class="normal">102</span>
-<span class="normal">103</span>
-<span class="normal">104</span>
-<span class="normal">105</span>
-<span class="normal">106</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">ha_render_system_prompt</span><span class="p">(</span>
-        <span class="n">all_entities</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="s2">&quot;prompts&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;homeassistant-set-state&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot; Render the system j2 prompt. Need to make it more generic.</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">152</span>
+<span class="normal">153</span>
+<span class="normal">154</span>
+<span class="normal">155</span>
+<span class="normal">156</span>
+<span class="normal">157</span>
+<span class="normal">158</span>
+<span class="normal">159</span>
+<span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span>
+<span class="normal">179</span>
+<span class="normal">180</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">ha_render_system_prompt</span><span class="p">(</span>
+    <span class="n">all_entities</span><span class="p">:</span> <span class="n">Any</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">env</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;prompts&quot;</span><span class="p">,</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;homeassistant-set-state&quot;</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Render the Home Assistant Jinja2 system prompt.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        all_entities: Optional entity list for template substitution.</span>
+<span class="sd">        env: Template root directory name.</span>
+<span class="sd">        name: Template file name without extension.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        str: The system prompt for the task queue.</span>
+<span class="sd">        Rendered system prompt string.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">all_entities</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">all_entities</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">all_entities</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
@@ -935,11 +1229,11 @@
 
     <span class="n">template_root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="vm">__name__</span><span class="p">,</span> <span class="s2">&quot;..&quot;</span><span class="p">,</span> <span class="s2">&quot;..&quot;</span><span class="p">,</span> <span class="s2">&quot;prompts&quot;</span><span class="p">)</span>
     <span class="n">template_root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">template_root</span><span class="p">)</span>
-    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Compiling </span><span class="si">%s</span><span class="s2"> from </span><span class="si">%s</span><span class="s2">.&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">template_root</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Compiling </span><span class="si">{}</span><span class="s2"> from </span><span class="si">{}</span><span class="s2">.&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">template_root</span><span class="p">)</span>
     <span class="c1"># TODO: Catch and log TemplateNotFound when necessary.</span>
-    <span class="n">env</span> <span class="o">=</span> <span class="n">Environment</span><span class="p">(</span><span class="n">loader</span><span class="o">=</span><span class="n">FileSystemLoader</span><span class="p">(</span><span class="n">template_root</span><span class="p">))</span>
-    <span class="n">template</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.txt&quot;</span><span class="p">)</span>
-    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Render system prompt for `</span><span class="si">%s</span><span class="s2">`&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+    <span class="n">template_env</span> <span class="o">=</span> <span class="n">Environment</span><span class="p">(</span><span class="n">loader</span><span class="o">=</span><span class="n">FileSystemLoader</span><span class="p">(</span><span class="n">template_root</span><span class="p">))</span>
+    <span class="n">template</span> <span class="o">=</span> <span class="n">template_env</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.txt&quot;</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Render system prompt for `</span><span class="si">{}</span><span class="s2">`&quot;</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
     <span class="k">del</span> <span class="n">logging</span>
 
     <span class="k">return</span> <span class="n">template</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">ALL_ENTITIES</span><span class="o">=</span><span class="n">all_entities</span><span class="p">)</span>
@@ -983,7 +1277,7 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The string for which the token length is required.</p>
+                <p>Text to tokenize.</p>
               </div>
             </td>
             <td>
@@ -999,7 +1293,7 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The name of the model.</p>
+                <p>Encoding name used for tokenization.</p>
               </div>
             </td>
             <td>
@@ -1014,13 +1308,13 @@
     <table>
       <thead>
         <tr>
-<th>Name</th>          <th>Type</th>
+          <th>Type</th>
           <th>Description</th>
         </tr>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-<td><code>int</code></td>            <td>
+            <td>
                   <code><span title="int">int</span></code>
             </td>
             <td>
@@ -1035,30 +1329,30 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>core/common.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">43</span>
-<span class="normal">44</span>
-<span class="normal">45</span>
-<span class="normal">46</span>
-<span class="normal">47</span>
-<span class="normal">48</span>
-<span class="normal">49</span>
-<span class="normal">50</span>
-<span class="normal">51</span>
-<span class="normal">52</span>
-<span class="normal">53</span>
-<span class="normal">54</span>
-<span class="normal">55</span>
-<span class="normal">56</span>
-<span class="normal">57</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">num_tokens_from_string</span><span class="p">(</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">num_tokens_from_string</span><span class="p">(</span>
         <span class="n">string</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">encoding_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;cl100k_base&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot; Get the number of tokens in a string using a specific model.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the number of tokens in a string using a specific model.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        string (str): The string for which the token length is required.</span>
-<span class="sd">        encoding_name (str): The name of the model.</span>
+<span class="sd">        string: Text to tokenize.</span>
+<span class="sd">        encoding_name: Encoding name used for tokenization.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        int: Number of tokens for the string.</span>
+<span class="sd">        Number of tokens for the string.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># TODO: Add support for dynamic model selection</span>
     <span class="n">encoding</span> <span class="o">=</span> <span class="n">tiktoken</span><span class="o">.</span><span class="n">get_encoding</span><span class="p">(</span><span class="n">encoding_name</span><span class="p">)</span>

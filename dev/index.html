@@ -10,8 +10,6 @@
       
       
       
-        <link rel="canonical" href="https://bearlike.github.io/personal-assistant/dev/">
-      
       
       
         <link rel="next" href="getting-started/">
@@ -68,7 +66,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#personal-assistant-documentation" class="md-skip">
+        <a href="#meeseeks-docs" class="md-skip">
           Skip to content
         </a>
       
@@ -288,10 +286,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#what-is-meeseeks" class="md-nav__link">
+  <a href="#features-quick-view" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What is Meeseeks?
+        Features (quick view)
       
     </span>
   </a>
@@ -299,13 +297,96 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#docs-sections" class="md-nav__link">
+  <a href="#subprojects-and-how-they-fit" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Docs Sections
+        Subprojects and how they fit
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-in-a-glance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture in a glance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installation-local" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation (local)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli-quick-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI quick commands
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deployment-docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deployment (Docker)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration notes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration notes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#add-mcp-servers-direct" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Add MCP servers (direct)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optional-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional components
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -398,10 +479,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#what-is-meeseeks" class="md-nav__link">
+  <a href="#features-quick-view" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What is Meeseeks?
+        Features (quick view)
       
     </span>
   </a>
@@ -409,13 +490,96 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#docs-sections" class="md-nav__link">
+  <a href="#subprojects-and-how-they-fit" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Docs Sections
+        Subprojects and how they fit
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-in-a-glance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture in a glance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installation-local" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation (local)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli-quick-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI quick commands
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deployment-docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deployment (Docker)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration notes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration notes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#add-mcp-servers-direct" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Add MCP servers (direct)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optional-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional components
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -439,14 +603,99 @@
   
 
 
-<h1 id="personal-assistant-documentation">Personal Assistant Documentation</h1>
-<p>Welcome to the documentation for <strong>Meeseeks: The Personal Assistant</strong>. This site is built with MkDocs + Material and versioned with Mike so you can browse docs for both development and released versions.</p>
-<h2 id="what-is-meeseeks">What is Meeseeks?</h2>
-<p>Meeseeks is a multi-agent assistant that breaks complex user requests into smaller actions, runs them through tools, and provides a consolidated response. This documentation covers how to run the project locally and how to explore the core APIs.</p>
-<h2 id="docs-sections">Docs Sections</h2>
+<h1 id="meeseeks-docs">Meeseeks Docs</h1>
+<p>Meeseeks is a personal assistant that breaks a request into small actions, runs the right tools, and replies with a clean summary. This doc gives a quick product view and how the parts fit together.</p>
+<h2 id="features-quick-view">Features (quick view)</h2>
 <ul>
-<li><a href="getting-started/">Getting Started</a> for local setup and development tips.</li>
-<li><a href="reference/">Reference</a> for API documentation generated from the source code.</li>
+<li>Plan -&gt; act -&gt; observe loop to keep work grounded in tool results.</li>
+<li>Multiple interfaces (chat UI, REST API, Home Assistant, terminal CLI) backed by one core engine.</li>
+<li>Tool registry for local tools plus optional MCP tools.</li>
+<li>Session transcripts with lightweight compaction for long runs.</li>
+<li>Context-aware memory (recent turns + summary) with optional context selection near budget.</li>
+<li>Step-level reflection after tool execution to validate outcomes.</li>
+<li>Permission gate with approval callbacks plus lightweight hooks around tool execution.</li>
+<li>Optional components (Langfuse, Home Assistant) auto-disable when not configured or when failures occur.</li>
+</ul>
+<h2 id="subprojects-and-how-they-fit">Subprojects and how they fit</h2>
+<ul>
+<li><code>core/</code>: orchestration loop, schemas, session storage, compaction, tool registry.</li>
+<li><code>tools/</code>: tool implementations and integrations.</li>
+<li><code>meeseeks-api/</code>: Flask API that exposes the assistant over HTTP.</li>
+<li><code>meeseeks-chat/</code>: Streamlit UI for interactive chat.</li>
+<li><code>meeseeks-cli/</code>: Terminal CLI for interactive sessions.</li>
+<li><code>meeseeks_ha_conversation/</code>: Home Assistant integration that routes voice requests to the API.</li>
+<li><code>prompts/</code>: planner prompt and examples.</li>
+</ul>
+<h2 id="architecture-in-a-glance">Architecture in a glance</h2>
+<ul>
+<li>The UI or API sends a user request into the core orchestrator.</li>
+<li>The orchestrator builds a short action plan, runs tools, and replans if needed.</li>
+<li>Tool results and summaries are stored in a session transcript for continuity.</li>
+</ul>
+<pre><code class="language-mermaid">flowchart LR
+  User --&gt; Chat
+  User --&gt; API
+  HA --&gt; API
+  User --&gt; CLI
+  Chat --&gt; Core
+  API --&gt; Core
+  CLI --&gt; Core
+  Core --&gt; Tools
+  Tools --&gt; HomeAssistant
+  Tools --&gt; MCP
+  Core --&gt; SessionStore
+</code></pre>
+<h2 id="installation-local">Installation (local)</h2>
+<ul>
+<li>Prereqs: Python 3.11+, Poetry.</li>
+<li>Install deps: <code>poetry install</code>.</li>
+<li>Copy <code>.env.example</code> to <code>.env</code> and set the required values.</li>
+<li>Run the API: <code>python meeseeks-api/backend.py</code>.</li>
+<li>Run the chat UI: <code>streamlit run meeseeks-chat/chat_master.py</code>.</li>
+<li>Run the CLI: <code>python meeseeks-cli/cli_master.py</code>.</li>
+</ul>
+<h2 id="cli-quick-commands">CLI quick commands</h2>
+<ul>
+<li><code>/help</code> show commands</li>
+<li><code>/models</code> pick a model from your API</li>
+<li><code>/mcp</code> list MCP servers/tools (use <code>/mcp select</code> to filter)</li>
+<li><code>/mcp init</code> scaffold an MCP config file</li>
+<li><code>/summarize</code> compact the session</li>
+<li><code>/new</code> start a fresh session</li>
+<li><code>/automatic</code> auto-approve tool actions for the session</li>
+<li><code>/quit</code> exit the CLI</li>
+</ul>
+<h2 id="deployment-docker">Deployment (Docker)</h2>
+<ul>
+<li>Dockerfiles are provided for the API and chat UI.</li>
+<li>Provide the same environment values as local install.</li>
+<li>Persist data if you want session transcripts (<code>MESEEKS_SESSION_DIR</code>).</li>
+<li>Expose the API for Home Assistant or other clients to call.</li>
+</ul>
+<h2 id="configuration-notes">Configuration notes</h2>
+<ul>
+<li>Tool catalog can be driven by a JSON manifest via <code>MESEEKS_TOOL_MANIFEST</code> (optional override; disables auto-discovery).</li>
+<li>MCP tools use:</li>
+<li><code>MESEEKS_MCP_CONFIG</code>: server connection info (see <code>configs/mcp.example.json</code>).</li>
+<li>A manifest is auto-generated on load (cached under <code>~/.meeseeks/</code>) unless you override it.</li>
+</ul>
+<h3 id="add-mcp-servers-direct">Add MCP servers (direct)</h3>
+<ol>
+<li>Copy <code>configs/mcp.example.json</code> and set your server URL + headers.</li>
+<li>Set <code>MESEEKS_MCP_CONFIG=./configs/your-mcp.json</code> in <code>.env</code>.</li>
+<li>Start the app once; the tool manifest is auto-discovered and cached.</li>
+<li>Optional: add <code>auto_approve_tools</code> per server to allowlist tools (the CLI writes this if you pick “Yes, always”).</li>
+</ol>
+<p>Advanced override:
+- If you want a custom tool list, set <code>MESEEKS_TOOL_MANIFEST</code> to your own JSON.</p>
+<p>Notes:
+- If you override the manifest, include <code>talk_to_user_tool</code> or you will lose the default reply tool.
+- MCP tool names must match the server’s advertised tool list.</p>
+<h3 id="optional-components">Optional components</h3>
+<ul>
+<li>Langfuse observability: set <code>LANGFUSE_PUBLIC_KEY</code> + <code>LANGFUSE_SECRET_KEY</code> (or disable via <code>LANGFUSE_ENABLED=0</code>).</li>
+<li>Home Assistant tools: set <code>HA_URL</code> + <code>HA_TOKEN</code> (or disable via <code>MESEEKS_HOME_ASSISTANT_ENABLED=0</code>).</li>
+<li>Optional components auto-disable on init/runtime/auth errors with logs.</li>
 </ul>
 
 
