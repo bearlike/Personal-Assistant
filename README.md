@@ -74,6 +74,8 @@ Optional feature that users can choose to install to further optimize their expe
 
 This repository ships a versioned documentation site built with MkDocs + Material and Mike.
 
+The version selector only lists versions that have been deployed with `mike` (it does not list Git branches directly).
+
 ### Local documentation workflow
 
 1. Install documentation dependencies:
@@ -103,6 +105,7 @@ For development docs (main branch):
 ```bash
 export PYTHONPATH="$PWD"
 mike deploy dev
+mike set-default dev
 ```
 
 If you plan to push docs to `gh-pages` (for example, using `--push`), ensure git has a user configured:
