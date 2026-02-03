@@ -49,7 +49,14 @@ load_dotenv()
 
 
 def _build_direct_response(message: str) -> TaskQueue:
-    """Create a TaskQueue with a direct talk-to-user response."""
+    """Create a TaskQueue with a direct talk-to-user response.
+
+    Args:
+        message: Plaintext response to return to the user.
+
+    Returns:
+        TaskQueue populated with a single talk-to-user action and result.
+    """
     step = ActionStep(
         action_consumer="talk_to_user_tool",
         action_type="set",
@@ -67,7 +74,16 @@ def _augment_system_prompt(
     tool_registry: ToolRegistry | None,
     session_summary: str | None = None,
 ) -> str:
-    """Append tool catalog and session summary information to a base prompt."""
+    """Append tool catalog and session summary information to a base prompt.
+
+    Args:
+        system_prompt: Base system prompt content.
+        tool_registry: Optional registry used to add tool descriptions.
+        session_summary: Optional summarized context for the session.
+
+    Returns:
+        Augmented prompt string including tool catalog and summary context.
+    """
     sections = [system_prompt]
     if session_summary:
         sections.append(f"Session summary:\n{session_summary}")
@@ -87,14 +103,19 @@ def generate_action_plan(
     tool_registry: ToolRegistry | None = None,
     session_summary: str | None = None,
 ) -> TaskQueue:
-    """
-    Use the LangChain pipeline to generate an action plan based on the user query.
+    """Use the LangChain pipeline to generate an action plan.
 
     Args:
-        user_query (str): The user query to generate the action plan.
+        user_query: User request to transform into an action plan.
+        model_name: Optional model override for planning.
+        tool_registry: Optional registry used to list available tools.
+        session_summary: Optional summary to provide prior context.
 
     Returns:
-        List[dict]: The generated action plan as a list of dictionaries.
+        TaskQueue containing the ordered action plan.
+
+    Raises:
+        ValueError: If model configuration is invalid.
     """
     if tool_registry is None:
         tool_registry = load_registry()
@@ -177,14 +198,18 @@ def run_action_plan(
     approval_callback: Callable[[ActionStep], bool] | None = None,
     hook_manager: HookManager | None = None,
 ) -> TaskQueue:
-    """
-    Run the generated action plan.
+    """Execute the generated action plan with permission checks.
 
     Args:
-        task_queue (TaskQueue): The action plan to run.
+        task_queue: The action plan to run.
+        tool_registry: Optional registry used to resolve tools.
+        event_logger: Optional callback to emit orchestration events.
+        permission_policy: Optional policy to decide tool permissions.
+        approval_callback: Optional human approval callback.
+        hook_manager: Optional hook manager for lifecycle callbacks.
 
     Returns:
-        TaskQueue: The updated action plan after running.
+        Updated TaskQueue with action results.
     """
     if tool_registry is None:
         tool_registry = load_registry()
@@ -293,7 +318,14 @@ def run_action_plan(
 
 
 def _action_steps_complete(task_queue: TaskQueue) -> bool:
-    """Return True if all action steps have completed with results."""
+    """Return True if all action steps have completed with results.
+
+    Args:
+        task_queue: Queue to inspect for completion.
+
+    Returns:
+        True when every action has a non-null result.
+    """
     return all(step.result is not None for step in task_queue.action_steps)
 
 
@@ -303,7 +335,17 @@ def _maybe_auto_compact(
     model_name: str | None,
     hook_manager: HookManager,
 ) -> str | None:
-    """Compact and persist session history when it exceeds token thresholds."""
+    """Compact and persist session history when it exceeds token thresholds.
+
+    Args:
+        session_store: Store used for transcript and summary persistence.
+        session_id: Unique session identifier.
+        model_name: Optional model name to estimate context window size.
+        hook_manager: Hook manager to pre-process events.
+
+    Returns:
+        Updated summary string if compaction occurred; otherwise None.
+    """
     events = session_store.load_transcript(session_id)
     events = hook_manager.run_pre_compact(events)
     summary = session_store.load_summary(session_id)
@@ -330,6 +372,25 @@ def orchestrate_session(
 ) -> TaskQueue | tuple[TaskQueue, OrchestrationState]:
     """
     Orchestrate a session using a plan-act-observe-decide loop.
+
+    Args:
+        user_query: User input that initiates the orchestration cycle.
+        model_name: Optional model override for planning.
+        max_iters: Maximum planning iterations before giving up.
+        initial_task_queue: Optional pre-computed task queue.
+        return_state: Whether to return orchestration state along with results.
+        session_id: Optional existing session identifier.
+        session_store: Optional session store for transcript persistence.
+        tool_registry: Optional tool registry for resolution.
+        permission_policy: Optional permission policy override.
+        approval_callback: Optional approval callback for ASK decisions.
+        hook_manager: Optional hook manager for lifecycle callbacks.
+
+    Returns:
+        TaskQueue alone, or a tuple of TaskQueue and OrchestrationState.
+
+    Raises:
+        ValueError: If user_query is invalid.
     """
     if tool_registry is None:
         tool_registry = load_registry()

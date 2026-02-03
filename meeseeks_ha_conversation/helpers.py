@@ -18,7 +18,14 @@ class ExposedEntity(TypedDict):
 
 
 def get_exposed_entities(hass: HomeAssistant) -> list[ExposedEntity]:
-    """Return exposed entities."""
+    """Return exposed entities.
+
+    Args:
+        hass: Home Assistant core instance.
+
+    Returns:
+        List of exposed entities and their metadata.
+    """
     hass_entity = entity_registry.async_get(hass)
     exposed_entities: list[ExposedEntity] = []
 

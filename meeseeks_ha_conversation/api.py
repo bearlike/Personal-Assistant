@@ -35,19 +35,33 @@ class MeeseeksApiClient:
         timeout: int,
         session: aiohttp.ClientSession,
     ) -> None:
-        """Sample API Client."""
+        """Initialize the API client.
+
+        Args:
+            base_url: Base URL for the Meeseeks API.
+            timeout: Request timeout in seconds.
+            session: Shared aiohttp client session.
+        """
         self._base_url = base_url.rstrip("/")
         self._api_key = 'msk-strong-password'
         self.timeout = timeout
         self._session = session
 
     async def async_get_heartbeat(self) -> bool:
-        """Get heartbeat from the API."""
+        """Get heartbeat from the API.
+
+        Returns:
+            True when the service is considered healthy.
+        """
         # TODO: Implement a heartbeat check
         return True
 
     async def async_get_models(self) -> str:
-        """Get models from the API."""
+        """Get models from the API.
+
+        Returns:
+            JSON-serialized model list.
+        """
         # TODO: This is monkey-patched for now
         response_data: ModelsResponse = {
             "models": [
@@ -64,7 +78,18 @@ class MeeseeksApiClient:
     async def async_generate(
         self, data: dict[str, Any] | None = None
     ) -> MeeseeksQueryResponse:
-        """Generate a completion from the API."""
+        """Generate a completion from the API.
+
+        Args:
+            data: Request payload including prompt and optional session ID.
+
+        Returns:
+            Parsed query response payload.
+
+        Raises:
+            ValueError: If prompt data is missing.
+            ApiJsonError: If the API returns unexpected data.
+        """
         if not data or "prompt" not in data:
             raise ValueError("Missing prompt in request data.")
         url_query = f"{self._base_url}/api/query"
@@ -93,7 +118,22 @@ class MeeseeksApiClient:
         headers: dict[str, str] | None = None,
         decode_json: bool = True,
     ) -> MeeseeksQueryResponse | str:
-        """Get information from the API."""
+        """Perform an HTTP request to the Meeseeks API.
+
+        Args:
+            method: HTTP method to use.
+            url: Fully qualified request URL.
+            data: Optional JSON payload to send.
+            headers: Optional HTTP headers override.
+            decode_json: Whether to parse JSON responses.
+
+        Returns:
+            Parsed response payload or raw text depending on decode_json.
+
+        Raises:
+            ApiJsonError: If the API returns an error payload.
+            aiohttp.ClientResponseError: For non-2xx responses.
+        """
         if headers is None:
             headers = {
                 'accept': 'application/json',

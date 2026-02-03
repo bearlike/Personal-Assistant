@@ -17,12 +17,29 @@ logging = get_logger(name="core.tool_registry")
 
 class ToolRunner(Protocol):
     def run(self, action_step: ActionStep) -> MockSpeaker:  # pragma: no cover
-        """Execute an action step and return a speaker response."""
+        """Execute an action step and return a speaker response.
+
+        Args:
+            action_step: Action step payload to execute.
+
+        Returns:
+            MockSpeaker response from the tool.
+        """
 
 
 @dataclass(frozen=True)
 class ToolSpec:
-    """Metadata describing a tool available to the assistant."""
+    """Metadata describing a tool available to the assistant.
+
+    Attributes:
+        tool_id: Unique identifier for the tool.
+        name: Human-friendly tool name.
+        description: Short description of the tool behavior.
+        factory: Callable that instantiates a tool runner.
+        enabled: Whether the tool is enabled for execution.
+        kind: Tool type, such as "local" or "mcp".
+        metadata: Additional tool metadata for adapters.
+    """
     tool_id: str
     name: str
     description: str
@@ -40,12 +57,23 @@ class ToolRegistry:
         self._instances: dict[str, ToolRunner] = {}
 
     def register(self, spec: ToolSpec) -> None:
-        """Register a tool specification and update action validation."""
+        """Register a tool specification and update action validation.
+
+        Args:
+            spec: Tool specification to register.
+        """
         self._tools[spec.tool_id] = spec
         set_available_tools(list(self._tools.keys()))
 
     def get(self, tool_id: str) -> ToolRunner | None:
-        """Return an enabled tool runner, instantiating it if needed."""
+        """Return an enabled tool runner, instantiating it if needed.
+
+        Args:
+            tool_id: Tool identifier to look up.
+
+        Returns:
+            ToolRunner instance if enabled; otherwise None.
+        """
         spec = self._tools.get(tool_id)
         if spec is None or not spec.enabled:
             return None
@@ -54,14 +82,25 @@ class ToolRegistry:
         return self._instances[tool_id]
 
     def list_specs(self, include_disabled: bool = False) -> list[ToolSpec]:
-        """List tool specifications, optionally including disabled tools."""
+        """List tool specifications, optionally including disabled tools.
+
+        Args:
+            include_disabled: Whether to include disabled tools.
+
+        Returns:
+            List of tool specifications.
+        """
         specs = list(self._tools.values())
         if include_disabled:
             return specs
         return [spec for spec in specs if spec.enabled]
 
     def tool_catalog(self) -> list[dict[str, str]]:
-        """Return a serialized catalog of registered tool metadata."""
+        """Return a serialized catalog of registered tool metadata.
+
+        Returns:
+            List of dictionaries containing tool IDs, names, and descriptions.
+        """
         return [
             {
                 "tool_id": spec.tool_id,
@@ -73,7 +112,15 @@ class ToolRegistry:
 
 
 def _import_factory(module_path: str, class_name: str) -> Callable[[], ToolRunner]:
-    """Return a factory that instantiates a tool by import path."""
+    """Return a factory that instantiates a tool by import path.
+
+    Args:
+        module_path: Python module path containing the tool class.
+        class_name: Name of the tool class to instantiate.
+
+    Returns:
+        Callable that returns a new ToolRunner instance.
+    """
     def _factory() -> ToolRunner:
         module = importlib.import_module(module_path)
         cls = getattr(module, class_name)
@@ -83,7 +130,11 @@ def _import_factory(module_path: str, class_name: str) -> Callable[[], ToolRunne
 
 
 def _default_registry() -> ToolRegistry:
-    """Create the built-in registry for local tools."""
+    """Create the built-in registry for local tools.
+
+    Returns:
+        ToolRegistry populated with built-in local tools.
+    """
     registry = ToolRegistry()
     registry.register(
         ToolSpec(
@@ -122,6 +173,11 @@ def load_registry(manifest_path: str | None = None) -> ToolRegistry:
          "kind": "mcp", "server": "weather", "tool": "get_weather"}
       ]
     }
+    Args:
+        manifest_path: Optional path to a tool manifest JSON file.
+
+    Returns:
+        ToolRegistry populated from the manifest or defaults.
     """
     if manifest_path is None:
         manifest_path = os.getenv("MESEEKS_TOOL_MANIFEST")

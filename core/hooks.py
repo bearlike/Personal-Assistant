@@ -28,7 +28,14 @@ class HookManager:
     )
 
     def run_pre_tool_use(self, action_step: ActionStep) -> ActionStep:
-        """Apply pre-tool hooks to an action step."""
+        """Apply pre-tool hooks to an action step.
+
+        Args:
+            action_step: Action step to process.
+
+        Returns:
+            Updated action step after hooks run.
+        """
         for hook in self.pre_tool_use:
             action_step = hook(action_step)
         return action_step
@@ -36,7 +43,15 @@ class HookManager:
     def run_post_tool_use(
         self, action_step: ActionStep, result: MockSpeaker
     ) -> MockSpeaker:
-        """Apply post-tool hooks to a tool result."""
+        """Apply post-tool hooks to a tool result.
+
+        Args:
+            action_step: Action step that was executed.
+            result: Result returned by the tool.
+
+        Returns:
+            Updated result after hooks run.
+        """
         for hook in self.post_tool_use:
             result = hook(action_step, result)
         return result
@@ -44,13 +59,28 @@ class HookManager:
     def run_permission_request(
         self, action_step: ActionStep, decision: PermissionDecision
     ) -> PermissionDecision:
-        """Apply permission hooks to a decision outcome."""
+        """Apply permission hooks to a decision outcome.
+
+        Args:
+            action_step: Action step under review.
+            decision: Current decision to modify.
+
+        Returns:
+            Updated permission decision after hooks run.
+        """
         for hook in self.permission_request:
             decision = hook(action_step, decision)
         return decision
 
     def run_pre_compact(self, events: Iterable[EventRecord]) -> list[EventRecord]:
-        """Apply compaction hooks to events prior to summarization."""
+        """Apply compaction hooks to events prior to summarization.
+
+        Args:
+            events: Iterable of event records.
+
+        Returns:
+            List of event records after hooks run.
+        """
         event_list: list[EventRecord] = list(events)
         for hook in self.pre_compact:
             event_list = hook(event_list)
@@ -58,7 +88,11 @@ class HookManager:
 
 
 def default_hook_manager() -> HookManager:
-    """Create a hook manager with no custom hooks registered."""
+    """Create a hook manager with no custom hooks registered.
+
+    Returns:
+        Empty HookManager instance.
+    """
     return HookManager()
 
 

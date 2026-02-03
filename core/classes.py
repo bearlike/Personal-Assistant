@@ -23,13 +23,24 @@ AVAILABLE_TOOLS: list[str] = ["home_assistant_tool", "talk_to_user_tool"]
 
 
 def set_available_tools(tool_ids: list[str]) -> None:
-    """Update the global tool list for ActionStep validation."""
+    """Update the global tool list for ActionStep validation.
+
+    Args:
+        tool_ids: List of tool identifiers to allow.
+    """
     global AVAILABLE_TOOLS
     AVAILABLE_TOOLS = tool_ids
 
 
 class ActionStep(BaseModel):
-    """Defines an action step within a task queue with validation."""
+    """Defines an action step within a task queue with validation.
+
+    Attributes:
+        action_consumer: Tool identifier that should execute the action.
+        action_type: Action category, typically "get" or "set".
+        action_argument: Natural language argument for the tool.
+        result: Optional tool result payload.
+    """
     action_consumer: str = Field(
         description=f"Specify one of {AVAILABLE_TOOLS} to indicate the action consumer."
     )
@@ -50,7 +61,13 @@ class ActionStep(BaseModel):
 
 
 class TaskQueue(BaseModel):
-    """Manages a queue of actions to be performed, tracking their results."""
+    """Manages a queue of actions to be performed, tracking their results.
+
+    Attributes:
+        human_message: Original user message for the task queue.
+        action_steps: Ordered list of action steps to execute.
+        task_result: Aggregated result of the task queue.
+    """
     human_message: str | None = Field(
         alias="_human_message",
         default=None,
@@ -66,7 +83,14 @@ class TaskQueue(BaseModel):
     @validator("action_steps", allow_reuse=True)
     # pylint: disable=E0213,W0613
     def validate_actions(cls, field: list[ActionStep]) -> list[ActionStep]:
-        """Normalize and validate action steps within a task queue."""
+        """Normalize and validate action steps within a task queue.
+
+        Args:
+            field: Action steps to normalize and validate.
+
+        Returns:
+            Normalized list of action steps.
+        """
         for action in field:
             # Normalize once and store it
             action.action_consumer = action.action_consumer.lower()
@@ -103,7 +127,18 @@ class TaskQueue(BaseModel):
 
 
 class OrchestrationState(BaseModel):
-    """Track state for the orchestration loop."""
+    """Track state for the orchestration loop.
+
+    Attributes:
+        goal: User goal for the session.
+        session_id: Unique session identifier.
+        plan: Current action plan.
+        tool_results: Result strings from executed tools.
+        open_questions: Outstanding questions for the user.
+        done: Whether orchestration is finished.
+        done_reason: Reason for completion.
+        summary: Optional session summary string.
+    """
     goal: str
     session_id: str | None = None
     plan: list[ActionStep] = Field(default_factory=list)
@@ -115,10 +150,20 @@ class OrchestrationState(BaseModel):
 
 
 class AbstractTool(abc.ABC):
-    """Abstract base class for tools, providing common features and requiring specific methods."""
+    """Abstract base class for tools, providing common features and methods."""
 
     def _setup_cache_dir(self, name: str) -> str:
-        """Set up and return the cache directory path."""
+        """Set up and return the cache directory path.
+
+        Args:
+            name: Tool name used to construct the cache path.
+
+        Returns:
+            Absolute path to the cache directory.
+
+        Raises:
+            ValueError: If CACHE_DIR is not configured.
+        """
         root_cache_dir = os.getenv("CACHE_DIR")
         if not root_cache_dir:
             raise ValueError("CACHE_DIR environment variable is not set.")
@@ -134,7 +179,17 @@ class AbstractTool(abc.ABC):
         model_name: str | None = None,
         temperature: float = 0.3,
     ) -> None:
-        """Initialize the tool with optional model configuration."""
+        """Initialize the tool with optional model configuration.
+
+        Args:
+            name: Tool display name.
+            description: Short description of tool behavior.
+            model_name: Optional model override for the tool.
+            temperature: Sampling temperature for the model.
+
+        Raises:
+            ValueError: If CACHE_DIR is not configured.
+        """
         self.model_name = cast(
             str,
             model_name
@@ -167,7 +222,15 @@ class AbstractTool(abc.ABC):
         logging.debug("%s cache directory is %s.", self._id, self.cache_dir)
 
     def _save_json(self, data: object, filename: str) -> None:
-        """Save a dictionary to a JSON file."""
+        """Save a dictionary to a JSON file.
+
+        Args:
+            data: Serializable payload to store.
+            filename: Output filename under the cache directory.
+
+        Raises:
+            OSError: If the file cannot be written.
+        """
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
         filename = os.path.join(self.cache_dir, filename)
@@ -176,7 +239,17 @@ class AbstractTool(abc.ABC):
         logging.info(f"Data saved to {filename}.")
 
     def _load_rag_json(self, filename: str) -> list[Document]:
-        """Load a dictionary from a JSON file."""
+        """Load a dictionary from a JSON file.
+
+        Args:
+            filename: JSON filename under the cache directory.
+
+        Returns:
+            List of loaded Documents.
+
+        Raises:
+            OSError: If the file cannot be read.
+        """
         logging.debug("RAG directory is %s.", self.cache_dir)
         logging.info(f"Loading `{filename}` as JSON.")
         filename = os.path.join(self.cache_dir, filename)
@@ -189,7 +262,14 @@ class AbstractTool(abc.ABC):
         return data
 
     def _load_rag_documents(self, filenames: list[str]) -> list[Document]:
-        """Load and concatenate multiple JSON files into RAG documents."""
+        """Load and concatenate multiple JSON files into RAG documents.
+
+        Args:
+            filenames: List of JSON files to load.
+
+        Returns:
+            Combined list of Documents for RAG ingestion.
+        """
         rag_documents: list[Document] = []
         for rag_file in filenames:
             data = self._load_rag_json(rag_file)
@@ -197,36 +277,40 @@ class AbstractTool(abc.ABC):
         return rag_documents
 
     def set_state(self, action_step: ActionStep | None = None) -> MockSpeaker:
-        """
-        An abstract method that subclasses should implement,
-        performing the desired action.
+        """Perform a state-changing action.
+
+        Args:
+            action_step: Action step containing the action arguments.
 
         Returns:
-            str: A message indicating the result of the action.
+            MockSpeaker response for the action.
         """
         MockSpeaker = get_mock_speaker()
         return MockSpeaker(content="Not implemented yet.")
 
     def get_state(self, action_step: ActionStep | None = None) -> MockSpeaker:
-        """
-        An abstract method that subclasses should implement,
-        performing the desired action.
+        """Perform a read-only action.
+
+        Args:
+            action_step: Action step containing the query arguments.
 
         Returns:
-            str: A message indicating the result of the action.
+            MockSpeaker response for the action.
         """
         MockSpeaker = get_mock_speaker()
         return MockSpeaker(content="Not implemented yet.")
 
     def run(self, action_step: ActionStep) -> MockSpeaker:
-        """
-        Executes the action based on the action type.
+        """Execute the action based on the action type.
 
-        Arguments:
-            action_step (ActionStep): An ActionStep object with the action details.
+        Args:
+            action_step: ActionStep object with action details.
 
         Returns:
-            str: A message indicating the result of the action.
+            MockSpeaker response for the action.
+
+        Raises:
+            ValueError: If the action type is unsupported.
         """
         if action_step.action_type == "set":
             return self.set_state(action_step)
@@ -239,16 +323,17 @@ def create_task_queue(
     action_data: list[ActionStepPayload] | None = None,
     is_example: bool = True,
 ) -> TaskQueue:
-    """
-    Creates a new TaskQueue object and assigns values from action_data.
+    """Create a TaskQueue object from serialized action data.
 
-    Arguments:
-        action_data (List[dict]): List of dictionaries, where each
-                    dictionary represents an action step with keys
-                    'action_consumer' and 'action_argument'.
+    Args:
+        action_data: List of action step payloads.
+        is_example: Whether to drop the human_message field.
 
     Returns:
-        A TaskQueue object with the provided action steps.
+        TaskQueue populated with the action steps.
+
+    Raises:
+        ValueError: If action_data is None.
     """
     if action_data is None:
         raise ValueError("Action data cannot be None.")
@@ -268,7 +353,17 @@ def create_task_queue(
 
 
 def get_task_master_examples(example_id: int = 0) -> str:
-    """Get the example task queue data."""
+    """Get serialized example task queue data.
+
+    Args:
+        example_id: Index of the example to return.
+
+    Returns:
+        JSON-serialized task queue string.
+
+    Raises:
+        ValueError: If example_id is out of range.
+    """
     examples: list[list[ActionStepPayload]] = [
         [
             {"action_consumer": "home_assistant_tool", "action_type": "set",

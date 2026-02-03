@@ -29,12 +29,16 @@ class TalkToUser(AbstractTool):
         )
 
     def set_state(self, action_step: ActionStep | None = None) -> MockSpeaker:
-        """
-        An abstract method that subclasses should implement,
-        performing the desired action.
+        """Return the action argument as the response content.
+
+        Args:
+            action_step: Action step containing the response text.
 
         Returns:
-            str: A message indicating the result of the action.
+            MockSpeaker wrapping the response content.
+
+        Raises:
+            ValueError: If action_step is None.
         """
         if action_step is None:
             raise ValueError("Action step cannot be None.")
@@ -42,5 +46,12 @@ class TalkToUser(AbstractTool):
         return MockSpeaker(content=action_step.action_argument)
 
     def get_state(self, action_step: ActionStep | None = None) -> MockSpeaker:
-        """TalkToUser does not support read operations."""
+        """TalkToUser does not support read operations.
+
+        Args:
+            action_step: Ignored action step.
+
+        Raises:
+            NotImplementedError: Always, because GET is unsupported.
+        """
         raise NotImplementedError("This method is not supported by TalkToUser.")

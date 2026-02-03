@@ -13,8 +13,12 @@ logging = get_logger(name="core.compaction")
 def summarize_events(events: Iterable[EventRecord], max_items: int = 20) -> str:
     """Generate a lightweight summary of recent events.
 
-    This is intentionally simple to keep dependencies small. It can be replaced by
-    a model-backed summarizer later.
+    Args:
+        events: Iterable of event records to summarize.
+        max_items: Maximum number of recent events to include.
+
+    Returns:
+        Concise summary string of recent events.
     """
     snippets: list[str] = []
     for event in list(events)[-max_items:]:
@@ -33,5 +37,13 @@ def summarize_events(events: Iterable[EventRecord], max_items: int = 20) -> str:
 
 
 def should_compact(events: Iterable[EventRecord], threshold: int = 50) -> bool:
-    """Return True when the event list meets the compaction threshold."""
+    """Return True when the event list meets the compaction threshold.
+
+    Args:
+        events: Iterable of event records to count.
+        threshold: Minimum number of events that triggers compaction.
+
+    Returns:
+        True when compaction should run.
+    """
     return len(list(events)) >= threshold

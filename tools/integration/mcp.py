@@ -14,7 +14,16 @@ logging = get_logger(name="tools.integration.mcp")
 
 
 def _load_mcp_config() -> dict[str, Any]:
-    """Load MCP server configuration from disk."""
+    """Load MCP server configuration from disk.
+
+    Returns:
+        Parsed MCP configuration dictionary.
+
+    Raises:
+        ValueError: If MESEEKS_MCP_CONFIG is not set.
+        OSError: If the configuration file cannot be read.
+        json.JSONDecodeError: If the configuration is invalid JSON.
+    """
     config_path = os.getenv("MESEEKS_MCP_CONFIG")
     if not config_path:
         raise ValueError("MESEEKS_MCP_CONFIG is not set.")
@@ -27,12 +36,28 @@ class MCPToolRunner:
     """Wrapper to invoke MCP tools via langchain-mcp-adapters."""
 
     def __init__(self, server_name: str, tool_name: str) -> None:
-        """Initialize the MCP tool runner for a specific server tool."""
+        """Initialize the MCP tool runner for a specific server tool.
+
+        Args:
+            server_name: MCP server name from configuration.
+            tool_name: Tool name to invoke on the server.
+        """
         self.server_name = server_name
         self.tool_name = tool_name
 
     async def _invoke_async(self, input_text: str) -> str:
-        """Invoke an MCP tool asynchronously and return its output."""
+        """Invoke an MCP tool asynchronously and return its output.
+
+        Args:
+            input_text: Input text to send to the MCP tool.
+
+        Returns:
+            Stringified tool response.
+
+        Raises:
+            RuntimeError: If MCP adapters are not installed.
+            ValueError: If the server or tool is not configured.
+        """
         try:
             from langchain_mcp_adapters.client import MultiServerMCPClient
         except Exception as exc:  # pragma: no cover - runtime dependency
@@ -59,7 +84,17 @@ class MCPToolRunner:
         return str(result)
 
     def run(self, action_step: ActionStep) -> MockSpeaker:
-        """Execute the MCP tool using the action step argument."""
+        """Execute the MCP tool using the action step argument.
+
+        Args:
+            action_step: Action step containing the prompt argument.
+
+        Returns:
+            MockSpeaker with the tool response content.
+
+        Raises:
+            ValueError: If action_step is None.
+        """
         if action_step is None:
             raise ValueError("Action step cannot be None.")
         MockSpeakerType = get_mock_speaker()

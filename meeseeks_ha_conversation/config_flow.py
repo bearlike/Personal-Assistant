@@ -57,7 +57,14 @@ class MeeseeksConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Handle the initial step."""
+        """Handle the initial config flow step.
+
+        Args:
+            user_input: Submitted form data, if available.
+
+        Returns:
+            FlowResult for the configuration step.
+        """
         if user_input is None:
             return self.async_show_form(
                 step_id="user", data_schema=STEP_USER_DATA_SCHEMA
@@ -109,7 +116,14 @@ class MeeseeksConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
     def async_get_options_flow(
         config_entry: config_entries.ConfigEntry,
     ) -> config_entries.OptionsFlow:
-        """Create the options flow."""
+        """Create the options flow.
+
+        Args:
+            config_entry: Existing config entry to edit.
+
+        Returns:
+            Options flow handler.
+        """
         return MeeseeksOptionsFlow(config_entry)
 
 
@@ -117,14 +131,25 @@ class MeeseeksOptionsFlow(config_entries.OptionsFlow):
     """Meeseeks config flow options handler."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize options flow."""
+        """Initialize options flow.
+
+        Args:
+            config_entry: Config entry to manage.
+        """
         self.config_entry = config_entry
         self.options = dict(config_entry.options)
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Manage the options."""
+        """Show the options menu.
+
+        Args:
+            user_input: Submitted form data, if available.
+
+        Returns:
+            FlowResult for the options menu.
+        """
         return self.async_show_menu(
             step_id="init",
             menu_options=MENU_OPTIONS
@@ -133,7 +158,14 @@ class MeeseeksOptionsFlow(config_entries.OptionsFlow):
     async def async_step_all_set(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Manage the options."""
+        """Handle the "all_set" options step.
+
+        Args:
+            user_input: Submitted form data, if available.
+
+        Returns:
+            FlowResult for the options menu.
+        """
         return self.async_show_menu(
             step_id="init",
             menu_options=MENU_OPTIONS
@@ -142,7 +174,14 @@ class MeeseeksOptionsFlow(config_entries.OptionsFlow):
     async def async_step_general_config(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Manage the options."""
+        """Handle the general configuration step.
+
+        Args:
+            user_input: Submitted form data, if available.
+
+        Returns:
+            FlowResult for the options menu.
+        """
         return self.async_show_menu(
             step_id="init",
             menu_options=MENU_OPTIONS
@@ -151,7 +190,14 @@ class MeeseeksOptionsFlow(config_entries.OptionsFlow):
     async def async_step_prompt_system(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Manage the options."""
+        """Handle the prompt system configuration step.
+
+        Args:
+            user_input: Submitted form data, if available.
+
+        Returns:
+            FlowResult for the options menu.
+        """
         return self.async_show_menu(
             step_id="init",
             menu_options=MENU_OPTIONS
@@ -160,7 +206,14 @@ class MeeseeksOptionsFlow(config_entries.OptionsFlow):
     async def async_step_model_config(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Manage the options."""
+        """Handle the model configuration step.
+
+        Args:
+            user_input: Submitted form data, if available.
+
+        Returns:
+            FlowResult for the options menu.
+        """
         return self.async_show_menu(
             step_id="init",
             menu_options=MENU_OPTIONS

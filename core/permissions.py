@@ -33,7 +33,14 @@ class PermissionRule:
     decision: PermissionDecision = PermissionDecision.ASK
 
     def matches(self, action_step: ActionStep) -> bool:
-        """Return True when the action step matches the rule pattern."""
+        """Return True when the action step matches the rule pattern.
+
+        Args:
+            action_step: Action step to evaluate against the rule.
+
+        Returns:
+            True when the rule matches the action step.
+        """
         return fnmatch(action_step.action_consumer, self.tool_id) and fnmatch(
             action_step.action_type, self.action_type
         )
@@ -52,7 +59,14 @@ class PermissionPolicy:
         self._default_decision = default_decision
 
     def decide(self, action_step: ActionStep) -> PermissionDecision:
-        """Return the permission decision for an action step."""
+        """Return the permission decision for an action step.
+
+        Args:
+            action_step: Action step to evaluate.
+
+        Returns:
+            PermissionDecision based on the configured rules.
+        """
         for rule in self._rules:
             if rule.matches(action_step):
                 return rule.decision
@@ -63,7 +77,14 @@ class PermissionPolicy:
 
 
 def _parse_decision(value: str | None) -> PermissionDecision | None:
-    """Parse a string value into a PermissionDecision."""
+    """Parse a string value into a PermissionDecision.
+
+    Args:
+        value: Raw string from configuration.
+
+    Returns:
+        Parsed PermissionDecision or None when invalid.
+    """
     if value is None:
         return None
     value = value.strip().lower()
@@ -74,7 +95,11 @@ def _parse_decision(value: str | None) -> PermissionDecision | None:
 
 
 def _default_policy() -> PermissionPolicy:
-    """Build the default permission policy when no configuration is provided."""
+    """Build the default permission policy when no configuration is provided.
+
+    Returns:
+        PermissionPolicy with built-in defaults.
+    """
     rules = [
         PermissionRule(
             tool_id="talk_to_user_tool",
@@ -94,7 +119,19 @@ def _default_policy() -> PermissionPolicy:
 
 
 def _load_policy_data(path: str) -> dict[str, Any]:
-    """Load permission policy data from TOML or JSON."""
+    """Load permission policy data from TOML or JSON.
+
+    Args:
+        path: Filesystem path to a policy file.
+
+    Returns:
+        Raw policy payload dictionary.
+
+    Raises:
+        OSError: If the policy file cannot be read.
+        json.JSONDecodeError: If a JSON policy file is invalid.
+        tomllib.TOMLDecodeError: If a TOML policy file is invalid.
+    """
     with open(path, "rb") as handle:
         if path.endswith(".toml"):
             return tomllib.load(handle)
@@ -102,7 +139,14 @@ def _load_policy_data(path: str) -> dict[str, Any]:
 
 
 def load_permission_policy(path: str | None = None) -> PermissionPolicy:
-    """Load permission policy configuration from disk or defaults."""
+    """Load permission policy configuration from disk or defaults.
+
+    Args:
+        path: Optional explicit policy path. Defaults to env var when omitted.
+
+    Returns:
+        Loaded PermissionPolicy or default policy on error.
+    """
     if path is None:
         path = os.getenv("MESEEKS_PERMISSION_POLICY")
     if not path:
@@ -147,7 +191,11 @@ def load_permission_policy(path: str | None = None) -> PermissionPolicy:
 
 
 def approval_callback_from_env() -> Callable[[ActionStep], bool] | None:
-    """Return an approval callback based on environment configuration."""
+    """Return an approval callback based on environment configuration.
+
+    Returns:
+        Callable that approves/denies actions or None to indicate no callback.
+    """
     mode = os.getenv("MESEEKS_APPROVAL_MODE", "").strip().lower()
     if mode in {"allow", "auto", "approve", "yes"}:
         return lambda _: True
@@ -157,12 +205,20 @@ def approval_callback_from_env() -> Callable[[ActionStep], bool] | None:
 
 
 def auto_approve(_: ActionStep) -> bool:
-    """Approval callback that always approves."""
+    """Approval callback that always approves.
+
+    Returns:
+        True for all inputs.
+    """
     return True
 
 
 def auto_deny(_: ActionStep) -> bool:
-    """Approval callback that always denies."""
+    """Approval callback that always denies.
+
+    Returns:
+        False for all inputs.
+    """
     return False
 
 

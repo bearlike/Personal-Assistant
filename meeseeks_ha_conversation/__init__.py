@@ -42,7 +42,18 @@ class MeeseeksResponse(TypedDict):
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Meeseeks conversation using UI."""
+    """Set up Meeseeks conversation using UI.
+
+    Args:
+        hass: Home Assistant core instance.
+        entry: Configuration entry to initialize.
+
+    Returns:
+        True when setup succeeds.
+
+    Raises:
+        ConfigEntryNotReady: If the Meeseeks API is unreachable.
+    """
     # https://developers.home-assistant.io/docs/config_entries_index/#setting-up-an-entry
     hass.data.setdefault(DOMAIN, {})
     client = MeeseeksApiClient(
@@ -74,13 +85,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload Meeseeks conversation."""
+    """Unload Meeseeks conversation.
+
+    Args:
+        hass: Home Assistant core instance.
+        entry: Configuration entry to unload.
+
+    Returns:
+        True when unload succeeds.
+    """
     conversation.async_unset_agent(hass, entry)
     return True
 
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Reload Meeseeks conversation."""
+    """Reload Meeseeks conversation.
+
+    Args:
+        hass: Home Assistant core instance.
+        entry: Configuration entry to reload.
+    """
     await async_unload_entry(hass, entry)
     await async_setup_entry(hass, entry)
 
@@ -97,13 +121,24 @@ class MeeseeksAgent(conversation.AbstractConversationAgent):
 
     @property
     def supported_languages(self) -> list[str] | Literal["*"]:
-        """Return a list of supported languages."""
+        """Return a list of supported languages.
+
+        Returns:
+            Language identifiers or "*" for all languages.
+        """
         return MATCH_ALL
 
     async def async_process(
         self, user_input: conversation.ConversationInput
     ) -> conversation.ConversationResult:
-        """Process a sentence."""
+        """Process a user utterance into a conversation result.
+
+        Args:
+            user_input: Incoming conversation input.
+
+        Returns:
+            ConversationResult populated with a response.
+        """
         # * If needeed in the future, uncomment the following lines
         # raw_system_prompt = self.entry.options.get(
         #     CONF_PROMPT_SYSTEM, DEFAULT_PROMPT_SYSTEM)
@@ -150,7 +185,15 @@ class MeeseeksAgent(conversation.AbstractConversationAgent):
     def _async_generate_prompt(
         self, raw_prompt: str, exposed_entities: list[dict[str, Any]]
     ) -> str:
-        """Generate a prompt for the user."""
+        """Generate a prompt for the user.
+
+        Args:
+            raw_prompt: Template string for prompt rendering.
+            exposed_entities: Entities exposed to the conversation agent.
+
+        Returns:
+            Rendered prompt string.
+        """
         return template.Template(raw_prompt, self.hass).async_render(
             {
                 "ha_name": self.hass.config.location_name,
@@ -160,7 +203,17 @@ class MeeseeksAgent(conversation.AbstractConversationAgent):
         )
 
     async def query(self, messages: MeeseeksMessage) -> MeeseeksResponse:
-        """Process a sentence."""
+        """Send a query payload to the Meeseeks API.
+
+        Args:
+            messages: Message payload to send.
+
+        Returns:
+            MeeseeksResponse payload with task result and metadata.
+
+        Raises:
+            HomeAssistantError: If the API call fails.
+        """
         # model = self.entry.options.get(CONF_MODEL, DEFAULT_MODEL)
         # LOGGER.debug("Prompt for %s: %s", model, messages["prompt"])
 

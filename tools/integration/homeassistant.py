@@ -43,7 +43,11 @@ class HomeAssistantCache(TypedDict):
 
 @runtime_checkable
 class CacheHolder(Protocol):
-    """Protocol describing objects with a Home Assistant cache attribute."""
+    """Protocol describing objects with a Home Assistant cache attribute.
+
+    Attributes:
+        cache: Home Assistant cache payload.
+    """
     cache: HomeAssistantCache
 
 
@@ -56,9 +60,23 @@ class SupportsInvoke(Protocol):
 def cache_monitor(
     func: Callable[Concatenate[SelfT, P], R]
 ) -> Callable[Concatenate[SelfT, P], R]:
-    """Decorator to monitor and update the cache."""
+    """Decorator to monitor and update the cache.
+
+    Args:
+        func: Method that updates a portion of the cache.
+
+    Returns:
+        Wrapped function that normalizes cache contents after execution.
+    """
     def sort_by_entity_id(dict_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Sort a list of entities by the entity_id field."""
+        """Sort a list of entities by the entity_id field.
+
+        Args:
+            dict_list: List of entity dictionaries.
+
+        Returns:
+            Sorted list of entities.
+        """
         return sorted(dict_list, key=lambda x: x["entity_id"])
 
     def clean_entities(
@@ -66,7 +84,16 @@ def cache_monitor(
         forbidden_prefixes: list[str],
         forbidden_substrings: list[str],
     ) -> HomeAssistantCache:
-        """Filter and normalize entities while populating sensors."""
+        """Filter and normalize entities while populating sensors.
+
+        Args:
+            self: Cache holder to mutate.
+            forbidden_prefixes: Entity ID prefixes to exclude.
+            forbidden_substrings: Entity ID substrings to exclude.
+
+        Returns:
+            Updated HomeAssistantCache payload.
+        """
         for idx, entity in enumerate(self.cache["entities"]):
             if "context" in entity:
                 self.cache["entities"][idx].pop("context")
@@ -105,7 +132,16 @@ def cache_monitor(
         return self.cache
 
     def wrapper(self: SelfT, *args: P.args, **kwargs: P.kwargs) -> R:
-        """Invoke the wrapped function and normalize cache content."""
+        """Invoke the wrapped function and normalize cache content.
+
+        Args:
+            self: Cache holder instance.
+            *args: Positional arguments forwarded to the wrapped function.
+            **kwargs: Keyword arguments forwarded to the wrapped function.
+
+        Returns:
+            Result of the wrapped function.
+        """
         result = func(self, *args, **kwargs)
 
         forbidden_prefixes = [
@@ -253,7 +289,11 @@ class HomeAssistant(AbstractTool):
 
     @cache_monitor
     def update_services(self) -> bool:
-        """Update the list of services from Home Assistant."""
+        """Update the list of services from Home Assistant.
+
+        Returns:
+            True when services are fetched successfully.
+        """
         url = f"{self.base_url}/services"
         try:
             response = requests.get(url, headers=self.api_headers, timeout=30)
@@ -267,7 +307,11 @@ class HomeAssistant(AbstractTool):
 
     @cache_monitor
     def update_entities(self) -> bool:
-        """Update the list of entities from Home Assistant."""
+        """Update the list of entities from Home Assistant.
+
+        Returns:
+            True when entities are fetched successfully.
+        """
         url = f"{self.base_url}/states"
         try:
             response = requests.get(url, headers=self.api_headers, timeout=30)
@@ -280,7 +324,14 @@ class HomeAssistant(AbstractTool):
 
     @cache_monitor
     def update_entity_ids(self) -> bool:
-        """Update the list of entity IDs from Home Assistant."""
+        """Update the list of entity IDs from Home Assistant.
+
+        Returns:
+            True when entity IDs are populated.
+
+        Raises:
+            ValueError: If no entities are available for ID extraction.
+        """
         # TODO: Always assumes blacklist by default due to cache_monitor.
         self.update_entities()
         entities = self.cache["entities"]
@@ -292,7 +343,11 @@ class HomeAssistant(AbstractTool):
 
     @cache_monitor
     def update_cache(self) -> None:
-        """Update the entire cache."""
+        """Update the entire cache.
+
+        Raises:
+            ValueError: If entity IDs cannot be derived.
+        """
         self.update_entity_ids()
         self.update_services()
         self._save_json(self.cache["entities"], "entities.json")
@@ -305,7 +360,20 @@ class HomeAssistant(AbstractTool):
         entity_id: str,
         data: dict | None = None,
     ) -> tuple[bool, list[dict[str, Any]]]:
-        """Call a service in Home Assistant."""
+        """Call a service in Home Assistant.
+
+        Args:
+            domain: Home Assistant domain name (e.g., "light").
+            service: Service name within the domain (e.g., "turn_on").
+            entity_id: Entity ID to target.
+            data: Optional extra payload for the service call.
+
+        Returns:
+            Tuple of success flag and JSON response payload.
+
+        Raises:
+            ValueError: If the domain is not allowed.
+        """
         if domain not in self.cache["allowed_domains"]:
             raise ValueError(f"Domain does not exist or blacklisted: {domain}")
 
@@ -331,6 +399,15 @@ class HomeAssistant(AbstractTool):
         system_prompt: str,
         parser: PydanticOutputParser,
     ) -> ChatPromptTemplate:
+        """Create the prompt template for a set-state operation.
+
+        Args:
+            system_prompt: System prompt content.
+            parser: Pydantic output parser for HomeAssistantCall.
+
+        Returns:
+            ChatPromptTemplate configured for set-state tasks.
+        """
         example = HomeAssistantCall(
             domain="scene", service="turn_on", entity_id="scene.lamp_power_on")
         prompt = ChatPromptTemplate(
@@ -354,6 +431,14 @@ class HomeAssistant(AbstractTool):
 
     @staticmethod
     def _create_get_prompt(system_prompt: str) -> ChatPromptTemplate:
+        """Create the prompt template for a get-state operation.
+
+        Args:
+            system_prompt: System prompt content.
+
+        Returns:
+            ChatPromptTemplate configured for get-state tasks.
+        """
         prompt = ChatPromptTemplate(
             messages=[
                 SystemMessage(content=system_prompt),
@@ -379,7 +464,14 @@ class HomeAssistant(AbstractTool):
 
     @staticmethod
     def _clean_answer(answer: str) -> str:
-        """Clean the answer by removing/replacing characters."""
+        """Clean the answer by removing/replacing characters.
+
+        Args:
+            answer: Raw answer string to normalize.
+
+        Returns:
+            Cleaned answer string.
+        """
         replacements = {
             # Common entities
             "RealFeel": "Real Feel",
@@ -412,7 +504,16 @@ class HomeAssistant(AbstractTool):
         rag_documents: list[Document],
         action_step: ActionStep,
     ) -> MockSpeaker:
-        """Invoke the service and set the state."""
+        """Invoke the service and set the state.
+
+        Args:
+            chain: Runnable chain that yields HomeAssistantCall.
+            rag_documents: Context documents for the chain.
+            action_step: Action step describing the request.
+
+        Returns:
+            MockSpeaker with a status message.
+        """
         MockSpeaker = get_mock_speaker()
 
         try:
@@ -443,13 +544,16 @@ class HomeAssistant(AbstractTool):
         return MockSpeaker(content=tmp_return_message)
 
     def set_state(self, action_step: ActionStep | None = None) -> MockSpeaker:
-        """ Predict and call a service for a given action step based
-                on sensor information.
+        """Predict and call a service for a given action step.
+
         Args:
-            action_step (ActionStep): The natural language action
-                                        step to be performed.
+            action_step: Action step describing the desired change.
+
         Returns:
-            Response from the chain.
+            MockSpeaker with a status message.
+
+        Raises:
+            ValueError: If action_step is None.
         """
         if action_step is None:
             raise ValueError("Action step cannot be None.")
@@ -471,13 +575,16 @@ class HomeAssistant(AbstractTool):
             chain, rag_documents, action_step)
 
     def get_state(self, action_step: ActionStep | None = None) -> MockSpeaker:
-        """ Generate response for a given action step based
-                on sensor information.
+        """Generate response for a given action step based on sensors.
+
         Args:
-            action_step (ActionStep): The natural language action
-                                        step to be performed.
+            action_step: Action step describing the desired query.
+
         Returns:
-            Response from the chain.
+            MockSpeaker with the generated response.
+
+        Raises:
+            ValueError: If action_step is None.
         """
         if action_step is None:
             raise ValueError("Action step cannot be None.")
@@ -503,7 +610,11 @@ class HomeAssistant(AbstractTool):
 
 
 def test_homeassistant() -> HomeAssistant:
-    """Test the HomeAssistant class."""
+    """Test the HomeAssistant class.
+
+    Returns:
+        Initialized HomeAssistant instance after a test call.
+    """
     ha = HomeAssistant()
     ha.update_cache()
     ha.call_service("scene", "turn_on", "scene.strip_lights_white")

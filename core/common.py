@@ -13,23 +13,31 @@ from jinja2 import Environment, FileSystemLoader
 
 
 class MockSpeaker(NamedTuple):
-    """Simple mock response container used across tools and tests."""
+    """Simple mock response container used across tools and tests.
+
+    Attributes:
+        content: Text content returned by a tool.
+    """
     content: str
 
 
 def get_mock_speaker() -> type[MockSpeaker]:
-    """Return a mock speaker for testing."""
+    """Return a mock speaker for testing.
+
+    Returns:
+        MockSpeaker class for constructing responses.
+    """
     return MockSpeaker
 
 
 def get_logger(name: str | None = None) -> logging_real.Logger:
-    """ Get the logger for the module.
+    """Get the logger for the module.
 
     Args:
-        name (str, optional): Name of the logger. Defaults to __name__.
+        name: Name of the logger, defaults to __name__.
 
     Returns:
-        logging.Logger: The logger object.
+        Logger configured with colored output.
     """
     logging_real.basicConfig(level=logging_real.DEBUG,
                              format='%(asctime)s - %(levelname)s - %(message)s')
@@ -51,14 +59,14 @@ def get_logger(name: str | None = None) -> logging_real.Logger:
 
 def num_tokens_from_string(
         string: str, encoding_name: str = "cl100k_base") -> int:
-    """ Get the number of tokens in a string using a specific model.
+    """Get the number of tokens in a string using a specific model.
 
     Args:
-        string (str): The string for which the token length is required.
-        encoding_name (str): The name of the model.
+        string: Text to tokenize.
+        encoding_name: Encoding name used for tokenization.
 
     Returns:
-        int: Number of tokens for the string.
+        Number of tokens for the string.
     """
     # TODO: Add support for dynamic model selection
     encoding = tiktoken.get_encoding(encoding_name)
@@ -67,7 +75,11 @@ def num_tokens_from_string(
 
 
 def get_unique_timestamp() -> int:
-    """ Get a unique timestamp for the task queue. """
+    """Get a unique timestamp for the task queue.
+
+    Returns:
+        Integer timestamp suitable for unique IDs.
+    """
     # Get the number of seconds since epoch (Jan 1, 1970) as a float
     current_timestamp = int(time.time())
     # Convert it to string for uniqueness and consistency
@@ -77,10 +89,16 @@ def get_unique_timestamp() -> int:
 
 
 def get_system_prompt(name: str = "action-planner") -> str:
-    """ Get the system prompt for the task queue.
+    """Get the system prompt for the task queue.
+
+    Args:
+        name: Prompt file name without extension.
 
     Returns:
-        str: The system prompt for the task queue.
+        System prompt string.
+
+    Raises:
+        OSError: If the prompt file cannot be read.
     """
     logging = get_logger(name="core.common.get_system_prompt")
     system_prompt_path = os.path.join(
@@ -97,10 +115,15 @@ def ha_render_system_prompt(
     env: str = "prompts",
     name: str = "homeassistant-set-state",
 ) -> str:
-    """ Render the system j2 prompt. Need to make it more generic.
+    """Render the Home Assistant Jinja2 system prompt.
+
+    Args:
+        all_entities: Optional entity list for template substitution.
+        env: Template root directory name.
+        name: Template file name without extension.
 
     Returns:
-        str: The system prompt for the task queue.
+        Rendered system prompt string.
     """
     if all_entities is not None:
         all_entities = str(all_entities).strip()

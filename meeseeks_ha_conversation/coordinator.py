@@ -26,7 +26,12 @@ class MeeseeksDataUpdateCoordinator(DataUpdateCoordinator):
         hass: HomeAssistant,
         client: MeeseeksApiClient,
     ) -> None:
-        """Initialize."""
+        """Initialize the coordinator.
+
+        Args:
+            hass: Home Assistant core instance.
+            client: API client for Meeseeks.
+        """
         self.client = client
         super().__init__(
             hass=hass,
@@ -36,7 +41,14 @@ class MeeseeksDataUpdateCoordinator(DataUpdateCoordinator):
         )
 
     async def _async_update_data(self) -> bool:
-        """Update data via library."""
+        """Update data via library.
+
+        Returns:
+            True when the heartbeat check succeeds.
+
+        Raises:
+            UpdateFailed: If the API heartbeat fails.
+        """
         try:
             return await self.client.async_get_heartbeat()
         except ApiClientError as exception:
