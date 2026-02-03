@@ -1,3 +1,4 @@
+"""Integration tests for core tools and adapters."""
 import asyncio
 import sys
 import types
@@ -11,6 +12,7 @@ from tools.integration.mcp import MCPToolRunner, _load_mcp_config
 
 
 def test_talk_to_user_set_state(monkeypatch):
+    """Echo the action argument when setting state."""
     monkeypatch.setattr(TalkToUser, "__init__", lambda self: None)
     tool = TalkToUser()
     step = types.SimpleNamespace(action_argument="hello")
@@ -19,6 +21,7 @@ def test_talk_to_user_set_state(monkeypatch):
 
 
 def test_talk_to_user_requires_step(monkeypatch):
+    """Require an action step for TalkToUser set_state."""
     monkeypatch.setattr(TalkToUser, "__init__", lambda self: None)
     tool = TalkToUser()
     with pytest.raises(ValueError):
@@ -26,12 +29,14 @@ def test_talk_to_user_requires_step(monkeypatch):
 
 
 def test_mcp_config_requires_env(monkeypatch):
+    """Raise when MCP config environment variable is missing."""
     monkeypatch.delenv("MESEEKS_MCP_CONFIG", raising=False)
     with pytest.raises(ValueError):
         _load_mcp_config()
 
 
 def test_mcp_tool_runner_uses_async(monkeypatch):
+    """Use async invocation path in MCP tool runner."""
     runner = MCPToolRunner(server_name="srv", tool_name="tool")
     async def _fake_invoke(_):
         return "ok"
@@ -43,6 +48,7 @@ def test_mcp_tool_runner_uses_async(monkeypatch):
 
 
 def test_mcp_invoke_async_success(monkeypatch, tmp_path):
+    """Invoke an MCP tool successfully with stubbed client."""
     config_path = tmp_path / "mcp.json"
     config_path.write_text('{"servers": {"srv": {"transport": "stdio"}}}', encoding="utf-8")
     monkeypatch.setenv("MESEEKS_MCP_CONFIG", str(config_path))
@@ -70,6 +76,7 @@ def test_mcp_invoke_async_success(monkeypatch, tmp_path):
 
 
 def test_mcp_invoke_async_missing_tool(monkeypatch, tmp_path):
+    """Raise when the requested MCP tool is unavailable."""
     config_path = tmp_path / "mcp.json"
     config_path.write_text('{"servers": {"srv": {"transport": "stdio"}}}', encoding="utf-8")
     monkeypatch.setenv("MESEEKS_MCP_CONFIG", str(config_path))
@@ -112,6 +119,7 @@ def _make_homeassistant():
 
 
 def test_homeassistant_clean_answer():
+    """Normalize Home Assistant response strings."""
     answer = HomeAssistant._clean_answer('RealFeel 10km/h "test"')
     assert "Real Feel" in answer
     assert "kilometer per hour" in answer
@@ -119,6 +127,7 @@ def test_homeassistant_clean_answer():
 
 
 def test_homeassistant_update_services(monkeypatch):
+    """Update cached services from the Home Assistant API."""
     ha = _make_homeassistant()
 
     class DummyResponse:
@@ -137,6 +146,7 @@ def test_homeassistant_update_services(monkeypatch):
 
 
 def test_homeassistant_update_entities(monkeypatch):
+    """Update cached entities and sensors from the API."""
     ha = _make_homeassistant()
 
     class DummyResponse:
@@ -159,6 +169,7 @@ def test_homeassistant_update_entities(monkeypatch):
 
 
 def test_homeassistant_update_entity_ids(monkeypatch):
+    """Populate entity ID cache from fetched entities."""
     ha = _make_homeassistant()
 
     def fake_update_entities():
@@ -174,6 +185,7 @@ def test_homeassistant_update_entity_ids(monkeypatch):
 
 
 def test_homeassistant_prompt_builders():
+    """Build prompts for set/get operations."""
     class DummyParser:
         def get_format_instructions(self):
             return "format"
@@ -185,6 +197,7 @@ def test_homeassistant_prompt_builders():
 
 
 def test_homeassistant_call_service_success(monkeypatch):
+    """Call a Home Assistant service successfully."""
     ha = _make_homeassistant()
 
     class DummyResponse:
@@ -208,12 +221,14 @@ def test_homeassistant_call_service_success(monkeypatch):
 
 
 def test_homeassistant_call_service_invalid_domain():
+    """Reject service calls with invalid domains."""
     ha = _make_homeassistant()
     with pytest.raises(ValueError):
         ha.call_service("invalid", "turn_on", "scene.lamp")
 
 
 def test_homeassistant_invoke_service(monkeypatch):
+    """Invoke a service call and return a success response."""
     ha = _make_homeassistant()
 
     class DummyCall:
@@ -232,6 +247,7 @@ def test_homeassistant_invoke_service(monkeypatch):
 
 
 def test_homeassistant_set_state(monkeypatch):
+    """Set state via the Home Assistant tool flow."""
     ha = _make_homeassistant()
 
     class DummyChain:
@@ -265,6 +281,7 @@ def test_homeassistant_set_state(monkeypatch):
 
 
 def test_homeassistant_get_state(monkeypatch):
+    """Fetch state via the Home Assistant tool flow."""
     ha = _make_homeassistant()
 
     class DummyChain:

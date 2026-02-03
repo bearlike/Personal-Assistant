@@ -1,3 +1,4 @@
+"""Tests for the Streamlit chat UI helpers."""
 # ruff: noqa: I001
 # mypy: ignore-errors
 import os
@@ -59,14 +60,18 @@ sys.modules["langchain.memory"] = langchain_memory
 langchain_core_pydantic = types.ModuleType("langchain_core.pydantic_v1")
 
 class BaseModel:
+    """Minimal stand-in for Pydantic BaseModel."""
     def __init__(self, **kwargs):
+        """Store provided attributes on the instance."""
         for key, value in kwargs.items():
             setattr(self, key, value)
 
 def Field(*args, **kwargs):  # noqa: N802 - mimic pydantic API
+    """Stub Field helper for pydantic-compatible imports."""
     return None
 
 def validator(*args, **kwargs):  # noqa: N802 - mimic pydantic API
+    """Stub validator decorator for pydantic-compatible imports."""
     def wrapper(func):
         return func
 
@@ -121,6 +126,7 @@ def _make_task_queue(action_steps):
 
 
 def test_generate_action_plan_helper(monkeypatch):
+    """Return a formatted action plan with the generated queue."""
     steps = [
         ActionStep(
             action_consumer="talk_to_user_tool",
@@ -142,6 +148,7 @@ def test_generate_action_plan_helper(monkeypatch):
 
 
 def test_run_action_plan_helper(monkeypatch, tmp_path):
+    """Combine responses from a task queue execution."""
     session_store = SessionStore(root_dir=str(tmp_path))
     session_id = session_store.create_session()
     fake_state = types.SimpleNamespace(
@@ -171,6 +178,7 @@ def test_run_action_plan_helper(monkeypatch, tmp_path):
 
 
 def test_main_flow(monkeypatch, tmp_path):
+    """Exercise the main chat flow with stubbed Streamlit runtime."""
     class DummyContext:
         def __enter__(self):
             return self

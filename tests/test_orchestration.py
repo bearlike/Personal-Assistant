@@ -1,3 +1,4 @@
+"""Tests for orchestration workflows."""
 from core import task_master  # noqa: E402
 from core.classes import ActionStep, TaskQueue  # noqa: E402
 from core.common import get_mock_speaker  # noqa: E402
@@ -12,14 +13,18 @@ from core.tool_registry import ToolRegistry, ToolSpec  # noqa: E402
 
 
 class Counter:
+    """Simple counter helper for call tracking."""
     def __init__(self):
+        """Initialize the counter."""
         self.count = 0
 
     def bump(self):
+        """Increment the counter by one."""
         self.count += 1
 
 
 def make_task_queue(message: str) -> TaskQueue:
+    """Build a minimal task queue with a single action step."""
     step = ActionStep(
         action_consumer="talk_to_user_tool",
         action_type="set",
@@ -29,6 +34,7 @@ def make_task_queue(message: str) -> TaskQueue:
 
 
 def test_orchestrate_session_completes(monkeypatch, tmp_path):
+    """Return a completed task queue when execution succeeds."""
     generate_calls = Counter()
     run_calls = Counter()
     session_store = SessionStore(root_dir=str(tmp_path))
@@ -61,6 +67,7 @@ def test_orchestrate_session_completes(monkeypatch, tmp_path):
 
 
 def test_orchestrate_session_replans_on_failure(monkeypatch, tmp_path):
+    """Replan when an action plan fails once."""
     generate_calls = Counter()
     run_calls = Counter()
     session_store = SessionStore(root_dir=str(tmp_path))
@@ -97,6 +104,7 @@ def test_orchestrate_session_replans_on_failure(monkeypatch, tmp_path):
 
 
 def test_orchestrate_session_passes_summary(monkeypatch, tmp_path):
+    """Pass stored summaries into action plan generation."""
     captured = {}
     session_store = SessionStore(root_dir=str(tmp_path))
     session_id = session_store.create_session()
@@ -126,6 +134,7 @@ def test_orchestrate_session_passes_summary(monkeypatch, tmp_path):
 
 
 def test_orchestrate_session_max_iters(monkeypatch, tmp_path):
+    """Stop after max iteration count is reached."""
     generate_calls = Counter()
     run_calls = Counter()
     session_store = SessionStore(root_dir=str(tmp_path))
@@ -160,6 +169,7 @@ def test_orchestrate_session_max_iters(monkeypatch, tmp_path):
 
 
 def test_orchestrate_session_compact(tmp_path):
+    """Compact session transcripts when limits are exceeded."""
     session_store = SessionStore(root_dir=str(tmp_path))
     session_id = session_store.create_session()
     session_store.append_event(
@@ -180,16 +190,20 @@ def test_orchestrate_session_compact(tmp_path):
 
 
 class DummyTool:
+    """Stub tool used for permission tests."""
     def __init__(self):
+        """Initialize the dummy tool."""
         self.called_with = None
 
     def run(self, action_step):
+        """Return a mocked tool response."""
         self.called_with = action_step.action_argument
         MockSpeaker = get_mock_speaker()
         return MockSpeaker(content=f"ok:{action_step.action_argument}")
 
 
 def test_run_action_plan_permission_denied():
+    """Return permission denied when policy disallows execution."""
     registry = ToolRegistry()
     dummy_tool = DummyTool()
     registry.register(
@@ -231,6 +245,7 @@ def test_run_action_plan_permission_denied():
 
 
 def test_run_action_plan_hooks_modify_input():
+    """Allow hooks to modify action arguments."""
     registry = ToolRegistry()
     dummy_tool = DummyTool()
     registry.register(
@@ -276,6 +291,7 @@ def test_run_action_plan_hooks_modify_input():
 
 
 def test_orchestrate_session_auto_compact(monkeypatch, tmp_path):
+    """Auto-compact sessions based on token budget."""
     session_store = SessionStore(root_dir=str(tmp_path))
     session_id = session_store.create_session()
     monkeypatch.setenv("MESEEKS_AUTO_COMPACT_THRESHOLD", "0")

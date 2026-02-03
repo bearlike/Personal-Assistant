@@ -64,6 +64,14 @@ def _parse_command(text: str) -> tuple[str, list[str]]:
     return command, parts[1:]
 
 def run_cli(args: argparse.Namespace) -> int:
+    """Run the CLI application loop.
+
+    Args:
+        args: Parsed command-line arguments.
+
+    Returns:
+        Exit code for the CLI process.
+    """
     console = Console(color_system=None if args.no_color else "auto")
     store = SessionStore(root_dir=args.session_dir)
     session_id = _resolve_session_id(store, args.session, args.tag, args.fork)
@@ -154,6 +162,7 @@ def _run_query(
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build the argument parser for the CLI."""
     parser = argparse.ArgumentParser(description="Meeseeks terminal CLI")
     parser.add_argument("--query", help="Run a single query and exit")
     parser.add_argument("--model", help="Override model name")
@@ -178,6 +187,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    """Entry point for the CLI executable."""
     parser = build_parser()
     args = parser.parse_args()
     return run_cli(args)

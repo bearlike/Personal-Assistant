@@ -1,3 +1,4 @@
+"""Pytest configuration for repository tests."""
 import os
 import sys
 

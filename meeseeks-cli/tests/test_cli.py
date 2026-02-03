@@ -1,3 +1,4 @@
+"""Tests for CLI helpers and workflows."""
 # ruff: noqa: I001
 import os
 import sys
@@ -24,25 +25,30 @@ from cli_master import (  # noqa: E402
 
 
 class DummyStep:
+    """Minimal action step stub for CLI formatting."""
     def __init__(self, tool: str, action: str, argument: str) -> None:
+        """Initialize the dummy step."""
         self.action_consumer = tool
         self.action_type = action
         self.action_argument = argument
 
 
 def test_parse_command():
+    """Parse slash commands into command and arguments."""
     command, args = _parse_command("/tag primary")
     assert command == "/tag"
     assert args == ["primary"]
 
 
 def test_format_steps():
+    """Format action steps into display rows."""
     steps = [DummyStep("tool_a", "get", "status")]
     rows = _format_steps(steps)
     assert rows == [("tool_a", "get", "status")]
 
 
 def test_resolve_session_id(tmp_path):
+    """Resolve session IDs from tags or fork options."""
     store = SessionStore(root_dir=str(tmp_path))
     session_id = _resolve_session_id(store, None, "primary", None)
     assert session_id
@@ -53,6 +59,7 @@ def test_resolve_session_id(tmp_path):
 
 
 def test_handle_new_session_command(tmp_path):
+    """Create a new session via command registry."""
     store = SessionStore(root_dir=str(tmp_path))
     console = Console(record=True)
     tool_registry = load_registry()
@@ -73,6 +80,7 @@ def test_handle_new_session_command(tmp_path):
 
 
 def test_build_approval_callback_accepts():
+    """Accept approval when prompt returns yes."""
     console = Console(record=True)
     callback = _build_approval_callback(lambda _: "y", console)
     step = DummyStep("tool", "set", "arg")
@@ -81,11 +89,13 @@ def test_build_approval_callback_accepts():
 
 
 def test_build_approval_callback_none():
+    """Return None when approval prompting is disabled."""
     console = Console(record=True)
     assert _build_approval_callback(None, console) is None
 
 
 def test_run_query(monkeypatch, tmp_path):
+    """Run a CLI query with a generated plan."""
     store = SessionStore(root_dir=str(tmp_path))
     session_id = store.create_session()
     state = CliState(session_id=session_id, show_plan=True)
@@ -127,6 +137,7 @@ def test_run_query(monkeypatch, tmp_path):
 
 
 def test_run_cli_single_query(monkeypatch, tmp_path):
+    """Execute CLI in single-query mode."""
     from cli_master import run_cli
 
     args = types.SimpleNamespace(
@@ -157,6 +168,7 @@ def test_run_cli_single_query(monkeypatch, tmp_path):
 
 
 def test_run_cli_interactive_quit(monkeypatch, tmp_path):
+    """Exit interactive CLI when /quit is entered."""
     from cli_master import run_cli
 
     args = types.SimpleNamespace(

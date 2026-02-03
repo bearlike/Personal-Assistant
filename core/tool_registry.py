@@ -173,6 +173,7 @@ def load_registry(manifest_path: str | None = None) -> ToolRegistry:
          "kind": "mcp", "server": "weather", "tool": "get_weather"}
       ]
     }
+
     Args:
         manifest_path: Optional path to a tool manifest JSON file.
 

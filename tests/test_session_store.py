@@ -1,8 +1,10 @@
+"""Tests for session store persistence helpers."""
 from core.compaction import should_compact, summarize_events
 from core.session_store import SessionStore
 
 
 def test_session_store_roundtrip(tmp_path):
+    """Persist events and summaries in the session store."""
     store = SessionStore(root_dir=str(tmp_path))
     session_id = store.create_session()
 
@@ -18,6 +20,7 @@ def test_session_store_roundtrip(tmp_path):
 
 
 def test_session_store_tag_and_fork(tmp_path):
+    """Tag sessions and fork transcripts for new sessions."""
     store = SessionStore(root_dir=str(tmp_path))
     session_id = store.create_session()
     store.append_event(session_id, {"type": "user", "payload": {"text": "hello"}})
@@ -31,6 +34,7 @@ def test_session_store_tag_and_fork(tmp_path):
 
 
 def test_compaction_helpers():
+    """Verify compaction helpers summarize and detect thresholds."""
     events = [{"type": "user", "payload": {"text": "hello"}}]
     summary = summarize_events(events)
     assert "user" in summary

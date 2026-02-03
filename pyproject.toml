@@ -45,11 +45,14 @@ extend-exclude = [
 ]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP"]
+select = ["D", "E", "F", "I", "UP"]
 fixable = ["ALL"]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.mypy]
 files = [

@@ -16,6 +16,7 @@ from core.tool_registry import ToolRegistry  # noqa: E402
 
 @dataclass
 class CliState:
+    """State persisted across CLI interactions."""
     session_id: str
     show_plan: bool = True
     model_name: str | None = None
@@ -23,6 +24,7 @@ class CliState:
 
 @dataclass
 class CommandContext:
+    """Context passed to CLI command handlers."""
     console: Console
     store: SessionStore
     state: CliState

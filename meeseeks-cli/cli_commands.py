@@ -24,16 +24,28 @@ from core.tool_registry import ToolRegistry  # noqa: E402
 
 @dataclass(frozen=True)
 class Command:
+    """CLI command registration metadata."""
     name: str
     help: str
     handler: Callable[[CommandContext, list[str]], bool]
 
 
 class CommandRegistry:
+    """Registry for CLI commands and their handlers."""
     def __init__(self) -> None:
+        """Initialize an empty command registry."""
         self._commands: dict[str, Command] = {}
 
     def command(self, name: str, help_text: str) -> Callable[[Callable], Callable]:
+        """Register a command decorator for CLI handlers.
+
+        Args:
+            name: Command token (e.g., "/help").
+            help_text: Help text shown in the CLI.
+
+        Returns:
+            Decorator that registers a command handler.
+        """
         def decorator(func: Callable[[CommandContext, list[str]], bool]) -> Callable:
             self._commands[name] = Command(name=name, help=help_text, handler=func)
             return func
@@ -41,6 +53,16 @@ class CommandRegistry:
         return decorator
 
     def execute(self, name: str, context: CommandContext, args: list[str]) -> bool:
+        """Execute a registered command handler.
+
+        Args:
+            name: Command token to execute.
+            context: Command execution context.
+            args: Command arguments.
+
+        Returns:
+            True to continue, False to exit the CLI loop.
+        """
         command = self._commands.get(name)
         if command is None:
             context.console.print("Unknown command. Use /help for a list of commands.")
@@ -48,10 +70,12 @@ class CommandRegistry:
         return command.handler(context, args)
 
     def help_text(self) -> str:
+        """Return formatted help text for all commands."""
         lines = [f"{cmd.name} - {cmd.help}" for cmd in self._commands.values()]
         return "\n".join(sorted(lines))
 
     def list_commands(self) -> list[str]:
+        """Return a sorted list of registered command tokens."""
         return sorted(self._commands.keys())
 
 
@@ -296,6 +320,7 @@ def _render_mcp(console: Console, tool_registry: ToolRegistry) -> None:
 
 
 def get_registry() -> CommandRegistry:
+    """Return the singleton command registry."""
     return REGISTRY
 
 

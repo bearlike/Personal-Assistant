@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Streamlit Chat App
+"""Streamlit chat app.
 
 This module implements a chat application using Streamlit and Meeseeks.
 It allows users to interact with an AI assistant
@@ -32,7 +31,15 @@ from core.task_master import generate_action_plan, orchestrate_session
 logging = get_logger(name="Meeseeks-Chat")
 
 
-def generate_action_plan_helper(user_input: str):
+def generate_action_plan_helper(user_input: str) -> tuple[list[str], TaskQueue]:
+    """Build the action plan preview for a user query.
+
+    Args:
+        user_input: Raw user query text.
+
+    Returns:
+        Tuple of human-readable action plan entries and the task queue.
+    """
     action_plan_list = []
     task_queue = generate_action_plan(user_query=user_input)
     for action_step in task_queue.action_steps:
@@ -44,7 +51,15 @@ def generate_action_plan_helper(user_input: str):
     return action_plan_list, task_queue
 
 
-def run_action_plan_helper(task_queue: TaskQueue):
+def run_action_plan_helper(task_queue: TaskQueue) -> str:
+    """Execute an action plan and combine tool responses.
+
+    Args:
+        task_queue: Precomputed task queue to run.
+
+    Returns:
+        Combined tool responses as a single string.
+    """
     responses: list[str] = []
     task_queue = orchestrate_session(
         user_query=task_queue.human_message or "",
@@ -60,10 +75,8 @@ def run_action_plan_helper(task_queue: TaskQueue):
     return " ".join(responses)
 
 
-def main():
-    """
-    Main function to run the chat application.
-    """
+def main() -> None:
+    """Run the Streamlit chat application."""
     st.set_page_config(
         page_title="Meeseeks | Bedroom AI",
         page_icon=":speech_balloon:",

@@ -54,6 +54,13 @@ class PermissionPolicy:
         default_by_action: dict[str, PermissionDecision] | None = None,
         default_decision: PermissionDecision = PermissionDecision.ASK,
     ) -> None:
+        """Initialize the permission policy.
+
+        Args:
+            rules: Optional list of explicit permission rules.
+            default_by_action: Optional defaults keyed by action type.
+            default_decision: Default decision when no rule matches.
+        """
         self._rules = rules or []
         self._default_by_action = default_by_action or {}
         self._default_decision = default_decision

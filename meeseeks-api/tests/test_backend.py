@@ -1,3 +1,4 @@
+"""Tests for the Meeseeks API backend."""
 # mypy: ignore-errors
 import json
 import os
@@ -55,17 +56,22 @@ sys.modules["langchain.output_parsers"] = langchain_output_parsers
 langchain_core_pydantic = types.ModuleType("langchain_core.pydantic_v1")
 
 class BaseModel:
+    """Minimal stand-in for Pydantic BaseModel."""
     def __init__(self, **kwargs):
+        """Store provided attributes on the instance."""
         for key, value in kwargs.items():
             setattr(self, key, value)
 
     def dict(self, *args, **kwargs):
+        """Return a shallow dict representation of the instance."""
         return dict(self.__dict__)
 
 def Field(*args, **kwargs):  # noqa: N802 - mimic pydantic API
+    """Stub Field helper for pydantic-compatible imports."""
     return None
 
 def validator(*args, **kwargs):  # noqa: N802 - mimic pydantic API
+    """Stub validator decorator for pydantic-compatible imports."""
     def wrapper(func):
         return func
 
@@ -96,7 +102,9 @@ import backend  # noqa: E402
 
 
 class DummyQueue:
+    """Minimal task queue stub for API responses."""
     def __init__(self, result: str) -> None:
+        """Initialize the dummy queue with a single action result."""
         self.task_result = result
         self.action_steps = [
             {
@@ -108,6 +116,7 @@ class DummyQueue:
         ]
 
     def dict(self):
+        """Return a serialized representation of the queue."""
         return {
             "task_result": self.task_result,
             "action_steps": list(self.action_steps),
@@ -119,12 +128,14 @@ def _make_task_queue(result: str) -> DummyQueue:
 
 
 def test_query_requires_api_key(monkeypatch):
+    """Require authentication headers for query requests."""
     client = backend.app.test_client()
     response = client.post("/api/query", json={"query": "hello"})
     assert response.status_code == 401
 
 
 def test_query_invalid_input(monkeypatch):
+    """Reject empty payloads without a query value."""
     client = backend.app.test_client()
     response = client.post(
         "/api/query",
@@ -136,6 +147,7 @@ def test_query_invalid_input(monkeypatch):
 
 
 def test_query_success(monkeypatch):
+    """Return a task result payload when authorized."""
     client = backend.app.test_client()
 
     def fake_orchestrate(*args, **kwargs):

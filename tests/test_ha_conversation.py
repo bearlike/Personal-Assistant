@@ -1,3 +1,4 @@
+"""Tests for the Home Assistant conversation integration."""
 import asyncio
 import sys
 import types
@@ -265,31 +266,40 @@ from meeseeks_ha_conversation.helpers import get_exposed_entities  # noqa: E402
 
 
 class DummySession:
+    """Stub aiohttp session for API client testing."""
     def __init__(self, payload):
+        """Initialize the session with a payload."""
         self.payload = payload
         self.last_request = None
 
     async def request(self, method=None, url=None, headers=None, json=None):
+        """Capture the request metadata and return a dummy response."""
         self.last_request = {"method": method, "url": url, "headers": headers, "json": json}
         return DummyResponse(self.payload)
 
 
 class DummyResponse:
+    """Stub response object for aiohttp interactions."""
     def __init__(self, payload):
+        """Initialize the response with a payload."""
         self._payload = payload
         self.status = 200
 
     def raise_for_status(self):
+        """Return without raising to mimic successful responses."""
         return None
 
     async def json(self):
+        """Return the response payload as JSON."""
         return dict(self._payload)
 
     async def text(self):
+        """Return a placeholder text response."""
         return "ok"
 
 
 def test_api_generate_includes_session_id():
+    """Include session_id in API request payloads."""
     session = DummySession({"task_result": "ok"})
     client = MeeseeksApiClient(base_url="http://test", timeout=10, session=session)
     result = asyncio.run(
@@ -301,6 +311,7 @@ def test_api_generate_includes_session_id():
 
 
 def test_api_generate_requires_prompt():
+    """Raise when API requests omit a prompt."""
     session = DummySession({"task_result": "ok"})
     client = MeeseeksApiClient(base_url="http://test", timeout=10, session=session)
     try:
@@ -312,6 +323,7 @@ def test_api_generate_requires_prompt():
 
 
 def test_coordinator_update_success():
+    """Update coordinator successfully when heartbeat passes."""
     class Client:
         async def async_get_heartbeat(self):
             return True
@@ -322,6 +334,7 @@ def test_coordinator_update_success():
 
 
 def test_coordinator_update_failure():
+    """Raise UpdateFailed when heartbeat errors."""
     class Client:
         async def async_get_heartbeat(self):
             raise ApiClientError("bad")
@@ -336,6 +349,7 @@ def test_coordinator_update_failure():
 
 
 def test_helpers_get_exposed_entities():
+    """Return exposed entities with aliases."""
     hass = types.SimpleNamespace(
         states=types.SimpleNamespace(
             async_all=lambda: [
@@ -349,6 +363,7 @@ def test_helpers_get_exposed_entities():
 
 
 def test_agent_process_success():
+    """Process conversation input successfully."""
     hass = types.SimpleNamespace()
     entry = types.SimpleNamespace()
     client = types.SimpleNamespace()
@@ -368,6 +383,7 @@ def test_agent_process_success():
 
 
 def test_agent_process_error():
+    """Return error responses when agent processing fails."""
     hass = types.SimpleNamespace()
     entry = types.SimpleNamespace()
     client = types.SimpleNamespace()
@@ -389,6 +405,7 @@ def test_agent_process_error():
 
 
 def test_config_flow_show_form():
+    """Show config flow form on initial step."""
     flow = MeeseeksConfigFlow()
     flow.hass = object()
     result = asyncio.run(flow.async_step_user(None))
@@ -396,6 +413,7 @@ def test_config_flow_show_form():
 
 
 def test_config_flow_duplicate(monkeypatch):
+    """Abort config flow when duplicate entries exist."""
     flow = MeeseeksConfigFlow()
     flow.hass = object()
     flow._async_current_entries = lambda include_ignore=False: [
@@ -411,6 +429,7 @@ def test_config_flow_duplicate(monkeypatch):
 
 
 def test_config_flow_success(monkeypatch):
+    """Create config entries after successful validation."""
     flow = MeeseeksConfigFlow()
     flow.hass = object()
 
@@ -429,6 +448,7 @@ def test_config_flow_success(monkeypatch):
 
 
 def test_options_flow_menu():
+    """Return options flow menu results."""
     flow = MeeseeksOptionsFlow(types.SimpleNamespace(options={}))
     result = asyncio.run(flow.async_step_init())
     assert result["type"] == "menu"

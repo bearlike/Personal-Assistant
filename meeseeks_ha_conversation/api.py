@@ -1,4 +1,4 @@
-""" Meeseeks API Client. """
+"""Meeseeks API client."""
 from __future__ import annotations
 
 import json

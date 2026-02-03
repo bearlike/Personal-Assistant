@@ -1,3 +1,4 @@
+"""Tests for permission policy decisions."""
 from core.classes import ActionStep
 from core.permissions import (
     PermissionDecision,
@@ -8,6 +9,7 @@ from core.permissions import (
 
 
 def test_default_policy_allows_get():
+    """Allow default get actions under permissive policy."""
     policy = PermissionPolicy(
         rules=[
             PermissionRule(
@@ -28,6 +30,7 @@ def test_default_policy_allows_get():
 
 
 def test_rule_override_denies():
+    """Deny set actions when an explicit rule overrides defaults."""
     policy = PermissionPolicy(
         rules=[
             PermissionRule(
@@ -48,6 +51,7 @@ def test_rule_override_denies():
 
 
 def test_load_policy_from_json(tmp_path, monkeypatch):
+    """Load policy configuration from a JSON file."""
     policy_path = tmp_path / "policy.json"
     policy_path.write_text(
         """

@@ -1,9 +1,11 @@
+"""Tests for tool registry loading behavior."""
 import json
 
 from core.tool_registry import load_registry
 
 
 def test_default_registry(monkeypatch):
+    """Load built-in tools when no manifest is configured."""
     monkeypatch.delenv("MESEEKS_TOOL_MANIFEST", raising=False)
     registry = load_registry()
     tool_ids = {spec.tool_id for spec in registry.list_specs()}
@@ -12,6 +14,7 @@ def test_default_registry(monkeypatch):
 
 
 def test_manifest_local_tool(tmp_path, monkeypatch):
+    """Load a local tool from a manifest entry."""
     module_path = tmp_path / "dummy_tool.py"
     module_path.write_text(
         "class DummyTool:\n"
@@ -46,6 +49,7 @@ def test_manifest_local_tool(tmp_path, monkeypatch):
 
 
 def test_manifest_empty_falls_back(tmp_path):
+    """Fall back to defaults when manifest contains no tools."""
     manifest_path = tmp_path / "manifest.json"
     manifest_path.write_text(json.dumps({"tools": []}), encoding="utf-8")
 

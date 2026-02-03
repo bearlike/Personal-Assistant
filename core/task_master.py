@@ -370,8 +370,7 @@ def orchestrate_session(
     approval_callback: Callable[[ActionStep], bool] | None = None,
     hook_manager: HookManager | None = None,
 ) -> TaskQueue | tuple[TaskQueue, OrchestrationState]:
-    """
-    Orchestrate a session using a plan-act-observe-decide loop.
+    """Orchestrate a session using a plan-act-observe-decide loop.
 
     Args:
         user_query: User input that initiates the orchestration cycle.

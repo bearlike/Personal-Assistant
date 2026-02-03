@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Meeseeks API
+"""Meeseeks API.
 
 This module implements a REST API for Meeseeks using Flask-RESTX.
 It provides a single endpoint to interact with the Meeseeks core,
@@ -89,6 +88,7 @@ task_queue_model = api.model('TaskQueue', {
 
 @app.before_request
 def log_request_info():
+    """Log request metadata for debugging."""
     logging.debug('Endpoint: %s', request.endpoint)
     logging.debug('Headers: %s', request.headers)
     logging.debug('Body: %s', request.get_data())
@@ -96,10 +96,7 @@ def log_request_info():
 
 @ns.route('/query')
 class MeeseeksQuery(Resource):
-    """
-    Endpoint to submit a query to Meeseeks and receive the executed
-    action plan as a JSON response.
-    """
+    """Handle user queries and return executed action plans."""
 
     @api.doc(security='apikey')
     @api.expect(api.model('Query', {
@@ -112,11 +109,10 @@ class MeeseeksQuery(Resource):
     @api.response(400, 'Invalid input')
     @api.response(401, 'Unauthorized')
     def post(self) -> tuple[dict, int]:
-        """
-        Process a user query, generate and execute the action plan,
-        and return the result as a JSON.
+        """Process a user query and return the action plan.
 
-        Requires a valid API token for authorization.
+        Returns:
+            Tuple of response payload and HTTP status code.
         """
         # Get API token from headers
         api_token = request.headers.get('X-API-Key', None)

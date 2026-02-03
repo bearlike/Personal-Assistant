@@ -1,3 +1,4 @@
+"""Tests for core class behaviors."""
 import os
 
 import pytest
@@ -7,6 +8,7 @@ from core.classes import ActionStep, TaskQueue, create_task_queue, set_available
 
 
 def test_action_step_normalization():
+    """Normalize action step fields and tool identifiers."""
     set_available_tools(["talk_to_user_tool", "home_assistant_tool"])
     step = ActionStep(
         action_consumer="TALK_TO_USER_TOOL",
@@ -19,6 +21,7 @@ def test_action_step_normalization():
 
 
 def test_action_step_invalid_entries():
+    """Normalize invalid tool/action entries to lower case."""
     set_available_tools(["talk_to_user_tool"])
     step = ActionStep(
         action_consumer="UNKNOWN_TOOL",
@@ -31,6 +34,7 @@ def test_action_step_invalid_entries():
 
 
 def test_action_step_talk_to_user_get():
+    """Allow talk-to-user get actions to pass through."""
     set_available_tools(["talk_to_user_tool"])
     step = ActionStep(
         action_consumer="talk_to_user_tool",
@@ -42,6 +46,7 @@ def test_action_step_talk_to_user_get():
 
 
 def test_save_json(tmp_path, monkeypatch):
+    """Write JSON payloads using the tool helper."""
     from core.classes import AbstractTool
 
     class DummyTool(AbstractTool):
@@ -59,6 +64,7 @@ def test_save_json(tmp_path, monkeypatch):
 
 
 def test_create_task_queue_and_examples():
+    """Create task queues and validate example lookup errors."""
     action_data = [
         {
             "action_consumer": "talk_to_user_tool",
@@ -75,6 +81,7 @@ def test_create_task_queue_and_examples():
 
 
 def test_abstract_tool_init_and_run(monkeypatch, tmp_path):
+    """Initialize AbstractTool and run placeholder output."""
     class DummyHandler:
         def __init__(self, *args, **kwargs):
             pass

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""
-* Talk to User is a simple tool that accepts user input and returns it as
-* output. It serves as a basic example of a tool and can be extended for
-* features such as presidio or CRITIC to further refine language model outputs.
+"""Echo tool for simple user responses.
+
+Talk to User is a basic tool that accepts user input and returns it as output.
+It serves as a minimal example and can be extended with filters or validators.
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ class TalkToUser(AbstractTool):
     """Tool that returns the user's message back as the response."""
 
     def __init__(self) -> None:
+        """Initialize the tool metadata."""
         super().__init__(
             name="Talk to User",
             description="Directly talk to the user."

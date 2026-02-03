@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Home Assistant integration tools and data models."""
 from __future__ import annotations
 
 import os
@@ -32,6 +33,7 @@ SelfT = TypeVar("SelfT", bound="CacheHolder")
 
 
 class HomeAssistantCache(TypedDict):
+    """Cached Home Assistant entity and service metadata."""
     entity_ids: list[str]
     sensor_ids: list[str]
     entities: list[dict[str, Any]]
@@ -54,6 +56,14 @@ class CacheHolder(Protocol):
 class SupportsInvoke(Protocol):
     """Protocol for runnable chains that return HomeAssistantCall."""
     def invoke(self, input_data: dict[str, Any]) -> HomeAssistantCall:
+        """Invoke the chain with structured input.
+
+        Args:
+            input_data: Input payload for the chain.
+
+        Returns:
+            Parsed HomeAssistantCall.
+        """
         ...
 
 
@@ -233,6 +243,20 @@ class HomeAssistantCall(BaseModel):
     def validate_entity_id(
         cls, entity_id: str, values: dict[str, Any], **kwargs: Any
     ) -> str:
+        """Validate the entity_id against the cache when available.
+
+        Args:
+            cls: Pydantic model class.
+            entity_id: Candidate entity identifier.
+            values: Parsed model values.
+            **kwargs: Additional validator arguments.
+
+        Returns:
+            Validated entity identifier.
+
+        Raises:
+            ValueError: If the entity ID is not found in the cache.
+        """
         # ! BUG: The entity_id may not be validated correctly as the cache
         # !     is not passed to the validator.
         ha_cache = values.get("ha_cache")
@@ -246,6 +270,20 @@ class HomeAssistantCall(BaseModel):
     def validate_domain(
         cls, domain: str, values: dict[str, Any], **kwargs: Any
     ) -> str:
+        """Validate the domain against the cache when available.
+
+        Args:
+            cls: Pydantic model class.
+            domain: Domain string to validate.
+            values: Parsed model values.
+            **kwargs: Additional validator arguments.
+
+        Returns:
+            Validated domain string.
+
+        Raises:
+            ValueError: If the domain is not found in the cache.
+        """
         # ! BUG: The entity_id may not be validated correctly as the cache
         # !     is not passed to the validator.
         ha_cache = values.get("ha_cache")
@@ -255,6 +293,7 @@ class HomeAssistantCall(BaseModel):
         return domain
 
     class Config:
+        """Pydantic configuration for HomeAssistantCall."""
         arbitrary_types_allowed = True
 
 
@@ -262,6 +301,7 @@ class HomeAssistant(AbstractTool):
     """A service to manage and interact with Home Assistant."""
 
     def __init__(self) -> None:
+        """Initialize the Home Assistant tool with environment defaults."""
         super().__init__(
             name="Home Assistant",
             description="A service to manage and interact with Home Assistant"

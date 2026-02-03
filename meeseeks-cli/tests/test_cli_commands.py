@@ -1,3 +1,4 @@
+"""Tests for CLI command handlers."""
 # ruff: noqa: I001
 import json
 import os
@@ -19,7 +20,9 @@ from cli_context import CliState, CommandContext  # noqa: E402
 
 
 class DummyQueue:
+    """Minimal task queue stub for compact command results."""
     def __init__(self, result: str):
+        """Initialize the dummy queue with a result."""
         self.task_result = result
 
 
@@ -46,6 +49,7 @@ def _make_context(tmp_path):
 
 
 def test_command_help(tmp_path):
+    """Render help text for CLI commands."""
     context = _make_context(tmp_path)
     registry = get_registry()
     assert registry.execute("/help", context, []) is True
@@ -53,6 +57,7 @@ def test_command_help(tmp_path):
 
 
 def test_command_exit_quit(tmp_path):
+    """Exit the CLI on /exit and /quit commands."""
     context = _make_context(tmp_path)
     registry = get_registry()
     assert registry.execute("/exit", context, []) is False
@@ -60,6 +65,7 @@ def test_command_exit_quit(tmp_path):
 
 
 def test_command_new_session(tmp_path):
+    """Create a new session using CLI command."""
     context = _make_context(tmp_path)
     registry = get_registry()
     old_id = context.state.session_id
@@ -68,6 +74,7 @@ def test_command_new_session(tmp_path):
 
 
 def test_command_summary_and_tokens(tmp_path):
+    """Render summary and token budget commands."""
     context = _make_context(tmp_path)
     context.store.save_summary(context.state.session_id, "summary")
     registry = get_registry()
@@ -77,6 +84,7 @@ def test_command_summary_and_tokens(tmp_path):
 
 
 def test_command_tag_fork_plan(tmp_path):
+    """Tag, fork, and toggle plan display commands."""
     context = _make_context(tmp_path)
     registry = get_registry()
     assert registry.execute("/tag", context, ["primary"]) is True
@@ -90,6 +98,7 @@ def test_command_tag_fork_plan(tmp_path):
 
 
 def test_command_models(monkeypatch, tmp_path):
+    """Select a model via the CLI wizard."""
     context = _make_context(tmp_path)
     registry = get_registry()
 
@@ -103,6 +112,7 @@ def test_command_models(monkeypatch, tmp_path):
 
 
 def test_command_models_invalid_choice(monkeypatch, tmp_path):
+    """Ignore invalid model selection choices."""
     context = _make_context(tmp_path)
     registry = get_registry()
 
@@ -116,6 +126,7 @@ def test_command_models_invalid_choice(monkeypatch, tmp_path):
 
 
 def test_command_models_no_prompt(tmp_path):
+    """Handle model command without interactive prompt."""
     context = _make_context(tmp_path)
     context.prompt_func = None
     registry = get_registry()
@@ -123,6 +134,7 @@ def test_command_models_no_prompt(tmp_path):
 
 
 def test_fetch_models_success(monkeypatch):
+    """Fetch available models from the configured endpoint."""
     monkeypatch.setenv("OPENAI_API_BASE", "http://example.com/v1")
     monkeypatch.setenv("OPENAI_API_KEY", "key")
 
@@ -142,6 +154,7 @@ def test_fetch_models_success(monkeypatch):
 
 
 def test_fetch_models_missing_env(monkeypatch):
+    """Raise when model fetch env vars are missing."""
     monkeypatch.delenv("OPENAI_API_BASE", raising=False)
     monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
     monkeypatch.setenv("OPENAI_API_KEY", "key")
@@ -150,6 +163,7 @@ def test_fetch_models_missing_env(monkeypatch):
 
 
 def test_handle_model_wizard_cancel(monkeypatch, tmp_path):
+    """Cancel the model wizard without selecting a model."""
     context = _make_context(tmp_path)
     console = context.console
 
@@ -159,6 +173,7 @@ def test_handle_model_wizard_cancel(monkeypatch, tmp_path):
 
 
 def test_command_mcp(monkeypatch, tmp_path):
+    """Render MCP command output with valid config."""
     context = _make_context(tmp_path)
     registry = get_registry()
 
@@ -171,6 +186,7 @@ def test_command_mcp(monkeypatch, tmp_path):
 
 
 def test_render_mcp_invalid_json(monkeypatch, tmp_path):
+    """Handle invalid MCP config JSON gracefully."""
     context = _make_context(tmp_path)
     config_path = tmp_path / "mcp.json"
     config_path.write_text("{bad json")
@@ -180,6 +196,7 @@ def test_render_mcp_invalid_json(monkeypatch, tmp_path):
 
 
 def test_command_compact(monkeypatch, tmp_path):
+    """Compact sessions via CLI command."""
     context = _make_context(tmp_path)
     registry = get_registry()
 
@@ -191,6 +208,7 @@ def test_command_compact(monkeypatch, tmp_path):
 
 
 def test_unknown_command(tmp_path):
+    """Return help for unknown command tokens."""
     context = _make_context(tmp_path)
     registry = get_registry()
     assert registry.execute("/unknown", context, []) is True
