@@ -1,18 +1,26 @@
 # ruff: noqa: I001
 import os
 import sys
+import types
 
 test_dir = os.path.dirname(__file__)
 sys.path.append(os.path.join(test_dir, ".."))
 sys.path.append(os.path.join(test_dir, "..", ".."))
 
+from core.classes import ActionStep, TaskQueue  # noqa: E402
 from core.session_store import SessionStore  # noqa: E402
 from core.tool_registry import load_registry  # noqa: E402
 from rich.console import Console  # noqa: E402
 
 from cli_commands import get_registry  # noqa: E402
 from cli_context import CliState, CommandContext  # noqa: E402
-from cli_master import _format_steps, _parse_command, _resolve_session_id  # noqa: E402
+from cli_master import (  # noqa: E402
+    _build_approval_callback,
+    _format_steps,
+    _parse_command,
+    _resolve_session_id,
+    _run_query,
+)
 
 
 class DummyStep:
@@ -62,3 +70,120 @@ def test_handle_new_session_command(tmp_path):
     registry.execute("/new", context, [])
 
     assert state.session_id != session_id
+
+
+def test_build_approval_callback_accepts():
+    console = Console(record=True)
+    callback = _build_approval_callback(lambda _: "y", console)
+    step = DummyStep("tool", "set", "arg")
+    assert callback is not None
+    assert callback(step) is True
+
+
+def test_build_approval_callback_none():
+    console = Console(record=True)
+    assert _build_approval_callback(None, console) is None
+
+
+def test_run_query(monkeypatch, tmp_path):
+    store = SessionStore(root_dir=str(tmp_path))
+    session_id = store.create_session()
+    state = CliState(session_id=session_id, show_plan=True)
+    tool_registry = load_registry()
+    console = Console(record=True)
+
+    def fake_generate(*args, **kwargs):
+        step = ActionStep(
+            action_consumer="talk_to_user_tool",
+            action_type="set",
+            action_argument="hi",
+        )
+        task_queue = TaskQueue(action_steps=[step])
+        task_queue.human_message = "hi"
+        return task_queue
+
+    def fake_orchestrate(*args, **kwargs):
+        step = ActionStep(
+            action_consumer="talk_to_user_tool",
+            action_type="set",
+            action_argument="hi",
+        )
+        task_queue = TaskQueue(action_steps=[step])
+        task_queue.task_result = "ok"
+        return task_queue
+
+    monkeypatch.setattr("cli_master.generate_action_plan", fake_generate)
+    monkeypatch.setattr("cli_master.orchestrate_session", fake_orchestrate)
+
+    _run_query(
+        console,
+        store,
+        state,
+        tool_registry,
+        "hi",
+        types.SimpleNamespace(max_iters=1),
+        prompt_func=lambda _: "y",
+    )
+
+
+def test_run_cli_single_query(monkeypatch, tmp_path):
+    from cli_master import run_cli
+
+    args = types.SimpleNamespace(
+        query="hi",
+        model=None,
+        max_iters=1,
+        show_plan=False,
+        no_color=True,
+        session=None,
+        tag=None,
+        fork=None,
+        session_dir=str(tmp_path),
+        history_file=str(tmp_path / "history"),
+    )
+
+    def fake_orchestrate(*args, **kwargs):
+        step = ActionStep(
+            action_consumer="talk_to_user_tool",
+            action_type="set",
+            action_argument="hi",
+        )
+        task_queue = TaskQueue(action_steps=[step])
+        task_queue.task_result = "ok"
+        return task_queue
+
+    monkeypatch.setattr("cli_master.orchestrate_session", fake_orchestrate)
+    assert run_cli(args) == 0
+
+
+def test_run_cli_interactive_quit(monkeypatch, tmp_path):
+    from cli_master import run_cli
+
+    args = types.SimpleNamespace(
+        query=None,
+        model=None,
+        max_iters=1,
+        show_plan=False,
+        no_color=True,
+        session=None,
+        tag=None,
+        fork=None,
+        session_dir=str(tmp_path),
+        history_file=str(tmp_path / "history"),
+    )
+
+    class DummyHistory:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class DummySession:
+        def __init__(self, *args, **kwargs):
+            self.calls = 0
+
+        def prompt(self, *args, **kwargs):
+            self.calls += 1
+            return "/quit"
+
+    monkeypatch.setattr("cli_master.FileHistory", DummyHistory)
+    monkeypatch.setattr("cli_master.PromptSession", lambda *args, **kwargs: DummySession())
+    assert run_cli(args) == 0
