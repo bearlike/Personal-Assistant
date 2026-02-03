@@ -326,10 +326,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#install-documentation-dependencies" class="md-nav__link">
+  <a href="#install-dependencies" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Install documentation dependencies
+        Install dependencies
       
     </span>
   </a>
@@ -337,10 +337,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#run-the-docs-locally" class="md-nav__link">
+  <a href="#environment-setup" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Run the docs locally
+        Environment setup
       
     </span>
   </a>
@@ -348,10 +348,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#build-the-docs" class="md-nav__link">
+  <a href="#mcp-setup-auto-discovery" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Build the docs
+        MCP setup (auto-discovery)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional components
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-interfaces-local" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run interfaces (local)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#docker-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker (optional)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#docs-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docs (optional)
       
     </span>
   </a>
@@ -458,10 +502,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#install-documentation-dependencies" class="md-nav__link">
+  <a href="#install-dependencies" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Install documentation dependencies
+        Install dependencies
       
     </span>
   </a>
@@ -469,10 +513,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#run-the-docs-locally" class="md-nav__link">
+  <a href="#environment-setup" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Run the docs locally
+        Environment setup
       
     </span>
   </a>
@@ -480,10 +524,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#build-the-docs" class="md-nav__link">
+  <a href="#mcp-setup-auto-discovery" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Build the docs
+        MCP setup (auto-discovery)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional components
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-interfaces-local" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run interfaces (local)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#docker-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker (optional)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#docs-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docs (optional)
       
     </span>
   </a>
@@ -511,22 +599,59 @@
 
 
 <h1 id="getting-started">Getting Started</h1>
+<p>This guide walks through local setup, environment configuration, MCP setup, and how to run each interface.</p>
 <h2 id="prerequisites">Prerequisites</h2>
 <ul>
 <li>Python 3.11+</li>
-<li>Poetry (or pip + a virtual environment)</li>
+<li>Poetry</li>
+<li>Docker (optional, for container runs)</li>
 </ul>
-<h2 id="install-documentation-dependencies">Install documentation dependencies</h2>
+<h2 id="install-dependencies">Install dependencies</h2>
+<pre><code class="language-bash">poetry install
+</code></pre>
+<h2 id="environment-setup">Environment setup</h2>
+<ol>
+<li>Copy <code>.env.example</code> to <code>.env</code>.</li>
+<li>Set at least:</li>
+<li><code>OPENAI_API_KEY</code> (or your compatible provider key)</li>
+<li><code>OPENAI_API_BASE</code> (if you are using a local or custom API base)</li>
+<li><code>DEFAULT_MODEL</code> (or <code>ACTION_PLAN_MODEL</code>)</li>
+<li>Optional runtime paths:</li>
+<li><code>MESEEKS_SESSION_DIR</code> for session transcript storage</li>
+<li><code>MESEEKS_TOOL_MANIFEST</code> if you want a custom tool list (disables MCP auto-discovery)</li>
+</ol>
+<h2 id="mcp-setup-auto-discovery">MCP setup (auto-discovery)</h2>
+<p>MCP tools are auto-discovered from a server config file.
+1. Copy <code>configs/mcp.example.json</code> to <code>configs/mcp.json</code>.
+2. Set the MCP server <code>url</code> and any <code>headers</code> needed for auth.
+3. Set <code>MESEEKS_MCP_CONFIG=./configs/mcp.json</code> in <code>.env</code>.
+4. Start any interface once; a tool manifest is auto-generated and cached under <code>~/.meeseeks/</code>.</p>
+<p>Notes:
+- If you override the manifest, include <code>talk_to_user_tool</code> so the assistant can still reply.
+- MCP tool names must match the server's advertised tool list.</p>
+<h2 id="optional-components">Optional components</h2>
+<ul>
+<li>Langfuse: set <code>LANGFUSE_PUBLIC_KEY</code> + <code>LANGFUSE_SECRET_KEY</code> (or disable with <code>LANGFUSE_ENABLED=0</code>).</li>
+<li>Home Assistant: set <code>HA_URL</code> + <code>HA_TOKEN</code> (or disable with <code>MESEEKS_HOME_ASSISTANT_ENABLED=0</code>).</li>
+</ul>
+<h2 id="run-interfaces-local">Run interfaces (local)</h2>
+<ul>
+<li>API: <code>python meeseeks-api/backend.py</code></li>
+<li>Chat UI: <code>streamlit run meeseeks-chat/chat_master.py</code></li>
+<li>CLI: <code>python meeseeks-cli/cli_master.py</code></li>
+<li>Home Assistant integration: install <code>meeseeks_ha_conversation/</code> as a custom component and point it at the API.</li>
+</ul>
+<h2 id="docker-optional">Docker (optional)</h2>
+<ul>
+<li>Build images using the provided Dockerfiles for API/chat.</li>
+<li>Provide the same <code>.env</code> values as local.</li>
+<li>Persist <code>MESEEKS_SESSION_DIR</code> if you want transcripts across restarts.</li>
+</ul>
+<h2 id="docs-optional">Docs (optional)</h2>
+<p>If you want to build the docs locally:</p>
 <pre><code class="language-bash">pip install -r requirements-docs.txt
-</code></pre>
-<h2 id="run-the-docs-locally">Run the docs locally</h2>
-<pre><code class="language-bash">export PYTHONPATH=&quot;$PWD&quot;
+export PYTHONPATH=&quot;$PWD&quot;
 mkdocs serve
-</code></pre>
-<p>The documentation will be available at http://127.0.0.1:8000/.</p>
-<h2 id="build-the-docs">Build the docs</h2>
-<pre><code class="language-bash">export PYTHONPATH=&quot;$PWD&quot;
-mkdocs build
 </code></pre>
 
 
