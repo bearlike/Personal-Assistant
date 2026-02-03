@@ -105,6 +105,13 @@ export PYTHONPATH="$PWD"
 mike deploy dev
 ```
 
+If you plan to push docs to `gh-pages` (for example, using `--push`), ensure git has a user configured:
+
+```bash
+git config user.name "Your Name"
+git config user.email "you@example.com"
+```
+
 For release tags (for example, `v1.2.3` -> `1.2` with `latest` alias):
 
 ```bash
