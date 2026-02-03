@@ -6,7 +6,7 @@ import abc
 import json
 import os
 from collections.abc import Sequence
-from typing import cast
+from typing import Any, cast
 
 from dotenv import load_dotenv
 from langchain_community.document_loaders import JSONLoader
@@ -71,7 +71,7 @@ class ActionStep(BaseModel):
     action_type: str = Field(
         description="Specify either 'get' or 'set' to indicate the action type."
     )
-    action_argument: str = Field(
+    action_argument: str | dict[str, Any] = Field(
         description=(
             "Provide details for the action. If 'task', specify the task to perform. "
             "If 'talk', include the message to speak to the user."

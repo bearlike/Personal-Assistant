@@ -99,7 +99,7 @@ flowchart LR
 
 ## Installing and Running Meeseeks
 > [!IMPORTANT]
-> For Docker or manual installation, running, and configuring Meeseeks, visit [**Installation - Wiki**](https://github.com/bearlike/Personal-Assistant/wiki/Installation) or read `docs/README.md` for a quick local/deploy overview.
+> For Docker or manual installation, running, and configuring Meeseeks, visit [**Installation - Wiki**](https://github.com/bearlike/Personal-Assistant/wiki/Installation) or read `docs/index.md` for a quick local/deploy overview.
 
 ## MCP servers (quick setup)
 MCP tools are auto-discovered from your MCP server config.

@@ -8,6 +8,8 @@ It serves as a minimal example and can be extended with filters or validators.
 from __future__ import annotations
 
 # Third-party modules
+import json
+
 from dotenv import load_dotenv
 
 from core.classes import AbstractTool, ActionStep
@@ -44,8 +46,11 @@ class TalkToUser(AbstractTool):
         """
         if action_step is None:
             raise ValueError("Action step cannot be None.")
+        content = action_step.action_argument
+        if isinstance(content, dict):
+            content = json.dumps(content, ensure_ascii=True)
         MockSpeaker = get_mock_speaker()
-        return MockSpeaker(content=action_step.action_argument)
+        return MockSpeaker(content=content)
 
     def get_state(self, action_step: ActionStep | None = None) -> MockSpeaker:
         """TalkToUser does not support read operations.

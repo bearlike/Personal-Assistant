@@ -2,6 +2,7 @@
 """Common helpers shared across the assistant runtime."""
 from __future__ import annotations
 
+import json
 import logging as logging_real
 import os
 import sys
@@ -147,6 +148,20 @@ def get_system_prompt(name: str = "action-planner") -> str:
     logging.debug("Getting system prompt from `{}`", system_prompt_path)
     del logging
     return system_prompt.strip()
+
+
+def format_action_argument(argument: Any) -> str:
+    """Format an action argument for logs and prompts.
+
+    Args:
+        argument: Action argument payload.
+
+    Returns:
+        String representation suitable for display.
+    """
+    if isinstance(argument, dict):
+        return json.dumps(argument, ensure_ascii=True)
+    return str(argument)
 
 
 def ha_render_system_prompt(

@@ -8,7 +8,13 @@ import pytest
 from core.common import get_mock_speaker
 from tools.core.talk_to_user import TalkToUser
 from tools.integration.homeassistant import HomeAssistant
-from tools.integration.mcp import MCPToolRunner, _load_mcp_config, discover_mcp_tools
+from tools.integration.mcp import (
+    MCPToolRunner,
+    _load_mcp_config,
+    _prepare_mcp_input,
+    discover_mcp_tool_details,
+    discover_mcp_tools,
+)
 
 
 def test_talk_to_user_set_state(monkeypatch, tmp_path):
@@ -108,6 +114,70 @@ def test_mcp_discovery_normalizes_config(monkeypatch):
     assert server["headers"] == {"Authorization": "Bearer token"}
 
 
+def test_mcp_discovery_includes_schema(monkeypatch):
+    """Include minimal schemas when discovering MCP tool details."""
+    class DummySchema:
+        model_fields = {"question": object()}
+
+        @staticmethod
+        def model_json_schema():
+            return {
+                "required": ["question"],
+                "properties": {"question": {"type": "string", "description": "Query"}},
+            }
+
+    class DummyTool:
+        def __init__(self, name):
+            self.name = name
+            self.args_schema = DummySchema
+
+    class DummyClient:
+        def __init__(self, servers):
+            self.servers = servers
+
+        async def get_tools(self, server_name):
+            return [DummyTool("tool_one")]
+
+    module = types.ModuleType("langchain_mcp_adapters.client")
+    module.MultiServerMCPClient = DummyClient
+    monkeypatch.setitem(sys.modules, "langchain_mcp_adapters.client", module)
+
+    config = {"servers": {"srv": {"transport": "stdio"}}}
+    discovered = discover_mcp_tool_details(config)
+    assert discovered["srv"][0]["name"] == "tool_one"
+    schema = discovered["srv"][0]["schema"]
+    assert schema["required"] == ["question"]
+    assert schema["properties"]["question"]["type"] == "string"
+
+
+def test_mcp_discovery_handles_dict_schema(monkeypatch):
+    """Support JSON schema dictionaries from MCP tools."""
+    class DummyTool:
+        def __init__(self, name):
+            self.name = name
+            self.args_schema = {
+                "required": ["query"],
+                "properties": {"query": {"type": "string", "description": "Search"}},
+            }
+
+    class DummyClient:
+        def __init__(self, servers):
+            self.servers = servers
+
+        async def get_tools(self, server_name):
+            return [DummyTool("tool_one")]
+
+    module = types.ModuleType("langchain_mcp_adapters.client")
+    module.MultiServerMCPClient = DummyClient
+    monkeypatch.setitem(sys.modules, "langchain_mcp_adapters.client", module)
+
+    config = {"servers": {"srv": {"transport": "stdio"}}}
+    discovered = discover_mcp_tool_details(config)
+    schema = discovered["srv"][0]["schema"]
+    assert schema["required"] == ["query"]
+    assert schema["properties"]["query"]["type"] == "string"
+
+
 def test_mcp_invoke_async_success(monkeypatch, tmp_path):
     """Invoke an MCP tool successfully with stubbed client."""
     config_path = tmp_path / "mcp.json"
@@ -118,6 +188,8 @@ def test_mcp_invoke_async_success(monkeypatch, tmp_path):
         name = "tool"
 
         async def ainvoke(self, input_text):
+            if isinstance(input_text, dict):
+                return f"out:{input_text.get('query')}"
             return f"out:{input_text}"
 
     class DummyClient:
@@ -134,6 +206,79 @@ def test_mcp_invoke_async_success(monkeypatch, tmp_path):
     runner = MCPToolRunner(server_name="srv", tool_name="tool")
     result = asyncio.run(runner._invoke_async("hi"))
     assert result == "out:hi"
+
+
+def test_mcp_prepare_input_wraps_string_for_schema():
+    """Wrap string inputs when MCP tool declares args_schema fields."""
+    class DummyArgsSchema:
+        model_fields = {"query": object()}
+
+    tool = types.SimpleNamespace(args_schema=DummyArgsSchema)
+    payload = _prepare_mcp_input(tool, "hi")
+    assert payload == {"query": "hi"}
+
+
+def test_mcp_prepare_input_prefers_query_field():
+    """Pick a sensible field when multiple args are available."""
+    class DummyArgsSchema:
+        model_fields = {"query": object(), "other": object()}
+
+    tool = types.SimpleNamespace(args_schema=DummyArgsSchema)
+    payload = _prepare_mcp_input(tool, "hello")
+    assert payload == {"query": "hello"}
+
+
+def test_mcp_prepare_input_handles_dict_schema():
+    """Wrap string input using JSON schema dictionaries."""
+    tool = types.SimpleNamespace(
+        args_schema={
+            "required": ["query"],
+            "properties": {"query": {"type": "string"}},
+        }
+    )
+    payload = _prepare_mcp_input(tool, "hello")
+    assert payload == {"query": "hello"}
+
+
+def test_mcp_prepare_input_parses_json_string():
+    """Parse JSON object strings into dictionaries."""
+    tool = types.SimpleNamespace(args_schema=None)
+    payload = _prepare_mcp_input(tool, '{"question": "hi"}')
+    assert payload == {"question": "hi"}
+
+
+def test_mcp_invoke_async_wraps_string_for_schema(monkeypatch, tmp_path):
+    """Ensure MCP invoke passes dict payloads when args_schema exists."""
+    config_path = tmp_path / "mcp.json"
+    config_path.write_text('{"servers": {"srv": {"transport": "stdio"}}}', encoding="utf-8")
+    monkeypatch.setenv("MESEEKS_MCP_CONFIG", str(config_path))
+    captured = {}
+
+    class DummyArgsSchema:
+        model_fields = {"query": object()}
+
+    class DummyTool:
+        name = "tool"
+        args_schema = DummyArgsSchema
+
+        async def ainvoke(self, input_text):
+            captured["payload"] = input_text
+            return "ok"
+
+    class DummyClient:
+        def __init__(self, servers):
+            self.servers = servers
+
+        async def get_tools(self, server_name):
+            return [DummyTool()]
+
+    module = types.ModuleType("langchain_mcp_adapters.client")
+    module.MultiServerMCPClient = DummyClient
+    monkeypatch.setitem(sys.modules, "langchain_mcp_adapters.client", module)
+
+    runner = MCPToolRunner(server_name="srv", tool_name="tool")
+    asyncio.run(runner._invoke_async("hi"))
+    assert captured["payload"] == {"query": "hi"}
 
 
 def test_mcp_invoke_async_missing_tool(monkeypatch, tmp_path):

@@ -123,8 +123,8 @@ def test_auto_manifest_from_mcp_config(tmp_path, monkeypatch):
     monkeypatch.setenv("MESEEKS_CONFIG_DIR", str(tmp_path))
 
     monkeypatch.setattr(
-        "core.tool_registry.discover_mcp_tools",
-        lambda _config: {"srv": ["tool-a"]},
+        "core.tool_registry.discover_mcp_tool_details",
+        lambda _config: {"srv": [{"name": "tool-a", "schema": None}]},
     )
 
     registry = load_registry()

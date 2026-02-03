@@ -86,7 +86,45 @@ def _run_async(coro: Any) -> Any:
     return result.get("value")
 
 
-async def _discover_mcp_tools_async(config: dict[str, Any]) -> dict[str, list[str]]:
+def _schema_from_args_schema(args_schema: Any) -> dict[str, Any] | None:
+    if args_schema is None:
+        return None
+    if isinstance(args_schema, dict):
+        schema = args_schema
+    elif hasattr(args_schema, "model_json_schema"):
+        schema = args_schema.model_json_schema()
+    elif hasattr(args_schema, "schema"):
+        schema = args_schema.schema()
+    else:
+        return None
+    if not isinstance(schema, dict):
+        return None
+    required = schema.get("required", [])
+    if not isinstance(required, list):
+        required = []
+    properties = schema.get("properties", {})
+    if not isinstance(properties, dict):
+        properties = {}
+    payload: dict[str, Any] = {"required": required, "properties": {}}
+    for name, prop in properties.items():
+        if not isinstance(prop, dict):
+            continue
+        payload["properties"][name] = {
+            key: value
+            for key, value in prop.items()
+            if key in {"type", "description", "enum", "items"}
+        }
+    return payload
+
+
+def _tool_schema_payload(tool: Any) -> dict[str, Any] | None:
+    args_schema = getattr(tool, "args_schema", None)
+    return _schema_from_args_schema(args_schema)
+
+
+async def _discover_mcp_tool_details_async(
+    config: dict[str, Any],
+) -> dict[str, list[dict[str, Any]]]:
     try:
         from langchain_mcp_adapters.client import MultiServerMCPClient
     except Exception as exc:  # pragma: no cover - runtime dependency
@@ -95,17 +133,34 @@ async def _discover_mcp_tools_async(config: dict[str, Any]) -> dict[str, list[st
         ) from exc
 
     servers = config.get("servers", {})
-    discovered: dict[str, list[str]] = {}
+    discovered: dict[str, list[dict[str, Any]]] = {}
     for server_name, server_config in servers.items():
         client = MultiServerMCPClient({server_name: server_config})
         tools = await client.get_tools(server_name=server_name)
-        discovered[server_name] = sorted({tool.name for tool in tools})
+        details: list[dict[str, Any]] = []
+        for tool in tools:
+            details.append(
+                {
+                    "name": tool.name,
+                    "schema": _tool_schema_payload(tool),
+                }
+            )
+        discovered[server_name] = sorted(details, key=lambda item: item.get("name", ""))
     return discovered
 
 
 def discover_mcp_tools(config: dict[str, Any]) -> dict[str, list[str]]:
     """Discover MCP tool names per server from configuration."""
-    return _run_async(_discover_mcp_tools_async(_normalize_mcp_config(config)))
+    details = discover_mcp_tool_details(config)
+    return {
+        server_name: [tool["name"] for tool in tools if tool.get("name")]
+        for server_name, tools in details.items()
+    }
+
+
+def discover_mcp_tool_details(config: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    """Discover MCP tool names and schemas per server from configuration."""
+    return _run_async(_discover_mcp_tool_details_async(_normalize_mcp_config(config)))
 
 
 def tool_auto_approved(
@@ -149,11 +204,11 @@ class MCPToolRunner:
         self.server_name = server_name
         self.tool_name = tool_name
 
-    async def _invoke_async(self, input_text: str) -> str:
+    async def _invoke_async(self, input_payload: str | dict[str, Any]) -> str:
         """Invoke an MCP tool asynchronously and return its output.
 
         Args:
-            input_text: Input text to send to the MCP tool.
+            input_payload: Input payload to send to the MCP tool.
 
         Returns:
             Stringified tool response.
@@ -184,7 +239,9 @@ class MCPToolRunner:
             raise ValueError(
                 f"Tool '{self.tool_name}' not found on MCP server '{self.server_name}'."
             )
-        result = await tool.ainvoke(input_text)
+        result = await tool.ainvoke(
+            _prepare_mcp_input(tool, input_payload)
+        )
         return str(result)
 
     def run(self, action_step: ActionStep) -> MockSpeaker:
@@ -204,3 +261,66 @@ class MCPToolRunner:
         MockSpeakerType = get_mock_speaker()
         result = asyncio.run(self._invoke_async(action_step.action_argument))
         return MockSpeakerType(content=result)
+
+
+def _prepare_mcp_input(
+    tool: Any,
+    input_payload: str | dict[str, Any],
+) -> str | dict[str, Any]:
+    """Convert action input into the payload expected by MCP tools.
+
+    LangChain MCP tools with args_schema reject raw strings, so we coerce
+    string inputs into schema-shaped dictionaries when possible.
+    """
+    if isinstance(input_payload, dict):
+        return input_payload
+    if not isinstance(input_payload, str):
+        return input_payload
+
+    stripped = input_payload.strip()
+    if stripped.startswith("{") and stripped.endswith("}"):
+        try:
+            parsed = json.loads(stripped)
+        except json.JSONDecodeError:
+            parsed = None
+        if isinstance(parsed, dict):
+            return parsed
+
+    args_schema = getattr(tool, "args_schema", None)
+    field_names: list[str] = []
+    schema_properties: dict[str, Any] | None = None
+    if args_schema is not None:
+        if isinstance(args_schema, dict):
+            props = args_schema.get("properties")
+            if isinstance(props, dict):
+                schema_properties = props
+                field_names = list(props.keys())
+        else:
+            fields = getattr(args_schema, "model_fields", None)
+            if isinstance(fields, dict):
+                field_names = list(fields.keys())
+            else:
+                fields = getattr(args_schema, "__fields__", None)
+                if isinstance(fields, dict):
+                    field_names = list(fields.keys())
+
+    if not field_names:
+        return input_payload
+
+    def _wrap_value(field_name: str) -> dict[str, Any]:
+        if schema_properties and field_name in schema_properties:
+            prop = schema_properties[field_name]
+            if isinstance(prop, dict) and prop.get("type") == "array":
+                items = prop.get("items")
+                if isinstance(items, dict) and items.get("type") == "string":
+                    return {field_name: [input_payload]}
+        return {field_name: input_payload}
+
+    if len(field_names) == 1:
+        return _wrap_value(field_names[0])
+
+    for preferred in ("query", "question", "input", "text", "q"):
+        if preferred in field_names:
+            return _wrap_value(preferred)
+
+    return input_payload

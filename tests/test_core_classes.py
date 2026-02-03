@@ -20,6 +20,18 @@ def test_action_step_normalization():
     assert queue.action_steps[0].action_type == "set"
 
 
+def test_action_step_accepts_dict_argument():
+    """Allow structured action arguments for schema-based tools."""
+    set_available_tools(["talk_to_user_tool"])
+    step = ActionStep(
+        action_consumer="talk_to_user_tool",
+        action_type="set",
+        action_argument={"message": "hello"},
+    )
+    queue = TaskQueue(action_steps=[step])
+    assert queue.action_steps[0].action_argument == {"message": "hello"}
+
+
 def test_action_step_invalid_entries():
     """Normalize invalid tool/action entries to lower case."""
     set_available_tools(["talk_to_user_tool"])

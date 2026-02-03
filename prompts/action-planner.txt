@@ -8,6 +8,8 @@ Each action must also include:
 
 The `action_consumer` must be one of the tool IDs listed under "Available tools". Use only tool IDs listed there, even if other tool names appear elsewhere in the prompt.
 
+If a tool lists an "MCP tool input schema", the `action_argument` must be a JSON object that matches that schema (not a plain string).
+
 The `action_type` must be either "get" or "set" and must match the supported actions of the chosen tool.
 
 ### Guidelines:

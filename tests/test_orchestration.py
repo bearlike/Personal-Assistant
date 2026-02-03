@@ -141,6 +141,45 @@ def test_orchestrate_session_replans_on_failure(monkeypatch, tmp_path):
     assert run_calls.count == 2
 
 
+def test_run_action_plan_coerces_mcp_string_payload():
+    """Coerce string payloads into schema-shaped dicts for MCP tools."""
+    called = Counter()
+    captured = {}
+
+    class DummyTool:
+        def run(self, step):
+            called.bump()
+            captured["argument"] = step.action_argument
+            return get_mock_speaker()(content="ok")
+
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="mcp_srv_tool",
+            name="MCP Tool",
+            description="Test tool",
+            factory=lambda: DummyTool(),
+            kind="mcp",
+            metadata={
+                "schema": {
+                    "required": ["question"],
+                    "properties": {"question": {"type": "string"}},
+                }
+            },
+        )
+    )
+    step = ActionStep(
+        action_consumer="mcp_srv_tool",
+        action_type="get",
+        action_argument="Who is Krishnakanth?",
+    )
+    queue = TaskQueue(action_steps=[step])
+    task_master.run_action_plan(queue, tool_registry=registry)
+    assert called.count == 1
+    assert captured["argument"] == {"question": "Who is Krishnakanth?"}
+    assert queue.action_steps[0].result is not None
+
+
 def test_orchestrate_session_passes_summary(monkeypatch, tmp_path):
     """Pass stored summaries into action plan generation."""
     captured = {}
@@ -230,6 +269,113 @@ def test_orchestrate_session_passes_recent_events(monkeypatch, tmp_path):
 
     recent = captured.get("recent_events") or []
     assert any(event.get("type") == "user" for event in recent)
+
+
+def test_orchestrate_session_records_mcp_tool_result(monkeypatch, tmp_path):
+    """Record MCP tool results into the session transcript."""
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
+
+    class FakeMCPTool:
+        def run(self, step):
+            return get_mock_speaker()(content=f"fake:{step.action_argument}")
+
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="mcp_fake_search",
+            name="Fake MCP Search",
+            description="Fake MCP tool for tests",
+            factory=lambda: FakeMCPTool(),
+            kind="mcp",
+            metadata={
+                "schema": {
+                    "required": ["query"],
+                    "properties": {"query": {"type": "string"}},
+                }
+            },
+        )
+    )
+
+    def fake_generate(*_args, **_kwargs):
+        step = ActionStep(
+            action_consumer="mcp_fake_search",
+            action_type="get",
+            action_argument="Who is Krishnakanth?",
+        )
+        return TaskQueue(action_steps=[step])
+
+    monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
+
+    task_master.orchestrate_session(
+        "search",
+        max_iters=1,
+        session_id=session_id,
+        session_store=session_store,
+        tool_registry=registry,
+    )
+
+    events = session_store.load_transcript(session_id)
+    tool_events = [event for event in events if event.get("type") == "tool_result"]
+    assert tool_events
+    payload = tool_events[-1]["payload"]
+    assert payload["action_consumer"] == "mcp_fake_search"
+    assert payload["action_argument"] == {"query": "Who is Krishnakanth?"}
+    assert payload["result"] == "fake:{'query': 'Who is Krishnakanth?'}"
+
+
+def test_orchestrate_session_synthesizes_response(monkeypatch, tmp_path):
+    """Synthesize a response after tool execution when no talk-to-user step."""
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
+
+    class DummyTool:
+        def run(self, _step):
+            return get_mock_speaker()(content="tool output")
+
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="mcp_dummy",
+            name="Dummy MCP",
+            description="Dummy tool",
+            factory=lambda: DummyTool(),
+            kind="mcp",
+            metadata={
+                "schema": {
+                    "required": ["query"],
+                    "properties": {"query": {"type": "string"}},
+                }
+            },
+        )
+    )
+
+    def fake_generate(*_args, **_kwargs):
+        step = ActionStep(
+            action_consumer="mcp_dummy",
+            action_type="get",
+            action_argument="hello",
+        )
+        return TaskQueue(action_steps=[step])
+
+    monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
+    monkeypatch.setattr(task_master, "_synthesize_response", lambda **_kw: "final reply")
+
+    task_queue = task_master.orchestrate_session(
+        "hello",
+        max_iters=1,
+        session_id=session_id,
+        session_store=session_store,
+        tool_registry=registry,
+    )
+
+    assert task_queue.task_result == "final reply"
+    events = session_store.load_transcript(session_id)
+    assert any(
+        event.get("type") == "assistant"
+        and event.get("payload", {}).get("text") == "final reply"
+        for event in events
+    )
 
 
 def test_orchestrate_session_context_selection(monkeypatch, tmp_path):

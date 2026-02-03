@@ -1,6 +1,11 @@
 name: Pytest Coverage
 
 on:
+  push:
+    paths:
+      - "**/*.py"
+      - "pyproject.toml"
+      - "poetry.lock"
   pull_request:
   workflow_dispatch:
     inputs:

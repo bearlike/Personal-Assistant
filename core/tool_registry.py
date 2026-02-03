@@ -13,7 +13,7 @@ from typing import Any, Protocol
 from core.classes import ActionStep, set_available_tools
 from core.common import MockSpeaker, get_logger
 from core.components import resolve_home_assistant_status
-from tools.integration.mcp import _load_mcp_config, discover_mcp_tools
+from tools.integration.mcp import _load_mcp_config, discover_mcp_tool_details
 
 logging = get_logger(name="core.tool_registry")
 
@@ -129,6 +129,10 @@ class ToolRegistry:
                 self.disable(tool_id, reason)
                 return None
         return self._instances[tool_id]
+
+    def get_spec(self, tool_id: str) -> ToolSpec | None:
+        """Return the tool specification, even if disabled."""
+        return self._tools.get(tool_id)
 
     def list_specs(self, include_disabled: bool = False) -> list[ToolSpec]:
         """List tool specifications, optionally including disabled tools.
@@ -259,10 +263,15 @@ def _built_in_manifest_entries() -> list[dict[str, object]]:
     return entries
 
 
-def _build_manifest_payload(mcp_tools: dict[str, list[str]]) -> dict[str, object]:
+def _build_manifest_payload(
+    mcp_tools: dict[str, list[dict[str, object]]],
+) -> dict[str, object]:
     tools: list[dict[str, object]] = _built_in_manifest_entries()
-    for server_name, tool_names in mcp_tools.items():
-        for tool_name in tool_names:
+    for server_name, tool_specs in mcp_tools.items():
+        for tool_spec in tool_specs:
+            tool_name = str(tool_spec.get("name", "")).strip()
+            if not tool_name:
+                continue
             tools.append(
                 {
                     "tool_id": _sanitize_tool_id(server_name, tool_name),
@@ -272,6 +281,7 @@ def _build_manifest_payload(mcp_tools: dict[str, list[str]]) -> dict[str, object
                     "server": server_name,
                     "tool": tool_name,
                     "enabled": True,
+                    "schema": tool_spec.get("schema"),
                 }
             )
     return {"tools": tools}
@@ -282,7 +292,7 @@ def _ensure_auto_manifest(mcp_config_path: str) -> str | None:
 
     try:
         config = _load_mcp_config(mcp_config_path)
-        mcp_tools = discover_mcp_tools(config)
+        mcp_tools = discover_mcp_tool_details(config)
     except Exception as exc:
         logging.warning("Failed to auto-discover MCP tools: {}", exc)
         return manifest_path if os.path.exists(manifest_path) else None

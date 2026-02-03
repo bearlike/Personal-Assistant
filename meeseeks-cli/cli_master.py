@@ -69,6 +69,8 @@ from cli_context import CliState, CommandContext  # noqa: E402
 from cli_dialogs import DialogFactory  # noqa: E402
 
 from core.classes import ActionStep, TaskQueue  # noqa: E402
+from core.common import MockSpeaker, format_action_argument  # noqa: E402
+from core.hooks import HookManager  # noqa: E402
 from core.permissions import PermissionDecision  # noqa: E402
 from core.session_store import SessionStore  # noqa: E402
 from core.task_master import generate_action_plan, orchestrate_session  # noqa: E402
@@ -103,7 +105,13 @@ def _resolve_session_id(
 def _format_steps(steps: Iterable[ActionStep]) -> list[tuple[str, str, str]]:
     rows: list[tuple[str, str, str]] = []
     for step in steps:
-        rows.append((step.action_consumer, step.action_type, step.action_argument))
+        rows.append(
+            (
+                step.action_consumer,
+                step.action_type,
+                format_action_argument(step.action_argument),
+            )
+        )
     return rows
 
 
@@ -226,6 +234,7 @@ def _run_query(
         state,
         tool_registry,
     )
+    hook_manager = _build_cli_hook_manager(console, tool_registry)
     task_queue = orchestrate_session(
         user_query=query,
         model_name=state.model_name,
@@ -235,6 +244,7 @@ def _run_query(
         session_store=store,
         tool_registry=tool_registry,
         approval_callback=approval_callback,
+        hook_manager=hook_manager,
     )
 
     _render_results_with_registry(console, task_queue, tool_registry)
@@ -375,6 +385,37 @@ def _render_results_with_registry(
     console.print(Columns(panels, expand=True))
 
 
+def _build_cli_hook_manager(
+    console: Console,
+    tool_registry: ToolRegistry,
+) -> HookManager:
+    status_holder: dict[str, object] = {}
+    specs = _tool_specs_by_id(tool_registry)
+
+    def _start_spinner(action_step: ActionStep) -> ActionStep:
+        if action_step.action_consumer == "talk_to_user_tool":
+            return action_step
+        spec = specs.get(action_step.action_consumer)
+        label = action_step.action_consumer
+        if spec is not None and getattr(spec, "kind", "") == "mcp":
+            label = f"{label} (MCP)"
+        status = console.status(f"Running {label}...", spinner="dots")
+        status.start()
+        status_holder["status"] = status
+        return action_step
+
+    def _stop_spinner(action_step: ActionStep, result: MockSpeaker) -> MockSpeaker:
+        status = status_holder.pop("status", None)
+        if status is not None:
+            status.stop()
+        return result
+
+    return HookManager(
+        pre_tool_use=[_start_spinner],
+        post_tool_use=[_stop_spinner],
+    )
+
+
 def _build_approval_callback(
     prompt_func: Callable[[str], str] | None,
     console: Console,
@@ -412,7 +453,7 @@ def _build_approval_callback(
                 ["Yes", "No", "Yes, always"],
                 subtitle=(
                     f"{action_step.action_consumer}:{action_step.action_type} "
-                    f"({action_step.action_argument})"
+                    f"({format_action_argument(action_step.action_argument)})"
                 ),
             )
             if choice is None or choice == "No":
@@ -429,7 +470,7 @@ def _build_approval_callback(
         prompt = (
             "Approve "
             f"{action_step.action_consumer}:{action_step.action_type} "
-            f"({action_step.action_argument})? [y/N/a] "
+            f"({format_action_argument(action_step.action_argument)})? [y/N/a] "
         )
         try:
             response = prompt_func(prompt).strip().lower()
