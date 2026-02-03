@@ -105,9 +105,10 @@ def test_manifest_empty_falls_back(tmp_path, monkeypatch):
     manifest_path.write_text(json.dumps({"tools": []}), encoding="utf-8")
 
     registry = load_registry(str(manifest_path))
-    tool_ids = {spec.tool_id for spec in registry.list_specs()}
+    tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
+    enabled_ids = {spec.tool_id for spec in registry.list_specs()}
     assert "home_assistant_tool" in tool_ids
-    assert "talk_to_user_tool" in tool_ids
+    assert "talk_to_user_tool" in enabled_ids
 
 
 def test_auto_manifest_from_mcp_config(tmp_path, monkeypatch):
