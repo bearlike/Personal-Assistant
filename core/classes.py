@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Core data models and tool abstractions for Meeseeks orchestration."""
 from __future__ import annotations
 
 import abc
@@ -65,6 +66,7 @@ class TaskQueue(BaseModel):
     @validator("action_steps", allow_reuse=True)
     # pylint: disable=E0213,W0613
     def validate_actions(cls, field: list[ActionStep]) -> list[ActionStep]:
+        """Normalize and validate action steps within a task queue."""
         for action in field:
             # Normalize once and store it
             action.action_consumer = action.action_consumer.lower()
@@ -187,6 +189,7 @@ class AbstractTool(abc.ABC):
         return data
 
     def _load_rag_documents(self, filenames: list[str]) -> list[Document]:
+        """Load and concatenate multiple JSON files into RAG documents."""
         rag_documents: list[Document] = []
         for rag_file in filenames:
             data = self._load_rag_json(rag_file)

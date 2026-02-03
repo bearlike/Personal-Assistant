@@ -19,6 +19,7 @@ logging = get_logger(name="core.permissions")
 
 
 class PermissionDecision(str, Enum):
+    """Possible outcomes for a permission check."""
     ALLOW = "allow"
     DENY = "deny"
     ASK = "ask"
@@ -26,17 +27,20 @@ class PermissionDecision(str, Enum):
 
 @dataclass(frozen=True)
 class PermissionRule:
+    """Rule describing a tool/action permission decision."""
     tool_id: str = "*"
     action_type: str = "*"
     decision: PermissionDecision = PermissionDecision.ASK
 
     def matches(self, action_step: ActionStep) -> bool:
+        """Return True when the action step matches the rule pattern."""
         return fnmatch(action_step.action_consumer, self.tool_id) and fnmatch(
             action_step.action_type, self.action_type
         )
 
 
 class PermissionPolicy:
+    """Evaluate permission rules for action steps."""
     def __init__(
         self,
         rules: list[PermissionRule] | None = None,
@@ -48,6 +52,7 @@ class PermissionPolicy:
         self._default_decision = default_decision
 
     def decide(self, action_step: ActionStep) -> PermissionDecision:
+        """Return the permission decision for an action step."""
         for rule in self._rules:
             if rule.matches(action_step):
                 return rule.decision
@@ -58,6 +63,7 @@ class PermissionPolicy:
 
 
 def _parse_decision(value: str | None) -> PermissionDecision | None:
+    """Parse a string value into a PermissionDecision."""
     if value is None:
         return None
     value = value.strip().lower()
@@ -68,6 +74,7 @@ def _parse_decision(value: str | None) -> PermissionDecision | None:
 
 
 def _default_policy() -> PermissionPolicy:
+    """Build the default permission policy when no configuration is provided."""
     rules = [
         PermissionRule(
             tool_id="talk_to_user_tool",
@@ -87,6 +94,7 @@ def _default_policy() -> PermissionPolicy:
 
 
 def _load_policy_data(path: str) -> dict[str, Any]:
+    """Load permission policy data from TOML or JSON."""
     with open(path, "rb") as handle:
         if path.endswith(".toml"):
             return tomllib.load(handle)
@@ -94,6 +102,7 @@ def _load_policy_data(path: str) -> dict[str, Any]:
 
 
 def load_permission_policy(path: str | None = None) -> PermissionPolicy:
+    """Load permission policy configuration from disk or defaults."""
     if path is None:
         path = os.getenv("MESEEKS_PERMISSION_POLICY")
     if not path:
@@ -138,6 +147,7 @@ def load_permission_policy(path: str | None = None) -> PermissionPolicy:
 
 
 def approval_callback_from_env() -> Callable[[ActionStep], bool] | None:
+    """Return an approval callback based on environment configuration."""
     mode = os.getenv("MESEEKS_APPROVAL_MODE", "").strip().lower()
     if mode in {"allow", "auto", "approve", "yes"}:
         return lambda _: True
@@ -147,10 +157,12 @@ def approval_callback_from_env() -> Callable[[ActionStep], bool] | None:
 
 
 def auto_approve(_: ActionStep) -> bool:
+    """Approval callback that always approves."""
     return True
 
 
 def auto_deny(_: ActionStep) -> bool:
+    """Approval callback that always denies."""
     return False
 
 

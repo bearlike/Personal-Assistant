@@ -20,7 +20,7 @@ logging = get_logger(name="tools.core.talk_to_user")
 
 
 class TalkToUser(AbstractTool):
-    """A service to manage and interact with Home Assistant."""
+    """Tool that returns the user's message back as the response."""
 
     def __init__(self) -> None:
         super().__init__(
@@ -42,4 +42,5 @@ class TalkToUser(AbstractTool):
         return MockSpeaker(content=action_step.action_argument)
 
     def get_state(self, action_step: ActionStep | None = None) -> MockSpeaker:
+        """TalkToUser does not support read operations."""
         raise NotImplementedError("This method is not supported by TalkToUser.")

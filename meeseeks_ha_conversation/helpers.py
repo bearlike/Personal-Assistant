@@ -10,6 +10,7 @@ from homeassistant.helpers import entity_registry
 
 
 class ExposedEntity(TypedDict):
+    """Typed representation of a Home Assistant entity exposed to conversation."""
     entity_id: str
     name: str
     state: str

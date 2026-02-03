@@ -43,10 +43,12 @@ class HomeAssistantCache(TypedDict):
 
 @runtime_checkable
 class CacheHolder(Protocol):
+    """Protocol describing objects with a Home Assistant cache attribute."""
     cache: HomeAssistantCache
 
 
 class SupportsInvoke(Protocol):
+    """Protocol for runnable chains that return HomeAssistantCall."""
     def invoke(self, input_data: dict[str, Any]) -> HomeAssistantCall:
         ...
 
@@ -56,6 +58,7 @@ def cache_monitor(
 ) -> Callable[Concatenate[SelfT, P], R]:
     """Decorator to monitor and update the cache."""
     def sort_by_entity_id(dict_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Sort a list of entities by the entity_id field."""
         return sorted(dict_list, key=lambda x: x["entity_id"])
 
     def clean_entities(
@@ -63,6 +66,7 @@ def cache_monitor(
         forbidden_prefixes: list[str],
         forbidden_substrings: list[str],
     ) -> HomeAssistantCache:
+        """Filter and normalize entities while populating sensors."""
         for idx, entity in enumerate(self.cache["entities"]):
             if "context" in entity:
                 self.cache["entities"][idx].pop("context")
@@ -101,6 +105,7 @@ def cache_monitor(
         return self.cache
 
     def wrapper(self: SelfT, *args: P.args, **kwargs: P.kwargs) -> R:
+        """Invoke the wrapped function and normalize cache content."""
         result = func(self, *args, **kwargs)
 
         forbidden_prefixes = [
@@ -167,6 +172,7 @@ def cache_monitor(
 
 
 class HomeAssistantCall(BaseModel):
+    """Structured Home Assistant service call extracted from the model output."""
     cache: CacheHolder | None = Field(alias="_ha_cache", default=None)
     domain: str = Field(
         description=(

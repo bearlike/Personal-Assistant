@@ -13,6 +13,7 @@ from core.types import EventRecord
 
 @dataclass
 class HookManager:
+    """Container for hook callbacks used during orchestration."""
     pre_tool_use: list[Callable[[ActionStep], ActionStep]] = field(
         default_factory=list
     )
@@ -27,6 +28,7 @@ class HookManager:
     )
 
     def run_pre_tool_use(self, action_step: ActionStep) -> ActionStep:
+        """Apply pre-tool hooks to an action step."""
         for hook in self.pre_tool_use:
             action_step = hook(action_step)
         return action_step
@@ -34,6 +36,7 @@ class HookManager:
     def run_post_tool_use(
         self, action_step: ActionStep, result: MockSpeaker
     ) -> MockSpeaker:
+        """Apply post-tool hooks to a tool result."""
         for hook in self.post_tool_use:
             result = hook(action_step, result)
         return result
@@ -41,11 +44,13 @@ class HookManager:
     def run_permission_request(
         self, action_step: ActionStep, decision: PermissionDecision
     ) -> PermissionDecision:
+        """Apply permission hooks to a decision outcome."""
         for hook in self.permission_request:
             decision = hook(action_step, decision)
         return decision
 
     def run_pre_compact(self, events: Iterable[EventRecord]) -> list[EventRecord]:
+        """Apply compaction hooks to events prior to summarization."""
         event_list: list[EventRecord] = list(events)
         for hook in self.pre_compact:
             event_list = hook(event_list)
@@ -53,6 +58,7 @@ class HookManager:
 
 
 def default_hook_manager() -> HookManager:
+    """Create a hook manager with no custom hooks registered."""
     return HookManager()
 
 

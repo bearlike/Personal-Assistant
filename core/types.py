@@ -8,16 +8,19 @@ from typing_extensions import NotRequired
 
 
 class ActionStepPayload(TypedDict):
+    """Serialized action step data sent to/from orchestration."""
     action_consumer: str
     action_type: str
     action_argument: str
 
 
 class ActionPlanPayload(TypedDict):
+    """Payload describing an action plan."""
     steps: list[ActionStepPayload]
 
 
 class PermissionPayload(TypedDict):
+    """Payload emitted for permission decisions."""
     action_consumer: str
     action_type: str
     action_argument: str
@@ -25,6 +28,7 @@ class PermissionPayload(TypedDict):
 
 
 class ToolResultPayload(TypedDict):
+    """Payload describing the outcome of a tool invocation."""
     action_consumer: str
     action_type: str
     action_argument: str
@@ -33,10 +37,12 @@ class ToolResultPayload(TypedDict):
 
 
 class UserPayload(TypedDict):
+    """Payload describing a user message."""
     text: str
 
 
 class CompletionPayload(TypedDict):
+    """Payload describing overall completion state."""
     done: bool
     done_reason: str | None
     task_result: str | None
@@ -53,11 +59,13 @@ EventPayload = (
 
 
 class Event(TypedDict):
+    """Base event payload stored in transcripts."""
     type: str
     payload: EventPayload
 
 
 class EventRecord(Event):
+    """Event payload with a persisted timestamp."""
     ts: str
 
 

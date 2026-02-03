@@ -14,6 +14,7 @@ logging = get_logger(name="tools.integration.mcp")
 
 
 def _load_mcp_config() -> dict[str, Any]:
+    """Load MCP server configuration from disk."""
     config_path = os.getenv("MESEEKS_MCP_CONFIG")
     if not config_path:
         raise ValueError("MESEEKS_MCP_CONFIG is not set.")
@@ -26,10 +27,12 @@ class MCPToolRunner:
     """Wrapper to invoke MCP tools via langchain-mcp-adapters."""
 
     def __init__(self, server_name: str, tool_name: str) -> None:
+        """Initialize the MCP tool runner for a specific server tool."""
         self.server_name = server_name
         self.tool_name = tool_name
 
     async def _invoke_async(self, input_text: str) -> str:
+        """Invoke an MCP tool asynchronously and return its output."""
         try:
             from langchain_mcp_adapters.client import MultiServerMCPClient
         except Exception as exc:  # pragma: no cover - runtime dependency
@@ -56,6 +59,7 @@ class MCPToolRunner:
         return str(result)
 
     def run(self, action_step: ActionStep) -> MockSpeaker:
+        """Execute the MCP tool using the action step argument."""
         if action_step is None:
             raise ValueError("Action step cannot be None.")
         MockSpeakerType = get_mock_speaker()

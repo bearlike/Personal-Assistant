@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Common helpers shared across the assistant runtime."""
 from __future__ import annotations
 
 import logging as logging_real
@@ -12,6 +13,7 @@ from jinja2 import Environment, FileSystemLoader
 
 
 class MockSpeaker(NamedTuple):
+    """Simple mock response container used across tools and tests."""
     content: str
 
 

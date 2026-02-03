@@ -22,6 +22,7 @@ class ToolRunner(Protocol):
 
 @dataclass(frozen=True)
 class ToolSpec:
+    """Metadata describing a tool available to the assistant."""
     tool_id: str
     name: str
     description: str
@@ -32,15 +33,19 @@ class ToolSpec:
 
 
 class ToolRegistry:
+    """Registry of configured tools and their instantiated runners."""
     def __init__(self) -> None:
+        """Initialize an empty registry."""
         self._tools: dict[str, ToolSpec] = {}
         self._instances: dict[str, ToolRunner] = {}
 
     def register(self, spec: ToolSpec) -> None:
+        """Register a tool specification and update action validation."""
         self._tools[spec.tool_id] = spec
         set_available_tools(list(self._tools.keys()))
 
     def get(self, tool_id: str) -> ToolRunner | None:
+        """Return an enabled tool runner, instantiating it if needed."""
         spec = self._tools.get(tool_id)
         if spec is None or not spec.enabled:
             return None
@@ -49,12 +54,14 @@ class ToolRegistry:
         return self._instances[tool_id]
 
     def list_specs(self, include_disabled: bool = False) -> list[ToolSpec]:
+        """List tool specifications, optionally including disabled tools."""
         specs = list(self._tools.values())
         if include_disabled:
             return specs
         return [spec for spec in specs if spec.enabled]
 
     def tool_catalog(self) -> list[dict[str, str]]:
+        """Return a serialized catalog of registered tool metadata."""
         return [
             {
                 "tool_id": spec.tool_id,
@@ -66,6 +73,7 @@ class ToolRegistry:
 
 
 def _import_factory(module_path: str, class_name: str) -> Callable[[], ToolRunner]:
+    """Return a factory that instantiates a tool by import path."""
     def _factory() -> ToolRunner:
         module = importlib.import_module(module_path)
         cls = getattr(module, class_name)
@@ -75,6 +83,7 @@ def _import_factory(module_path: str, class_name: str) -> Callable[[], ToolRunne
 
 
 def _default_registry() -> ToolRegistry:
+    """Create the built-in registry for local tools."""
     registry = ToolRegistry()
     registry.register(
         ToolSpec(

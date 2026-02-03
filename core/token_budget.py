@@ -16,6 +16,7 @@ from core.types import EventRecord
 
 @dataclass(frozen=True)
 class TokenBudget:
+    """Token accounting snapshot used to decide compaction."""
     total_tokens: int
     summary_tokens: int
     event_tokens: int
@@ -26,10 +27,12 @@ class TokenBudget:
 
     @property
     def needs_compact(self) -> bool:
+        """Return True when utilization exceeds the configured threshold."""
         return self.utilization >= self.threshold
 
 
 def _parse_context_from_model(model_name: str) -> int | None:
+    """Parse a model context window size from a model name string."""
     matches = re.findall(r"(\d+(?:\.\d+)?)([km])", model_name.lower())
     if not matches:
         return None
@@ -45,6 +48,7 @@ def _parse_context_from_model(model_name: str) -> int | None:
 
 
 def _load_context_overrides() -> dict[str, int]:
+    """Load context window overrides from an env var or JSON/TOML file."""
     env_value = os.getenv("MESEEKS_MODEL_CONTEXT_WINDOWS")
     if not env_value:
         return {}
@@ -60,6 +64,7 @@ def _load_context_overrides() -> dict[str, int]:
 
 
 def get_context_window(model_name: str | None) -> int:
+    """Resolve the context window for a model name or default."""
     default_window = int(os.getenv("MESEEKS_DEFAULT_CONTEXT_WINDOW", "128000"))
     if not model_name:
         return default_window
@@ -73,6 +78,7 @@ def get_context_window(model_name: str | None) -> int:
 
 
 def _event_to_text(event: EventRecord) -> str:
+    """Extract a representative text string from an event payload."""
     payload = event.get("payload", "")
     if isinstance(payload, dict):
         payload_data = dict(payload)
@@ -84,6 +90,7 @@ def _event_to_text(event: EventRecord) -> str:
 
 
 def estimate_event_tokens(events: Iterable[EventRecord]) -> int:
+    """Estimate total tokens for a sequence of events."""
     texts = [_event_to_text(event) for event in events]
     joined = "\n".join(text for text in texts if text)
     if not joined:
@@ -92,6 +99,7 @@ def estimate_event_tokens(events: Iterable[EventRecord]) -> int:
 
 
 def estimate_summary_tokens(summary: str | None) -> int:
+    """Estimate token usage for the stored summary."""
     if not summary:
         return 0
     return num_tokens_from_string(summary)
@@ -103,6 +111,7 @@ def get_token_budget(
     model_name: str | None,
     threshold: float | None = None,
 ) -> TokenBudget:
+    """Calculate token utilization and remaining context budget."""
     event_tokens = estimate_event_tokens(events)
     summary_tokens = estimate_summary_tokens(summary)
     total_tokens = event_tokens + summary_tokens

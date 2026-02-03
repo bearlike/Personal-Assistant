@@ -26,6 +26,7 @@ from .exceptions import ApiClientError
 # from .helpers import get_exposed_entities
 
 class MeeseeksMessage(TypedDict, total=False):
+    """Message structure used to call the Meeseeks API."""
     system: str
     context: str | None
     session_id: str | None
@@ -33,6 +34,7 @@ class MeeseeksMessage(TypedDict, total=False):
 
 
 class MeeseeksResponse(TypedDict):
+    """Response payload returned from the Meeseeks API."""
     task_result: str
     response: str
     context: str

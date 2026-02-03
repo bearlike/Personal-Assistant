@@ -14,10 +14,12 @@ from .exceptions import ApiJsonError
 
 
 class ModelsResponse(TypedDict):
+    """Schema for the models list endpoint response."""
     models: list[dict[str, Any]]
 
 
 class MeeseeksQueryResponse(TypedDict):
+    """Schema for the main query response."""
     task_result: str
     response: str
     context: str

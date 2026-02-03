@@ -33,4 +33,5 @@ def summarize_events(events: Iterable[EventRecord], max_items: int = 20) -> str:
 
 
 def should_compact(events: Iterable[EventRecord], threshold: int = 50) -> bool:
+    """Return True when the event list meets the compaction threshold."""
     return len(list(events)) >= threshold

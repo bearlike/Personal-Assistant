@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Task planning and orchestration loop for Meeseeks."""
 
 # Standard library modules
 import os
@@ -66,6 +67,7 @@ def _augment_system_prompt(
     tool_registry: ToolRegistry | None,
     session_summary: str | None = None,
 ) -> str:
+    """Append tool catalog and session summary information to a base prompt."""
     sections = [system_prompt]
     if session_summary:
         sections.append(f"Session summary:\n{session_summary}")
@@ -291,6 +293,7 @@ def run_action_plan(
 
 
 def _action_steps_complete(task_queue: TaskQueue) -> bool:
+    """Return True if all action steps have completed with results."""
     return all(step.result is not None for step in task_queue.action_steps)
 
 
@@ -300,6 +303,7 @@ def _maybe_auto_compact(
     model_name: str | None,
     hook_manager: HookManager,
 ) -> str | None:
+    """Compact and persist session history when it exceeds token thresholds."""
     events = session_store.load_transcript(session_id)
     events = hook_manager.run_pre_compact(events)
     summary = session_store.load_summary(session_id)
