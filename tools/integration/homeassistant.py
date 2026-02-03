@@ -212,6 +212,9 @@ class HomeAssistantCall(BaseModel):
                 f"Domain '{domain}' is not in the Home Assistant cache.")
         return domain
 
+    class Config:
+        arbitrary_types_allowed = True
+
 
 class HomeAssistant(AbstractTool):
     """A service to manage and interact with Home Assistant."""
