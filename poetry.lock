@@ -1685,6 +1685,7 @@ coloredlogs = "^15.0.1"
 jinja2 = "^3.1.4"
 jq = "^1.7.0"
 langchain = "^0.1.19"
+langchain-community = "^0.0.38"
 langchain-openai = "^0.1.6"
 langfuse = "^2.29.3"
 openai = "^1.28.0"
@@ -3664,4 +3665,4 @@ cli = ["meeseeks-cli"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "13286e132b3851997b52b87e2bf275ac851026b9f984a8aeb8d33e2ca41c54fe"
+content-hash = "5066f2ed17e0223af183794c7f69043a7a12e1f5ec2dd202efbe80c18b31a34b"
