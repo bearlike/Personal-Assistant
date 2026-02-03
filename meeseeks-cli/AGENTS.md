@@ -1,4 +1,4 @@
-# Meeseeks CLI — UI/Terminal Guidance
+# Meeseeks CLI - UI/Terminal Guidance
 
 Scope: this file applies to the `meeseeks-cli/` package only. It covers the terminal UI (Rich + Textual) and how CLI output is produced.
 
@@ -16,7 +16,8 @@ Scope: this file applies to the `meeseeks-cli/` package only. It covers the term
   - Action plan checklist (Panel + Text + Group).
   - Tool results as cards (Panel + Columns).
   - Response panel (Markdown in a bold border).
-- Logging is gated by `--debug` and themed darker for CLI runs.
+- Logging is gated by `-v/--verbose` and themed darker for CLI runs.
+- Tool execution shows a lightweight spinner while a tool is running.
 
 ### Section styles (keep consistent)
 - Action Plan: checklist in a panel titled `:clipboard: Action Plan`, border `cyan`.
@@ -84,6 +85,12 @@ If you add a new interactive flow, use `DialogFactory` instead of writing custom
 - Avoid bespoke widgets or heavy layouting unless strictly required.
 - Prefer Rich/ Textual defaults; override only when UX needs it.
 - Keep new UI logic near existing UI code (`cli_master.py`, `cli_dialogs.py`).
+
+## Orchestration + testing guardrails (CLI-facing)
+- Show tool activity clearly (plan, spinner, tool panels) before final response.
+- Do not print raw tool output as the final answer; let the core synthesize.
+- Tests should drive a real CLI flow with fake tools/LLM outputs; avoid over-mocking.
+- Keep permission prompts deterministic in tests (auto-approve or stub).
 
 ## Keep this file updated
 Whenever you change:

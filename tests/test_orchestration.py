@@ -306,6 +306,7 @@ def test_orchestrate_session_records_mcp_tool_result(monkeypatch, tmp_path):
         return TaskQueue(action_steps=[step])
 
     monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
+    monkeypatch.setattr(task_master, "_should_synthesize_response", lambda *_a, **_k: False)
 
     task_master.orchestrate_session(
         "search",

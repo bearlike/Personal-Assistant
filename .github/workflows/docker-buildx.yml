@@ -16,7 +16,7 @@
 # * The 'latest' and 'stable' tags allow us to easily switch between different versions.
 # * The 'dev' tag allows you to have a separate version for development.
 
-name: Build and Push Docker Images
+name: Docker Images
 
 on:
   workflow_dispatch:

@@ -2,11 +2,15 @@
 <h1 align="center">Meeseeks: The Personal Assistant 👋</h1>
 
 <p align="center">
-    <a href="https://github.com/bearlike/Personal-Assistant/wiki"><img alt="Wiki" src="https://img.shields.io/badge/GitHub-Wiki-blue?style=for-the-badge&logo=github"></a>
-    <a href="https://github.com/features/actions"><img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/bearlike/Personal-Assistant/docker-buildx.yml?style=for-the-badge&"></a>
-    <a href="https://github.com/bearlike/Personal-Assistant/releases"><img src="https://img.shields.io/github/v/release/bearlike/Personal-Assistant?style=for-the-badge&" alt="GitHub Release"></a>
-    <a href="https://github.com/bearlike/Personal-Assistant/pkgs/container/meeseeks-chat"><img src="https://img.shields.io/badge/ghcr.io-bearlike/meeseeks--chat:latest-blue?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Image"></a>
-    <a href="https://github.com/bearlike/Personal-Assistant/pkgs/container/meeseeks-api"><img src="https://img.shields.io/badge/ghcr.io-bearlike/meeseeks--api:latest-blue?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Image"></a>
+    <a href="https://deepwiki.com/bearlike/Personal-Assistant"><img alt="Ask DeepWiki" src="https://deepwiki.com/badge.svg"></a>
+    <a href="https://github.com/bearlike/Personal-Assistant/actions/workflows/docker-buildx.yml"><img alt="Build and Push Docker Images" src="https://github.com/bearlike/Personal-Assistant/actions/workflows/docker-buildx.yml/badge.svg"></a>
+    <a href="https://codecov.io/gh/bearlike/Personal-Assistant"><img alt="Coverage" src="https://codecov.io/gh/bearlike/Personal-Assistant/branch/main/graph/badge.svg"></a>
+    <a href="https://codecov.io/gh/bearlike/Personal-Assistant?flags=core"><img alt="Coverage (core)" src="https://codecov.io/gh/bearlike/Personal-Assistant/branch/main/graph/badge.svg?flags=core"></a>
+    <a href="https://github.com/bearlike/Personal-Assistant/actions/workflows/lint.yml"><img alt="Lint" src="https://github.com/bearlike/Personal-Assistant/actions/workflows/lint.yml/badge.svg"></a>
+    <a href="https://github.com/bearlike/Personal-Assistant/actions/workflows/docs.yml"><img alt="Docs" src="https://github.com/bearlike/Personal-Assistant/actions/workflows/docs.yml/badge.svg"></a>
+    <a href="https://github.com/bearlike/Personal-Assistant/releases"><img src="https://img.shields.io/github/v/release/bearlike/Personal-Assistant" alt="GitHub Release"></a>
+    <a href="https://github.com/bearlike/Personal-Assistant/pkgs/container/meeseeks-chat"><img src="https://img.shields.io/badge/ghcr.io-bearlike/meeseeks--chat:latest-blue?logo=docker&logoColor=white" alt="Docker Image"></a>
+    <a href="https://github.com/bearlike/Personal-Assistant/pkgs/container/meeseeks-api"><img src="https://img.shields.io/badge/ghcr.io-bearlike/meeseeks--api:latest-blue?logo=docker&logoColor=white" alt="Docker Image"></a>
 </p>
 
 
@@ -19,7 +23,7 @@
 </p>
 
 # Project Motivation 🚀
-Meeseeks is a personal assistant built on an LLM-driven orchestration loop. It breaks a request into atomic steps, runs tools, and returns a clean summary. The core loop can replan after tool failures and keep short-term state while sessions persist on disk for continuity.
+Meeseeks is a personal assistant built on an LLM-driven orchestration loop. It breaks a request into atomic steps, runs tools, and returns a synthesized response. The core loop can replan after tool failures and keeps short-term state while sessions persist on disk.
 
 
 <details>
@@ -32,8 +36,6 @@ Meeseeks is a personal assistant built on an LLM-driven orchestration loop. It b
 </details>
 
 # Features 🔥
-> [!NOTE]
-> Visit [**Features - Wiki**](https://github.com/bearlike/Personal-Assistant/wiki/Features) for detailed information on tools and integration capabilities.
 
 <table align="center">
     <tr>
@@ -56,8 +58,9 @@ Meeseeks is a personal assistant built on an LLM-driven orchestration loop. It b
 - (✅) MCP tool visibility and model switch wizard in the CLI.
 - (✅) Plan -> act -> observe loop with re-planning on tool failures.
 - (✅) Session transcripts with lightweight compaction for long-running chats.
-- (✅) Tool registry with optional MCP tool support via manifest.
+- (✅) Tool registry with MCP auto-discovery and optional manifest override.
 - (✅) Permission gate + hooks around tool execution for safer runs.
+- (✅) Tool response synthesis before user-facing replies.
 
 ## Extras 👽
 Optional feature that users can choose to install to further optimize their experience.
@@ -97,24 +100,11 @@ flowchart LR
   Core --> SessionStore
 ```
 
-## Installing and Running Meeseeks
-> [!IMPORTANT]
-> For Docker or manual installation, running, and configuring Meeseeks, visit [**Installation - Wiki**](https://github.com/bearlike/Personal-Assistant/wiki/Installation) or read `docs/index.md` for a quick local/deploy overview.
-
-## MCP servers (quick setup)
-MCP tools are auto-discovered from your MCP server config.
-- Copy `configs/mcp.example.json` and set the MCP server URL + headers.
-- Set `MESEEKS_MCP_CONFIG` in `.env`.
-- First run will auto-generate the tool manifest under `~/.meeseeks/` and refresh it on each load.
-- Optional: add `auto_approve_tools` under each server to allowlist tools (the CLI writes this when you pick “Yes, always”).
-
-Advanced: set `MESEEKS_TOOL_MANIFEST` to override the tool list (disables auto-discovery).
-Tip: if you override the manifest, include `talk_to_user_tool` so the assistant can still reply.
-
-## Optional components
-- **Langfuse** is optional. Enable it by setting `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` (or disable with `LANGFUSE_ENABLED=0`).
-- **Home Assistant** tools are optional. Enable them by setting `HA_URL` and `HA_TOKEN` (or disable with `MESEEKS_HOME_ASSISTANT_ENABLED=0`).
-- Optional components auto-disable when init/runtime/auth fails, with logs explaining the reason.
+## Documentation
+- [docs/index.md](docs/index.md) - product overview and architecture
+- [docs/getting-started.md](docs/getting-started.md) - setup guide (env, MCP, configs, run paths)
+- [docs/components.md](docs/components.md) - monorepo map
+- [docs/reference.md](docs/reference.md) - API reference (mkdocstrings)
 
 ---
 

@@ -1,28 +1,57 @@
 # Getting Started
 
+This guide walks through local setup, environment configuration, MCP setup, and how to run each interface.
+
 ## Prerequisites
-
 - Python 3.11+
-- Poetry (or pip + a virtual environment)
+- Poetry
+- Docker (optional, for container runs)
 
-## Install documentation dependencies
+## Install dependencies
+```bash
+poetry install
+```
 
+## Environment setup
+1. Copy `.env.example` to `.env`.
+2. Set at least:
+   - `OPENAI_API_KEY` (or your compatible provider key)
+   - `OPENAI_API_BASE` (if you are using a local or custom API base)
+   - `DEFAULT_MODEL` (or `ACTION_PLAN_MODEL`)
+3. Optional runtime paths:
+   - `MESEEKS_SESSION_DIR` for session transcript storage
+   - `MESEEKS_TOOL_MANIFEST` if you want a custom tool list (disables MCP auto-discovery)
+
+## MCP setup (auto-discovery)
+MCP tools are auto-discovered from a server config file.
+1. Copy `configs/mcp.example.json` to `configs/mcp.json`.
+2. Set the MCP server `url` and any `headers` needed for auth.
+3. Set `MESEEKS_MCP_CONFIG=./configs/mcp.json` in `.env`.
+4. Start any interface once; a tool manifest is auto-generated and cached under `~/.meeseeks/`.
+
+Notes:
+- If you override the manifest, include `talk_to_user_tool` so the assistant can still reply.
+- MCP tool names must match the server's advertised tool list.
+
+## Optional components
+- Langfuse: set `LANGFUSE_PUBLIC_KEY` + `LANGFUSE_SECRET_KEY` (or disable with `LANGFUSE_ENABLED=0`).
+- Home Assistant: set `HA_URL` + `HA_TOKEN` (or disable with `MESEEKS_HOME_ASSISTANT_ENABLED=0`).
+
+## Run interfaces (local)
+- API: `python meeseeks-api/backend.py`
+- Chat UI: `streamlit run meeseeks-chat/chat_master.py`
+- CLI: `python meeseeks-cli/cli_master.py`
+- Home Assistant integration: install `meeseeks_ha_conversation/` as a custom component and point it at the API.
+
+## Docker (optional)
+- Build images using the provided Dockerfiles for API/chat.
+- Provide the same `.env` values as local.
+- Persist `MESEEKS_SESSION_DIR` if you want transcripts across restarts.
+
+## Docs (optional)
+If you want to build the docs locally:
 ```bash
 pip install -r requirements-docs.txt
-```
-
-## Run the docs locally
-
-```bash
 export PYTHONPATH="$PWD"
 mkdocs serve
-```
-
-The documentation will be available at http://127.0.0.1:8000/.
-
-## Build the docs
-
-```bash
-export PYTHONPATH="$PWD"
-mkdocs build
 ```
