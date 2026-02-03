@@ -37,6 +37,7 @@ from core.permissions import (
 from core.session_store import SessionStore
 from core.token_budget import get_token_budget
 from core.tool_registry import ToolRegistry, load_registry
+from core.types import ActionStepPayload, Event
 
 logging = get_logger(name="core.task_master")
 
@@ -169,7 +170,7 @@ def generate_action_plan(
 def run_action_plan(
     task_queue: TaskQueue,
     tool_registry: ToolRegistry | None = None,
-    event_logger=None,
+    event_logger: Callable[[Event], None] | None = None,
     permission_policy: PermissionPolicy | None = None,
     approval_callback: Callable[[ActionStep], bool] | None = None,
     hook_manager: HookManager | None = None,
@@ -192,7 +193,7 @@ def run_action_plan(
     if hook_manager is None:
         hook_manager = default_hook_manager()
 
-    results = []
+    results: list[str] = []
 
     for idx, action_step in enumerate(task_queue.action_steps):
         logging.debug("Processing ActionStep: %s", action_step)
@@ -344,7 +345,9 @@ def orchestrate_session(
     if hook_manager is None:
         hook_manager = default_hook_manager()
 
-    session_store.append_event(session_id, {"type": "user", "payload": {"text": user_query}})
+    session_store.append_event(
+        session_id, {"type": "user", "payload": {"text": user_query}}
+    )
 
     updated_summary = _maybe_auto_compact(
         session_store,
@@ -379,20 +382,19 @@ def orchestrate_session(
     else:
         task_queue = initial_task_queue
     state.plan = task_queue.action_steps
+    steps: list[ActionStepPayload] = [
+        {
+            "action_consumer": step.action_consumer,
+            "action_type": step.action_type,
+            "action_argument": step.action_argument,
+        }
+        for step in task_queue.action_steps
+    ]
     session_store.append_event(
         session_id,
         {
             "type": "action_plan",
-            "payload": {
-                "steps": [
-                    {
-                        "action_consumer": step.action_consumer,
-                        "action_type": step.action_type,
-                        "action_argument": step.action_argument,
-                    }
-                    for step in task_queue.action_steps
-                ]
-            },
+            "payload": {"steps": steps},
         },
     )
 
@@ -424,20 +426,19 @@ def orchestrate_session(
                 session_summary=state.summary,
             )
             state.plan = task_queue.action_steps
+            revised_steps: list[ActionStepPayload] = [
+                {
+                    "action_consumer": step.action_consumer,
+                    "action_type": step.action_type,
+                    "action_argument": step.action_argument,
+                }
+                for step in task_queue.action_steps
+            ]
             session_store.append_event(
                 session_id,
                 {
                     "type": "action_plan",
-                    "payload": {
-                        "steps": [
-                            {
-                                "action_consumer": step.action_consumer,
-                                "action_type": step.action_type,
-                                "action_argument": step.action_argument,
-                            }
-                            for step in task_queue.action_steps
-                        ]
-                    },
+                    "payload": {"steps": revised_steps},
                 },
             )
 
@@ -456,7 +457,6 @@ def orchestrate_session(
         },
     )
 
-    events = session_store.load_transcript(session_id)
     updated_summary = _maybe_auto_compact(
         session_store,
         session_id,

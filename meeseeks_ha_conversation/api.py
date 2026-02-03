@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, TypedDict
 
 import aiohttp
 import async_timeout
@@ -11,6 +11,17 @@ from .const import LOGGER
 
 # User-defined imports
 from .exceptions import ApiJsonError
+
+
+class ModelsResponse(TypedDict):
+    models: list[dict[str, Any]]
+
+
+class MeeseeksQueryResponse(TypedDict):
+    task_result: str
+    response: str
+    context: str
+    session_id: str | None
 
 
 class MeeseeksApiClient:
@@ -33,10 +44,10 @@ class MeeseeksApiClient:
         # TODO: Implement a heartbeat check
         return True
 
-    async def async_get_models(self) -> Any:
+    async def async_get_models(self) -> str:
         """Get models from the API."""
         # TODO: This is monkey-patched for now
-        response_data = {
+        response_data: ModelsResponse = {
             "models": [
                 {
                     "name": "meeseeks",
@@ -48,7 +59,9 @@ class MeeseeksApiClient:
         }
         return json.dumps(response_data)
 
-    async def async_generate(self, data: dict | None = None) -> Any:
+    async def async_generate(
+        self, data: dict[str, Any] | None = None
+    ) -> MeeseeksQueryResponse:
         """Generate a completion from the API."""
         if not data or "prompt" not in data:
             raise ValueError("Missing prompt in request data.")
@@ -60,21 +73,24 @@ class MeeseeksApiClient:
         if session_id:
             data_custom["session_id"] = session_id
         # Pass headers as None to use the default headers
-        return await self._meeseeks_api_wrapper(
+        result = await self._meeseeks_api_wrapper(
             method="post",
             url=url_query,
             data=data_custom,
             headers=None,
         )
+        if isinstance(result, str):
+            raise ApiJsonError("Unexpected text response from Meeseeks API.")
+        return result
 
     async def _meeseeks_api_wrapper(
         self,
         method: str,
         url: str,
-        data: dict | None = None,
-        headers: dict | None = None,
+        data: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
         decode_json: bool = True,
-    ) -> Any:
+    ) -> MeeseeksQueryResponse | str:
         """Get information from the API."""
         if headers is None:
             headers = {
@@ -92,12 +108,17 @@ class MeeseeksApiClient:
             response.raise_for_status()
 
             if decode_json:
-                response_data = await response.json()
+                raw_data: dict[str, Any] = await response.json()
                 if response.status == 404:
-                    raise ApiJsonError(response_data["error"])
-                LOGGER.debug(f"Response data: {response_data}")
-                response_data["response"] = response_data["task_result"]
-                response_data["context"] = response_data["task_result"]
+                    raise ApiJsonError(raw_data.get("error", "Unknown error"))
+                task_result = str(raw_data.get("task_result", ""))
+                response_data: MeeseeksQueryResponse = {
+                    "task_result": task_result,
+                    "response": str(raw_data.get("response", task_result)),
+                    "context": str(raw_data.get("context", task_result)),
+                    "session_id": raw_data.get("session_id"),
+                }
+                LOGGER.debug("Response data: %s", response_data)
                 return response_data
             else:
                 LOGGER.debug("Fallback to text response")

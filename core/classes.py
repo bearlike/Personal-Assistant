@@ -1,23 +1,24 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 import abc
 import json
 import os
-from typing import Any, cast
+from typing import cast
 
 from dotenv import load_dotenv
-
-# Third-party modules
 from langchain_community.document_loaders import JSONLoader
+from langchain_core.documents import Document
 from langchain_core.pydantic_v1 import BaseModel, Field, validator
 from langchain_openai import ChatOpenAI
 from langfuse.callback import CallbackHandler
 
-# User-defined modules
 from core.common import MockSpeaker, get_logger, get_mock_speaker, get_unique_timestamp
+from core.types import ActionStepPayload
 
 load_dotenv()
 logging = get_logger(name="core.classes")
-AVAILABLE_TOOLS = ["home_assistant_tool", "talk_to_user_tool"]
+AVAILABLE_TOOLS: list[str] = ["home_assistant_tool", "talk_to_user_tool"]
 
 
 def set_available_tools(tool_ids: list[str]) -> None:
@@ -40,7 +41,7 @@ class ActionStep(BaseModel):
             "If 'talk', include the message to speak to the user."
         )
     )
-    result: Any | None = Field(
+    result: MockSpeaker | None = Field(
         alias="_result",
         default=None,
         description='Private field to persist the action status and other data.'
@@ -63,7 +64,7 @@ class TaskQueue(BaseModel):
 
     @validator("action_steps", allow_reuse=True)
     # pylint: disable=E0213,W0613
-    def validate_actions(cls, field):
+    def validate_actions(cls, field: list[ActionStep]) -> list[ActionStep]:
         for action in field:
             # Normalize once and store it
             action.action_consumer = action.action_consumer.lower()
@@ -130,7 +131,7 @@ class AbstractTool(abc.ABC):
         description: str,
         model_name: str | None = None,
         temperature: float = 0.3,
-    ):
+    ) -> None:
         """Initialize the tool with optional model configuration."""
         self.model_name = cast(
             str,
@@ -163,7 +164,7 @@ class AbstractTool(abc.ABC):
         self.cache_dir = os.path.abspath(cache_dir)
         logging.debug("%s cache directory is %s.", self._id, self.cache_dir)
 
-    def _save_json(self, data, filename):
+    def _save_json(self, data: object, filename: str) -> None:
         """Save a dictionary to a JSON file."""
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
@@ -172,7 +173,7 @@ class AbstractTool(abc.ABC):
             json.dump(data, f, indent=4)
         logging.info(f"Data saved to {filename}.")
 
-    def _load_rag_json(self, filename) -> list:
+    def _load_rag_json(self, filename: str) -> list[Document]:
         """Load a dictionary from a JSON file."""
         logging.debug("RAG directory is %s.", self.cache_dir)
         logging.info(f"Loading `{filename}` as JSON.")
@@ -185,8 +186,8 @@ class AbstractTool(abc.ABC):
         data = loader.load()
         return data
 
-    def _load_rag_documents(self, filenames: list[str]) -> list:
-        rag_documents = []
+    def _load_rag_documents(self, filenames: list[str]) -> list[Document]:
+        rag_documents: list[Document] = []
         for rag_file in filenames:
             data = self._load_rag_json(rag_file)
             rag_documents.extend(data)
@@ -232,7 +233,8 @@ class AbstractTool(abc.ABC):
 
 
 def create_task_queue(
-    action_data: list[dict] | None = None, is_example=True
+    action_data: list[ActionStepPayload] | None = None,
+    is_example: bool = True,
 ) -> TaskQueue:
     """
     Creates a new TaskQueue object and assigns values from action_data.
@@ -262,9 +264,9 @@ def create_task_queue(
     return task_queue
 
 
-def get_task_master_examples(example_id: int = 0):
+def get_task_master_examples(example_id: int = 0) -> str:
     """Get the example task queue data."""
-    examples = [
+    examples: list[list[ActionStepPayload]] = [
         [
             {"action_consumer": "home_assistant_tool", "action_type": "set",
                 "action_argument": "Power on the strip lights."},

@@ -11,6 +11,7 @@ from dataclasses import dataclass
 import tomllib
 
 from core.common import num_tokens_from_string
+from core.types import EventRecord
 
 
 @dataclass(frozen=True)
@@ -71,17 +72,18 @@ def get_context_window(model_name: str | None) -> int:
     return default_window
 
 
-def _event_to_text(event: dict) -> str:
+def _event_to_text(event: EventRecord) -> str:
     payload = event.get("payload", "")
     if isinstance(payload, dict):
+        payload_data = dict(payload)
         for key in ("text", "message", "result"):
-            if key in payload:
-                return str(payload[key])
-        return json.dumps(payload, sort_keys=True)
+            if key in payload_data:
+                return str(payload_data[key])
+        return json.dumps(payload_data, sort_keys=True)
     return str(payload)
 
 
-def estimate_event_tokens(events: Iterable[dict]) -> int:
+def estimate_event_tokens(events: Iterable[EventRecord]) -> int:
     texts = [_event_to_text(event) for event in events]
     joined = "\n".join(text for text in texts if text)
     if not joined:
@@ -96,7 +98,7 @@ def estimate_summary_tokens(summary: str | None) -> int:
 
 
 def get_token_budget(
-    events: Iterable[dict],
+    events: Iterable[EventRecord],
     summary: str | None,
     model_name: str | None,
     threshold: float | None = None,

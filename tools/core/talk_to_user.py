@@ -5,6 +5,8 @@
 * features such as presidio or CRITIC to further refine language model outputs.
 """
 
+from __future__ import annotations
+
 # Third-party modules
 from dotenv import load_dotenv
 
@@ -20,7 +22,7 @@ logging = get_logger(name="tools.core.talk_to_user")
 class TalkToUser(AbstractTool):
     """A service to manage and interact with Home Assistant."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             name="Talk to User",
             description="Directly talk to the user."
@@ -39,5 +41,5 @@ class TalkToUser(AbstractTool):
         MockSpeaker = get_mock_speaker()
         return MockSpeaker(content=action_step.action_argument)
 
-    def get_state(self, *args, **kwargs):
+    def get_state(self, action_step: ActionStep | None = None) -> MockSpeaker:
         raise NotImplementedError("This method is not supported by TalkToUser.")

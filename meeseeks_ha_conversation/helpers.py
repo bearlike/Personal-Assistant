@@ -1,4 +1,7 @@
 """Helper functions for Meeseeks."""
+from __future__ import annotations
+
+from typing import TypedDict
 
 from homeassistant.components.conversation import DOMAIN as CONVERSATION_DOMAIN
 from homeassistant.components.homeassistant.exposed_entities import async_should_expose
@@ -6,10 +9,17 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry
 
 
-def get_exposed_entities(hass: HomeAssistant) -> list[dict]:
+class ExposedEntity(TypedDict):
+    entity_id: str
+    name: str
+    state: str
+    aliases: list[str]
+
+
+def get_exposed_entities(hass: HomeAssistant) -> list[ExposedEntity]:
     """Return exposed entities."""
     hass_entity = entity_registry.async_get(hass)
-    exposed_entities: list[dict] = []
+    exposed_entities: list[ExposedEntity] = []
 
     for state in hass.states.async_all():
         if async_should_expose(hass, CONVERSATION_DOMAIN, state.entity_id):

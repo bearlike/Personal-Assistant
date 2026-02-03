@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from core.common import get_logger
+from core.types import Event, EventRecord
 
 logging = get_logger(name="core.session_store")
 
@@ -45,14 +46,14 @@ class SessionStore:
     def _index_path(self) -> str:
         return os.path.join(self.root_dir, "index.json")
 
-    def _load_index(self) -> dict:
+    def _load_index(self) -> dict[str, dict[str, str]]:
         index_path = self._index_path()
         if not os.path.exists(index_path):
             return {"tags": {}}
         with open(index_path, encoding="utf-8") as handle:
             return json.load(handle)
 
-    def _save_index(self, data: dict) -> None:
+    def _save_index(self, data: dict[str, dict[str, str]]) -> None:
         with open(self._index_path(), "w", encoding="utf-8") as handle:
             json.dump(data, handle, indent=2)
 
@@ -65,18 +66,18 @@ class SessionStore:
     def _paths(self, session_id: str) -> SessionPaths:
         return SessionPaths(root=self.root_dir, session_id=session_id)
 
-    def append_event(self, session_id: str, event: dict) -> None:
+    def append_event(self, session_id: str, event: Event) -> None:
         paths = self._paths(session_id)
         os.makedirs(paths.session_dir, exist_ok=True)
-        payload = {"ts": _utc_now(), **event}
+        payload: EventRecord = {"ts": _utc_now(), **event}
         with open(paths.transcript_path, "a", encoding="utf-8") as handle:
             handle.write(json.dumps(payload) + "\n")
 
-    def load_transcript(self, session_id: str) -> list[dict]:
+    def load_transcript(self, session_id: str) -> list[EventRecord]:
         paths = self._paths(session_id)
         if not os.path.exists(paths.transcript_path):
             return []
-        events: list[dict] = []
+        events: list[EventRecord] = []
         with open(paths.transcript_path, encoding="utf-8") as handle:
             for line in handle:
                 line = line.strip()

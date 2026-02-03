@@ -8,6 +8,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 from fnmatch import fnmatch
+from typing import Any
 
 import tomllib
 
@@ -85,7 +86,7 @@ def _default_policy() -> PermissionPolicy:
     )
 
 
-def _load_policy_data(path: str) -> dict:
+def _load_policy_data(path: str) -> dict[str, Any]:
     with open(path, "rb") as handle:
         if path.endswith(".toml"):
             return tomllib.load(handle)

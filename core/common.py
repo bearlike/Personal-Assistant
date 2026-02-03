@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 import logging as logging_real
 import os
 import time
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 import coloredlogs
 import tiktoken
@@ -18,7 +20,7 @@ def get_mock_speaker() -> type[MockSpeaker]:
     return MockSpeaker
 
 
-def get_logger(name=None) -> logging_real.Logger:
+def get_logger(name: str | None = None) -> logging_real.Logger:
     """ Get the logger for the module.
 
     Args:
@@ -89,7 +91,10 @@ def get_system_prompt(name: str = "action-planner") -> str:
 
 
 def ha_render_system_prompt(
-        all_entities=None, env="prompts", name="homeassistant-set-state") -> str:
+    all_entities: Any | None = None,
+    env: str = "prompts",
+    name: str = "homeassistant-set-state",
+) -> str:
     """ Render the system j2 prompt. Need to make it more generic.
 
     Returns:
@@ -103,8 +108,8 @@ def ha_render_system_prompt(
     template_root = os.path.abspath(template_root)
     logging.debug("Compiling %s from %s.", name, template_root)
     # TODO: Catch and log TemplateNotFound when necessary.
-    env = Environment(loader=FileSystemLoader(template_root))
-    template = env.get_template(f"{name}.txt")
+    template_env = Environment(loader=FileSystemLoader(template_root))
+    template = template_env.get_template(f"{name}.txt")
     logging.debug("Render system prompt for `%s`", name)
     del logging
 

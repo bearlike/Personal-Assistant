@@ -5,7 +5,7 @@ https://github.com/bearlike/personal-Assistant/
 """
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal, TypedDict
 
 from homeassistant.components import conversation
 from homeassistant.config_entries import ConfigEntry
@@ -17,19 +17,27 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util import ulid
 
 from .api import MeeseeksApiClient
-from .const import (
-    CONF_BASE_URL,
-    CONF_TIMEOUT,
-    DEFAULT_TIMEOUT,
-    DOMAIN,
-    LOGGER,
-)
+from .const import CONF_BASE_URL, CONF_TIMEOUT, DEFAULT_TIMEOUT, DOMAIN, LOGGER
 
 # User-defined imports
 from .coordinator import MeeseeksDataUpdateCoordinator
 from .exceptions import ApiClientError
 
 # from .helpers import get_exposed_entities
+
+class MeeseeksMessage(TypedDict, total=False):
+    system: str
+    context: str | None
+    session_id: str | None
+    prompt: str
+
+
+class MeeseeksResponse(TypedDict):
+    task_result: str
+    response: str
+    context: str
+    session_id: str | None
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Meeseeks conversation using UI."""
@@ -83,7 +91,7 @@ class MeeseeksAgent(conversation.AbstractConversationAgent):
         self.hass = hass
         self.entry = entry
         self.client = client
-        self.history: dict[str, dict] = {}
+        self.history: dict[str, MeeseeksMessage] = {}
 
     @property
     def supported_languages(self) -> list[str] | Literal["*"]:
@@ -137,7 +145,9 @@ class MeeseeksAgent(conversation.AbstractConversationAgent):
             response=intent_response, conversation_id=conversation_id
         )
 
-    def _async_generate_prompt(self, raw_prompt: str, exposed_entities) -> str:
+    def _async_generate_prompt(
+        self, raw_prompt: str, exposed_entities: list[dict[str, Any]]
+    ) -> str:
         """Generate a prompt for the user."""
         return template.Template(raw_prompt, self.hass).async_render(
             {
@@ -147,10 +157,7 @@ class MeeseeksAgent(conversation.AbstractConversationAgent):
             parse_result=False,
         )
 
-    async def query(
-        self,
-        messages
-    ):
+    async def query(self, messages: MeeseeksMessage) -> MeeseeksResponse:
         """Process a sentence."""
         # model = self.entry.options.get(CONF_MODEL, DEFAULT_MODEL)
         # LOGGER.debug("Prompt for %s: %s", model, messages["prompt"])
@@ -158,12 +165,14 @@ class MeeseeksAgent(conversation.AbstractConversationAgent):
         # TODO: $context, and $system are not used but still implemented for
         #        future use
         # * Generator
-        result = await self.client.async_generate({
-            "context": messages["context"],
-            "system": messages["system"],
-            "prompt": messages["prompt"],
-            "session_id": messages.get("session_id"),
-        })
+        result = await self.client.async_generate(
+            {
+                "context": messages.get("context"),
+                "system": messages.get("system"),
+                "prompt": messages["prompt"],
+                "session_id": messages.get("session_id"),
+            }
+        )
         response: str = result["task_result"]
         LOGGER.debug("Response %s", response)
         return result

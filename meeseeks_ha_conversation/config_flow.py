@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import types
+from collections.abc import Mapping
 from typing import Any
 
 import voluptuous as vol
@@ -28,7 +29,7 @@ from .const import (
     MENU_OPTIONS,
 )
 
-STEP_USER_DATA_SCHEMA = vol.Schema(
+STEP_USER_DATA_SCHEMA: vol.Schema = vol.Schema(
     {
         vol.Required(CONF_BASE_URL, default=DEFAULT_BASE_URL): str,
         vol.Required(CONF_API_KEY, default=DEFAULT_API_KEY): str,
@@ -36,7 +37,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     }
 )
 
-DEFAULT_OPTIONS = types.MappingProxyType(
+DEFAULT_OPTIONS: Mapping[str, Any] = types.MappingProxyType(
     {
         CONF_BASE_URL: DEFAULT_BASE_URL,
         CONF_API_KEY: DEFAULT_API_KEY,
@@ -51,6 +52,7 @@ class MeeseeksConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
     """Handle a config flow for Meeseeks Conversation. Handles UI wizard."""
 
     VERSION = 1
+    client: MeeseeksApiClient
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -66,7 +68,7 @@ class MeeseeksConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
             if existing_entry.data.get(CONF_BASE_URL) == user_input[CONF_BASE_URL]:
                 return self.async_abort(reason="already_configured")
 
-        errors = {}
+        errors: dict[str, str] = {}
         try:
             self.client = MeeseeksApiClient(
                 base_url=cv.url_no_path(user_input[CONF_BASE_URL]),

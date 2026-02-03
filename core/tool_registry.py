@@ -9,15 +9,15 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from core.classes import set_available_tools
-from core.common import get_logger
+from core.classes import ActionStep, set_available_tools
+from core.common import MockSpeaker, get_logger
 
 logging = get_logger(name="core.tool_registry")
 
 
 class ToolRunner(Protocol):
-    def run(self, action_step):  # pragma: no cover - Protocol signature
-        ...
+    def run(self, action_step: ActionStep) -> MockSpeaker:  # pragma: no cover
+        """Execute an action step and return a speaker response."""
 
 
 @dataclass(frozen=True)

@@ -35,7 +35,7 @@ class MeeseeksDataUpdateCoordinator(DataUpdateCoordinator):
             update_interval=timedelta(minutes=5),
         )
 
-    async def _async_update_data(self):
+    async def _async_update_data(self) -> bool:
         """Update data via library."""
         try:
             return await self.client.async_get_heartbeat()

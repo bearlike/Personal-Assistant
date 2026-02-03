@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 import os
 import re
-from typing import Any
+from collections.abc import Callable
+from typing import Any, Concatenate, ParamSpec, Protocol, TypedDict, TypeVar
 
 import requests
 from dotenv import load_dotenv
 from langchain.output_parsers import PydanticOutputParser
 from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
+from langchain_core.documents import Document
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.messages.ai import AIMessage
 from langchain_core.pydantic_v1 import BaseModel, Field, validator
+from typing_extensions import NotRequired
 
 from core.classes import AbstractTool, ActionStep
 from core.common import MockSpeaker, get_logger, get_mock_speaker, ha_render_system_prompt
@@ -21,80 +26,128 @@ load_dotenv()
 # !     Currently, if there are parsing errors, the tool is allowed to fail.
 # TODO: Implement OutputFixingParser for error correction.
 
-def cache_monitor(func):
+P = ParamSpec("P")
+R = TypeVar("R")
+SelfT = TypeVar("SelfT", bound="CacheHolder")
+
+
+class HomeAssistantCache(TypedDict):
+    entity_ids: list[str]
+    sensor_ids: list[str]
+    entities: list[dict[str, Any]]
+    services: list[dict[str, Any]]
+    sensors: list[dict[str, Any]]
+    allowed_domains: list[str]
+    sensor: NotRequired[list[dict[str, Any]]]
+
+
+class CacheHolder(Protocol):
+    cache: HomeAssistantCache
+
+
+class SupportsInvoke(Protocol):
+    def invoke(self, input_data: dict[str, Any]) -> HomeAssistantCall:
+        ...
+
+
+def cache_monitor(
+    func: Callable[Concatenate[SelfT, P], R]
+) -> Callable[Concatenate[SelfT, P], R]:
     """Decorator to monitor and update the cache."""
-    @staticmethod
-    def sort_by_entity_id(dict_list: list[dict]) -> list[dict]:
-        return sorted(dict_list, key=lambda x: x['entity_id'])
+    def sort_by_entity_id(dict_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return sorted(dict_list, key=lambda x: x["entity_id"])
 
-    def clean_entities(self, forbidden_prefixes, forbidden_substrings):
-        for idx, entity in enumerate(self.cache['entities']):
-            if 'context' in entity:
-                self.cache['entities'][idx].pop('context')
-                self.cache['entities'][idx].pop('last_changed')
-                self.cache['entities'][idx].pop('last_reported')
-                self.cache['entities'][idx].pop('last_updated')
+    def clean_entities(
+        self: CacheHolder,
+        forbidden_prefixes: list[str],
+        forbidden_substrings: list[str],
+    ) -> HomeAssistantCache:
+        for idx, entity in enumerate(self.cache["entities"]):
+            if "context" in entity:
+                self.cache["entities"][idx].pop("context")
+                self.cache["entities"][idx].pop("last_changed")
+                self.cache["entities"][idx].pop("last_reported")
+                self.cache["entities"][idx].pop("last_updated")
 
-            if 'attributes' in entity:
-                self.cache['entities'][idx]['attributes'].pop('icon', None)
-                self.cache['entities'][idx]['attributes'].pop(
+            if "attributes" in entity:
+                self.cache["entities"][idx]["attributes"].pop("icon", None)
+                self.cache["entities"][idx]["attributes"].pop(
                     "monitor_cert_days_remaining", None)
-                self.cache['entities'][idx]['attributes'].pop(
+                self.cache["entities"][idx]["attributes"].pop(
                     "monitor_cert_is_valid", None)
-                self.cache['entities'][idx]['attributes'].pop(
+                self.cache["entities"][idx]["attributes"].pop(
                     "monitor_hostname", None)
-                self.cache['entities'][idx]['attributes'].pop(
+                self.cache["entities"][idx]["attributes"].pop(
                     "monitor_port", None)
 
-            if any(entity['entity_id'].startswith(prefix) for prefix in forbidden_prefixes):
-                self.cache['entities'].remove(entity)
+            if any(entity["entity_id"].startswith(prefix) for prefix in forbidden_prefixes):
+                self.cache["entities"].remove(entity)
 
-            if any(substring in entity['entity_id'] for substring in forbidden_substrings):
-                self.cache['entities'].remove(entity)
+            if any(substring in entity["entity_id"] for substring in forbidden_substrings):
+                self.cache["entities"].remove(entity)
 
-            if entity['entity_id'].startswith('scene.'):
-                self.cache['entities'][idx].pop('state', None)
+            if entity["entity_id"].startswith("scene."):
+                self.cache["entities"][idx].pop("state", None)
 
-            if entity['entity_id'].startswith('sensor.') or entity['entity_id'].startswith(
-                'binary_sensor.'
+            if entity["entity_id"].startswith("sensor.") or entity["entity_id"].startswith(
+                "binary_sensor."
             ):
-                self.cache['sensors'].append(entity)
-                self.cache['entities'].pop(idx)
+                self.cache["sensors"].append(entity)
+                self.cache["entities"].pop(idx)
 
-        self.cache['entities'] = sort_by_entity_id(self.cache['entities'])
-        self.cache['sensors'] = sort_by_entity_id(self.cache['sensors'])
+        self.cache["entities"] = sort_by_entity_id(self.cache["entities"])
+        self.cache["sensors"] = sort_by_entity_id(self.cache["sensors"])
         return self.cache
 
-    def wrapper(self, *args, **kwargs):
+    def wrapper(self: SelfT, *args: P.args, **kwargs: P.kwargs) -> R:
         result = func(self, *args, **kwargs)
 
         forbidden_prefixes = [
-            'alarm_control_panel.', 'automation.', 'binary_sensor.remote_ui',
-            'camera.', 'climate', 'conversation', 'device_tracker.kraken_raspberry_pi_5',
-            'media_player.axios', 'media_player.axios_2', 'media_player.chrome',
-            'media_player.fire_tv_192_168_1_12', 'person.', 'remote.',
-            'script.higher', 'sensor.hacs', 'sensor.hacs',
-            'sensor.kraken_raspberry_pi_5_', 'sensor.sonarr_commands',
-            'sensor.sun', 'sensor.uptimekuma_', 'stt.', 'sun.', 'switch.',
-            'switch.adam', 'switch.bedroom_camera_camera_motion_detection',
-            'tts.', 'update.', 'zone.home'
+            "alarm_control_panel.",
+            "automation.",
+            "binary_sensor.remote_ui",
+            "camera.",
+            "climate",
+            "conversation",
+            "device_tracker.kraken_raspberry_pi_5",
+            "media_player.axios",
+            "media_player.axios_2",
+            "media_player.chrome",
+            "media_player.fire_tv_192_168_1_12",
+            "person.",
+            "remote.",
+            "script.higher",
+            "sensor.hacs",
+            "sensor.hacs",
+            "sensor.kraken_raspberry_pi_5_",
+            "sensor.sonarr_commands",
+            "sensor.sun",
+            "sensor.uptimekuma_",
+            "stt.",
+            "sun.",
+            "switch.",
+            "switch.adam",
+            "switch.bedroom_camera_camera_motion_detection",
+            "tts.",
+            "update.",
+            "zone.home",
         ]
-        forbidden_substrings = ['blink_kk_bedroom']
+        forbidden_substrings = ["blink_kk_bedroom"]
         self.cache["sensor"] = []
         # Clean entities
         self.cache = clean_entities(
             self, forbidden_prefixes, forbidden_substrings)
 
         # Clean services
-        self.cache['services'] = [
+        self.cache["services"] = [
             service
-            for service in self.cache['services']
-            if service['domain'] in self.cache["allowed_domains"]
+            for service in self.cache["services"]
+            if service["domain"] in self.cache["allowed_domains"]
         ]
 
         # Retrieve entity and sensor IDs
-        self.cache['entity_ids'] = sorted(self.cache['entity_ids'])
-        self.cache['sensor_ids'] = sorted(self.cache['sensor_ids'])
+        self.cache["entity_ids"] = sorted(self.cache["entity_ids"])
+        self.cache["sensor_ids"] = sorted(self.cache["sensor_ids"])
 
         logging.info(
             (
@@ -102,10 +155,10 @@ def cache_monitor(func):
                 "(len) Sensors: %s; (len) Services: %s;>"
             ),
             func.__name__,
-            len(self.cache['entity_ids']),
-            len(self.cache['entities']),
-            len(self.cache['sensors']),
-            len(self.cache['services']),
+            len(self.cache["entity_ids"]),
+            len(self.cache["entities"]),
+            len(self.cache["sensors"]),
+            len(self.cache["services"]),
         )
 
         return result
@@ -113,7 +166,7 @@ def cache_monitor(func):
 
 
 class HomeAssistantCall(BaseModel):
-    cache: dict | None = Field(alias="_ha_cache", default={})
+    cache: CacheHolder | None = Field(alias="_ha_cache", default=None)
     domain: str = Field(
         description=(
             "The category of the service to call, such as 'light', 'switch', or 'scene'."
@@ -134,7 +187,9 @@ class HomeAssistantCall(BaseModel):
 
     @validator("entity_id", allow_reuse=True)
     # pylint: disable=E0213,W0613
-    def validate_entity_id(cls, entity_id, values, **kwargs):
+    def validate_entity_id(
+        cls, entity_id: str, values: dict[str, Any], **kwargs: Any
+    ) -> str:
         # ! BUG: The entity_id may not be validated correctly as the cache
         # !     is not passed to the validator.
         ha_cache = values.get("ha_cache")
@@ -145,7 +200,9 @@ class HomeAssistantCall(BaseModel):
 
     @validator("domain", allow_reuse=True)
     # pylint: disable=E0213,W0613
-    def validate_domain(cls, domain, values, **kwargs):
+    def validate_domain(
+        cls, domain: str, values: dict[str, Any], **kwargs: Any
+    ) -> str:
         # ! BUG: The entity_id may not be validated correctly as the cache
         # !     is not passed to the validator.
         ha_cache = values.get("ha_cache")
@@ -158,14 +215,14 @@ class HomeAssistantCall(BaseModel):
 class HomeAssistant(AbstractTool):
     """A service to manage and interact with Home Assistant."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             name="Home Assistant",
             description="A service to manage and interact with Home Assistant"
         )
         self.base_url = os.getenv("HA_URL", None)
         self._api_token = os.getenv("HA_TOKEN", None)
-        self.cache = {
+        self.cache: HomeAssistantCache = {
             "entity_ids": [],
             "sensor_ids": [],
             "entities": [],
@@ -179,13 +236,13 @@ class HomeAssistant(AbstractTool):
             raise ValueError(
                 "HA_URL and HA_TOKEN must be set in the environment.")
 
-        self.api_headers = {
+        self.api_headers: dict[str, str] = {
             "Authorization": f"Bearer {self._api_token}",
             "Content-Type": "application/json"
         }
 
     @cache_monitor
-    def update_services(self):
+    def update_services(self) -> bool:
         """Update the list of services from Home Assistant."""
         url = f"{self.base_url}/services"
         try:
@@ -199,7 +256,7 @@ class HomeAssistant(AbstractTool):
             return False
 
     @cache_monitor
-    def update_entities(self):
+    def update_entities(self) -> bool:
         """Update the list of entities from Home Assistant."""
         url = f"{self.base_url}/states"
         try:
@@ -212,7 +269,7 @@ class HomeAssistant(AbstractTool):
             return False
 
     @cache_monitor
-    def update_entity_ids(self):
+    def update_entity_ids(self) -> bool:
         """Update the list of entity IDs from Home Assistant."""
         # TODO: Always assumes blacklist by default due to cache_monitor.
         self.update_entities()
@@ -224,7 +281,7 @@ class HomeAssistant(AbstractTool):
         return True
 
     @cache_monitor
-    def update_cache(self):
+    def update_cache(self) -> None:
         """Update the entire cache."""
         self.update_entity_ids()
         self.update_services()
@@ -237,7 +294,7 @@ class HomeAssistant(AbstractTool):
         service: str,
         entity_id: str,
         data: dict | None = None,
-    ) -> tuple[bool, list]:
+    ) -> tuple[bool, list[dict[str, Any]]]:
         """Call a service in Home Assistant."""
         if domain not in self.cache["allowed_domains"]:
             raise ValueError(f"Domain does not exist or blacklisted: {domain}")
@@ -260,7 +317,10 @@ class HomeAssistant(AbstractTool):
             return False, []
 
     @staticmethod
-    def _create_set_prompt(system_prompt: str, parser: PydanticOutputParser) -> ChatPromptTemplate:
+    def _create_set_prompt(
+        system_prompt: str,
+        parser: PydanticOutputParser,
+    ) -> ChatPromptTemplate:
         example = HomeAssistantCall(
             domain="scene", service="turn_on", entity_id="scene.lamp_power_on")
         prompt = ChatPromptTemplate(
@@ -337,9 +397,10 @@ class HomeAssistant(AbstractTool):
         return answer
 
     def _invoke_service_and_set_state(
-        self, chain: Any,
-        rag_documents: list,
-        action_step: ActionStep
+        self,
+        chain: SupportsInvoke,
+        rag_documents: list[Document],
+        action_step: ActionStep,
     ) -> MockSpeaker:
         """Invoke the service and set the state."""
         MockSpeaker = get_mock_speaker()
@@ -431,7 +492,7 @@ class HomeAssistant(AbstractTool):
         return MockSpeaker(content=cleaned_message)
 
 
-def test_homeassistant():
+def test_homeassistant() -> HomeAssistant:
     """Test the HomeAssistant class."""
     ha = HomeAssistant()
     ha.update_cache()

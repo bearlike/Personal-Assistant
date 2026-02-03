@@ -7,6 +7,7 @@ import json
 import os
 from typing import Any
 
+from core.classes import ActionStep
 from core.common import MockSpeaker, get_logger, get_mock_speaker
 
 logging = get_logger(name="tools.integration.mcp")
@@ -54,10 +55,9 @@ class MCPToolRunner:
         result = await tool.ainvoke(input_text)
         return str(result)
 
-    def run(self, action_step) -> MockSpeaker:
+    def run(self, action_step: ActionStep) -> MockSpeaker:
         if action_step is None:
             raise ValueError("Action step cannot be None.")
         MockSpeakerType = get_mock_speaker()
         result = asyncio.run(self._invoke_async(action_step.action_argument))
         return MockSpeakerType(content=result)
-
