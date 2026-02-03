@@ -11,10 +11,10 @@
       
       
       
-        <link rel="prev" href="..">
+        <link rel="prev" href="../getting-started/">
       
       
-        <link rel="next" href="../components/">
+        <link rel="next" href="../reference/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Getting Started - Personal Assistant</title>
+        <title>Components - Personal Assistant</title>
       
     
     
@@ -68,7 +68,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#getting-started" class="md-skip">
+        <a href="#components" class="md-skip">
           Skip to content
         </a>
       
@@ -108,7 +108,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Getting Started
+              Components
             
           </span>
         </div>
@@ -252,37 +252,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Getting Started
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
         
   
   
@@ -298,70 +271,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Prerequisites
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#install-documentation-dependencies" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Install documentation dependencies
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-the-docs-locally" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Run the docs locally
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#build-the-docs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Build the docs
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -370,10 +279,19 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../components/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -389,6 +307,7 @@
   
 
       </a>
+      
     </li>
   
 
@@ -440,58 +359,6 @@
     
   
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Prerequisites
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#install-documentation-dependencies" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Install documentation dependencies
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#run-the-docs-locally" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Run the docs locally
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#build-the-docs" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Build the docs
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -510,24 +377,18 @@
   
 
 
-<h1 id="getting-started">Getting Started</h1>
-<h2 id="prerequisites">Prerequisites</h2>
+<h1 id="components">Components</h1>
+<p>This repository is a monorepo. Each component lives in its own folder:</p>
 <ul>
-<li>Python 3.11+</li>
-<li>Poetry (or pip + a virtual environment)</li>
+<li><code>core/</code>: orchestration loop, schemas, session storage, compaction, tool registry.</li>
+<li><code>tools/</code>: tool implementations and integration glue.</li>
+<li><code>meeseeks-api/</code>: Flask API that exposes the assistant over HTTP.</li>
+<li><code>meeseeks-chat/</code>: Streamlit UI for interactive chat.</li>
+<li><code>meeseeks-cli/</code>: terminal CLI for interactive sessions.</li>
+<li><code>meeseeks_ha_conversation/</code>: Home Assistant integration that routes voice requests to the API.</li>
+<li><code>prompts/</code>: planner prompt and examples.</li>
 </ul>
-<h2 id="install-documentation-dependencies">Install documentation dependencies</h2>
-<pre><code class="language-bash">pip install -r requirements-docs.txt
-</code></pre>
-<h2 id="run-the-docs-locally">Run the docs locally</h2>
-<pre><code class="language-bash">export PYTHONPATH=&quot;$PWD&quot;
-mkdocs serve
-</code></pre>
-<p>The documentation will be available at http://127.0.0.1:8000/.</p>
-<h2 id="build-the-docs">Build the docs</h2>
-<pre><code class="language-bash">export PYTHONPATH=&quot;$PWD&quot;
-mkdocs build
-</code></pre>
+<p>Note: the API/Chat/CLI folders use hyphens in their names, which makes them invalid Python module names. MkDocs + mkdocstrings can only render inline docstrings for importable modules, so those folders will not show API docs until we add a package shim or rename them.</p>
 
 
 
