@@ -1,5 +1,6 @@
 """Tests for tool registry loading behavior."""
 import json
+from types import SimpleNamespace
 
 from meeseeks_core.tool_registry import load_registry
 
@@ -96,6 +97,83 @@ def test_manifest_empty_falls_back(tmp_path, monkeypatch):
     enabled_ids = {spec.tool_id for spec in registry.list_specs()}
     assert "home_assistant_tool" in tool_ids
     assert "talk_to_user_tool" not in enabled_ids
+
+
+def test_manifest_skips_missing_local_class(tmp_path, monkeypatch):
+    """Skip local tools that omit module/class metadata."""
+    monkeypatch.delenv("MESEEKS_HOME_ASSISTANT_ENABLED", raising=False)
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "tools": [
+                    {"tool_id": "bad_tool", "name": "Bad Tool", "module": "bad_module"}
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    registry = load_registry(str(manifest_path))
+    tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
+    assert "bad_tool" not in tool_ids
+    assert "home_assistant_tool" in tool_ids
+
+
+def test_manifest_skips_mcp_tool_when_support_missing(tmp_path, monkeypatch):
+    """Skip MCP tools when MCP adapters are unavailable."""
+    monkeypatch.setattr("meeseeks_core.tool_registry._load_mcp_support", lambda: None)
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "tools": [
+                    {
+                        "tool_id": "mcp_tool",
+                        "name": "MCP Tool",
+                        "description": "Test",
+                        "kind": "mcp",
+                        "server": "srv",
+                        "tool": "ask",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    registry = load_registry(str(manifest_path))
+    tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
+    assert "mcp_tool" not in tool_ids
+    assert "home_assistant_tool" in tool_ids
+
+
+def test_manifest_skips_mcp_tool_missing_server(tmp_path, monkeypatch):
+    """Skip MCP tools missing server/tool metadata."""
+    dummy_mcp = SimpleNamespace(MCPToolRunner=object)
+    monkeypatch.setattr("meeseeks_core.tool_registry._load_mcp_support", lambda: dummy_mcp)
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "tools": [
+                    {
+                        "tool_id": "mcp_tool",
+                        "name": "MCP Tool",
+                        "description": "Test",
+                        "kind": "mcp",
+                        "tool": "ask",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    registry = load_registry(str(manifest_path))
+    tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
+    assert "mcp_tool" not in tool_ids
+    assert "home_assistant_tool" in tool_ids
 
 
 def test_auto_manifest_from_mcp_config(tmp_path, monkeypatch):

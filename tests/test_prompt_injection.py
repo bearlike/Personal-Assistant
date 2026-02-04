@@ -1,6 +1,6 @@
 """Tests for prompt/tool injection logic."""
 from meeseeks_core import task_master
-from meeseeks_core.common import get_system_prompt
+from meeseeks_core.common import get_system_prompt, ha_render_system_prompt
 from meeseeks_core.tool_registry import load_registry
 
 
@@ -83,3 +83,9 @@ def test_prompt_includes_mcp_schema(monkeypatch, tmp_path):
     assert "MCP tool input schemas" in prompt
     assert "mcp_srv_tool" in prompt
     assert "question" in prompt
+
+
+def test_ha_render_system_prompt_includes_entities():
+    """Render the HA prompt with provided entity list."""
+    prompt = ha_render_system_prompt(all_entities=["scene.lamp_power_on"])
+    assert "scene.lamp_power_on" in prompt
