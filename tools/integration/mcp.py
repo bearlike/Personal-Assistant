@@ -29,6 +29,29 @@ def _log_discovery_failure(server_name: str, exc: Exception) -> None:
         logging.opt(exception=exc).debug("MCP discovery traceback")
 
 
+def _log_runtime_failure(
+    server_name: str, tool_name: str, exc: Exception
+) -> None:
+    logging.warning(
+        "MCP runtime error for {}.{}: {}", server_name, tool_name, exc
+    )
+    exceptions = getattr(exc, "exceptions", None)
+    if isinstance(exceptions, tuple):
+        for idx, sub in enumerate(exceptions, start=1):
+            logging.warning(
+                "MCP runtime sub-exception {} for {}.{}: {}",
+                idx,
+                server_name,
+                tool_name,
+                sub,
+            )
+            logging.opt(exception=sub).debug(
+                "MCP runtime sub-exception traceback"
+            )
+    else:
+        logging.opt(exception=exc).debug("MCP runtime traceback")
+
+
 def _normalize_mcp_config(config: dict[str, Any]) -> dict[str, Any]:
     """Normalize legacy MCP config keys for adapter compatibility."""
     servers = config.get("servers", {})
@@ -277,10 +300,14 @@ class MCPToolRunner:
             raise ValueError(
                 f"Tool '{self.tool_name}' not found on MCP server '{self.server_name}'."
             )
-        result = await tool.ainvoke(
-            _prepare_mcp_input(tool, input_payload)
-        )
-        return str(result)
+        try:
+            result = await tool.ainvoke(
+                _prepare_mcp_input(tool, input_payload)
+            )
+            return str(result)
+        except Exception as exc:
+            _log_runtime_failure(self.server_name, self.tool_name, exc)
+            raise
 
     def run(self, action_step: ActionStep) -> MockSpeaker:
         """Execute the MCP tool using the action step argument.
