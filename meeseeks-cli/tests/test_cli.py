@@ -234,7 +234,7 @@ def test_run_cli_single_query(monkeypatch, tmp_path):
         task_queue.task_result = "ok"
         return task_queue
 
-    monkeypatch.setattr("cli_master._render_startup_header", fake_header)
+    monkeypatch.setattr("cli_master.render_header", fake_header)
     monkeypatch.setattr("cli_master.orchestrate_session", fake_orchestrate)
     assert run_cli(args) == 0
 
@@ -269,7 +269,7 @@ def test_run_cli_interactive_quit(monkeypatch, tmp_path):
             self.calls += 1
             return "/quit"
 
-    monkeypatch.setattr("cli_master._render_startup_header", lambda *args, **kwargs: None)
+    monkeypatch.setattr("cli_master.render_header", lambda *args, **kwargs: None)
     monkeypatch.setattr("cli_master.FileHistory", DummyHistory)
     monkeypatch.setattr("cli_master.PromptSession", lambda *args, **kwargs: DummySession())
     assert run_cli(args) == 0
