@@ -15,9 +15,11 @@ poetry install
 ## Environment setup
 1. Copy `.env.example` to `.env`.
 2. Set at least:
-   - `OPENAI_API_KEY` (or your compatible provider key)
-   - `OPENAI_API_BASE` (if you are using a local or custom API base)
+   - `OPENAI_API_KEY` (for your OpenAI-compatible endpoint)
+   - `OPENAI_API_BASE` (LiteLLM proxy or other OpenAI-compatible base URL)
    - `DEFAULT_MODEL` (or `ACTION_PLAN_MODEL`)
+3. If you use an OpenAI-compatible base URL and your model name has no provider
+   prefix, Meeseeks will call `openai/<model>` automatically.
 3. Optional runtime paths:
    - `MESEEKS_SESSION_DIR` for session transcript storage
    - `MESEEKS_TOOL_MANIFEST` if you want a custom tool list (disables MCP auto-discovery)

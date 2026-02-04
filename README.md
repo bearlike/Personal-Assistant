@@ -49,6 +49,7 @@ Meeseeks is a personal assistant built on an LLM-driven orchestration loop. It b
 </table>
 
 - (✅) Optional [LangFuse](https://github.com/langfuse/langfuse) integrations for observability (auto-disabled if not configured).
+- (✅) LiteLLM-backed LLM gateway with OpenAI-compatible base URLs for provider-agnostic model selection.
 - (✅) Use natural language to interact with integrations and tools.
 - (✅) Simple REST API interface for 3rd party tools to interface with Meeseeks.
 - (✅) Handles complex user queries by breaking them into actionable steps, executing these steps, and then summarizing on the results.

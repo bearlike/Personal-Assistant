@@ -20,6 +20,8 @@ permissions:
 jobs:
   coverage:
     runs-on: ubuntu-22.04
+    env:
+      COVERAGE_FILE: .coverage
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -42,15 +44,18 @@ jobs:
       - name: Run pytest with coverage
         run: |
           poetry run coverage run \
+            --data-file "${COVERAGE_FILE}" \
             --source=core,tools,meeseeks_ha_conversation \
             -m pytest
-          poetry run coverage report --skip-covered
-          poetry run coverage xml -o coverage.xml
+          poetry run coverage report --data-file "${COVERAGE_FILE}" --skip-covered
+          poetry run coverage xml --data-file "${COVERAGE_FILE}" -o coverage.xml
 
       - name: Generate core-only coverage report
         run: |
           poetry run coverage xml \
-            --include "*core/*" \
+            --data-file "${COVERAGE_FILE}" \
+            --include "*/core/*" \
+            --include "core/*" \
             -o coverage-core.xml
 
       - name: Upload coverage artifact

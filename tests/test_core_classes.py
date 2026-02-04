@@ -104,7 +104,7 @@ def test_examples_skip_home_assistant_when_unavailable():
 
 def test_abstract_tool_init_and_run(monkeypatch, tmp_path):
     """Initialize AbstractTool and run placeholder output."""
-    class DummyChatOpenAI:
+    class DummyChatLiteLLM:
         def __init__(self, **kwargs):
             if "temperature" in kwargs and kwargs["temperature"] is None:
                 raise ValueError("temperature cannot be None")
@@ -112,9 +112,9 @@ def test_abstract_tool_init_and_run(monkeypatch, tmp_path):
     import sys
     import types
 
-    module = types.ModuleType("langchain_openai")
-    module.ChatOpenAI = DummyChatOpenAI
-    monkeypatch.setitem(sys.modules, "langchain_openai", module)
+    module = types.ModuleType("langchain_litellm")
+    module.ChatLiteLLM = DummyChatLiteLLM
+    monkeypatch.setitem(sys.modules, "langchain_litellm", module)
     monkeypatch.setenv("CACHE_DIR", str(tmp_path))
 
     class DummyTool(classes.AbstractTool):
