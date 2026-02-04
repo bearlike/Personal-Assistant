@@ -17,7 +17,7 @@ langchain-litellm = "^0.4.0"
 litellm = "^1.81.0"
 langfuse = { version = "^2.29.3", optional = true }
 jinja2 = "^3.1.4"
-jq = "^1.7.0"
+jq = "^1.11.0"
 tiktoken = "^0.7.0"
 typing-extensions = "^4.12.2"
 meeseeks-api = { path = "./meeseeks-api", optional = true }
