@@ -1,7 +1,7 @@
 # Home Assistant Conversation Integration for Meeseeks 🚀
 
 <p align="center">
-    <a href="https://github.com/bearlike/Personal-Assistant/releases"><img src="https://img.shields.io/github/v/release/bearlike/Personal-Assistant?style=for-the-badge&" alt="GitHub Release"></a>
+    <a href="https://github.com/bearlike/Assistant/releases"><img src="https://img.shields.io/github/v/release/bearlike/Assistant?style=for-the-badge&" alt="GitHub Release"></a>
 </p>
 
 
@@ -30,4 +30,4 @@ uv sync --extra ha
 To use it in Home Assistant, install `meeseeks_ha_conversation/` as a custom component
 and point it at the Meeseeks API.
 
-[Link to GitHub Repository](https://github.com/bearlike/Personal-Assistant)
+[Link to GitHub Repository](https://github.com/bearlike/Assistant)

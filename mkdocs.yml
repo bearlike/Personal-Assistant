@@ -1,7 +1,7 @@
 site_name: Personal Assistant
 site_description: Documentation for the Personal Assistant (Meeseeks) project.
-repo_url: https://github.com/bearlike/Personal-Assistant
-repo_name: bearlike/Personal-Assistant
+repo_url: https://github.com/bearlike/Assistant
+repo_name: bearlike/Assistant
 
 theme:
   name: material

@@ -1,7 +1,7 @@
 # Meeseeks API Server
 <p align="center">
-    <a href="https://github.com/bearlike/Personal-Assistant/pkgs/container/meeseeks-chat"><img src="https://img.shields.io/badge/ghcr.io-bearlike/meeseeks&#x2212;api:latest-blue?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Image"></a>
-    <a href="https://github.com/bearlike/Personal-Assistant/releases"><img src="https://img.shields.io/github/v/release/bearlike/Personal-Assistant?style=for-the-badge&" alt="GitHub Release"></a>
+    <a href="https://github.com/bearlike/Assistant/pkgs/container/meeseeks-chat"><img src="https://img.shields.io/badge/ghcr.io-bearlike/meeseeks&#x2212;api:latest-blue?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Image"></a>
+    <a href="https://github.com/bearlike/Assistant/releases"><img src="https://img.shields.io/github/v/release/bearlike/Assistant?style=for-the-badge&" alt="GitHub Release"></a>
 </p>
 
 - REST API Engine wrapped around the meeseeks-core.
@@ -14,4 +14,4 @@ uv sync --extra api
 uv run meeseeks-api
 ```
 
-[Link to GitHub Repository](https://github.com/bearlike/Personal-Assistant)
+[Link to GitHub Repository](https://github.com/bearlike/Assistant)

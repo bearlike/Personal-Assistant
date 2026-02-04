@@ -13,7 +13,7 @@ Meeseeks is a multi-agent LLM personal assistant that decomposes user requests i
 - `meeseeks_ha_conversation/`: Home Assistant integration
 
 ## How to get context fast
-1. Use the DeepWiki MCP tool on `bearlike/Personal-Assistant` for a fast architecture map.
+1. Use the DeepWiki MCP tool on `bearlike/Assistant` for a fast architecture map.
 2. Read `README.md` and component READMEs for configuration/runtime details.
 3. Use `rg` to locate specific behavior and follow the exact file path.
 4. For CI issues, use GitHub Actions logs (GH CLI or MCP GitHub tools).
