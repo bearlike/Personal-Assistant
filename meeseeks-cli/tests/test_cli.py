@@ -10,6 +10,7 @@ sys.path.append(os.path.join(test_dir, ".."))
 sys.path.append(os.path.join(test_dir, "..", ".."))
 
 from core.classes import ActionStep, TaskQueue  # noqa: E402
+from core.common import get_mock_speaker  # noqa: E402
 from core.session_store import SessionStore  # noqa: E402
 from core.tool_registry import ToolRegistry, ToolSpec, load_registry  # noqa: E402
 from rich.console import Console  # noqa: E402
@@ -22,6 +23,8 @@ from cli_master import (  # noqa: E402
     _parse_command,
     _resolve_session_id,
     _run_query,
+    render_header,
+    HeaderContext,
 )
 
 
@@ -201,6 +204,220 @@ def test_run_query(monkeypatch, tmp_path):
     )
     assert captured["tool_registry"] is tool_registry
     assert captured["session_id"] == session_id
+
+
+def test_run_query_renders_tool_output_and_response(monkeypatch, tmp_path):
+    """Render tool output and final response in verbose mode."""
+    store = SessionStore(root_dir=str(tmp_path))
+    session_id = store.create_session()
+    state = CliState(session_id=session_id, show_plan=False)
+    tool_registry = ToolRegistry()
+    tool_registry.register(
+        ToolSpec(
+            tool_id="mcp_tool",
+            name="MCP Tool",
+            description="Tool",
+            factory=lambda: None,
+            kind="mcp",
+        )
+    )
+    console = Console(record=True)
+
+    def fake_orchestrate(*_args, **_kwargs):
+        step = ActionStep(
+            action_consumer="mcp_tool",
+            action_type="get",
+            action_argument="payload",
+        )
+        step.result = get_mock_speaker()(content={"foo": "bar"})
+        task_queue = TaskQueue(action_steps=[step])
+        task_queue.task_result = "final response"
+        return task_queue
+
+    monkeypatch.setattr("cli_master.orchestrate_session", fake_orchestrate)
+
+    _run_query(
+        console,
+        store,
+        state,
+        tool_registry,
+        "hi",
+        types.SimpleNamespace(max_iters=1, verbose=1),
+        prompt_func=lambda _: "y",
+    )
+
+    output = console.export_text()
+    assert '"foo": "bar"' in output
+    assert "final response" in output
+
+
+def test_run_query_hides_output_when_not_verbose(monkeypatch, tmp_path):
+    """Hide tool output in non-verbose mode."""
+    store = SessionStore(root_dir=str(tmp_path))
+    session_id = store.create_session()
+    state = CliState(session_id=session_id, show_plan=False)
+    tool_registry = ToolRegistry()
+    tool_registry.register(
+        ToolSpec(
+            tool_id="mcp_tool",
+            name="MCP Tool",
+            description="Tool",
+            factory=lambda: None,
+            kind="mcp",
+        )
+    )
+    console = Console(record=True)
+
+    def fake_orchestrate(*_args, **_kwargs):
+        step = ActionStep(
+            action_consumer="mcp_tool",
+            action_type="get",
+            action_argument="payload",
+        )
+        step.result = get_mock_speaker()(content={"foo": "bar"})
+        return TaskQueue(action_steps=[step])
+
+    monkeypatch.setattr("cli_master.orchestrate_session", fake_orchestrate)
+
+    _run_query(
+        console,
+        store,
+        state,
+        tool_registry,
+        "hi",
+        types.SimpleNamespace(max_iters=1, verbose=0),
+        prompt_func=lambda _: "y",
+    )
+
+    output = console.export_text()
+    assert "output hidden" in output
+
+
+def test_run_query_renders_partial_tool_results(monkeypatch, tmp_path):
+    """Render mixed tool results when a step fails and a later step succeeds."""
+    store = SessionStore(root_dir=str(tmp_path))
+    session_id = store.create_session()
+    state = CliState(session_id=session_id, show_plan=False)
+    tool_registry = ToolRegistry()
+    tool_registry.register(
+        ToolSpec(
+            tool_id="tool_one",
+            name="Tool One",
+            description="Tool One",
+            factory=lambda: None,
+        )
+    )
+    tool_registry.register(
+        ToolSpec(
+            tool_id="tool_two",
+            name="Tool Two",
+            description="Tool Two",
+            factory=lambda: None,
+        )
+    )
+    console = Console(record=True)
+
+    def fake_orchestrate(*_args, **_kwargs):
+        first = ActionStep(
+            action_consumer="tool_one",
+            action_type="get",
+            action_argument="payload",
+        )
+        second = ActionStep(
+            action_consumer="tool_two",
+            action_type="get",
+            action_argument="payload",
+        )
+        second.result = get_mock_speaker()(content="ok")
+        queue = TaskQueue(action_steps=[first, second])
+        queue.task_result = "final response"
+        return queue
+
+    monkeypatch.setattr("cli_master.orchestrate_session", fake_orchestrate)
+
+    _run_query(
+        console,
+        store,
+        state,
+        tool_registry,
+        "hi",
+        types.SimpleNamespace(max_iters=1, verbose=1),
+        prompt_func=lambda _: "y",
+    )
+
+    output = console.export_text()
+    assert "(no result)" in output
+    assert "ok" in output
+
+
+def test_run_query_dims_tool_panels_after_response(monkeypatch, tmp_path):
+    """Disable highlight when a final response exists."""
+    store = SessionStore(root_dir=str(tmp_path))
+    session_id = store.create_session()
+    state = CliState(session_id=session_id, show_plan=False)
+    tool_registry = ToolRegistry()
+    console = Console(record=True)
+    captured: dict[str, object] = {}
+
+    def fake_orchestrate(*_args, **_kwargs):
+        step = ActionStep(
+            action_consumer="tool",
+            action_type="get",
+            action_argument="payload",
+        )
+        step.result = get_mock_speaker()(content="ok")
+        queue = TaskQueue(action_steps=[step])
+        queue.task_result = "final"
+        return queue
+
+    def fake_render(*_args, **kwargs):
+        captured["highlight_latest"] = kwargs.get("highlight_latest")
+
+    monkeypatch.setattr("cli_master.orchestrate_session", fake_orchestrate)
+    monkeypatch.setattr("cli_master._render_results_with_registry", fake_render)
+
+    _run_query(
+        console,
+        store,
+        state,
+        tool_registry,
+        "hi",
+        types.SimpleNamespace(max_iters=1, verbose=0),
+        prompt_func=lambda _: "y",
+    )
+
+    assert captured["highlight_latest"] is False
+
+
+def test_render_header_responsive_modes():
+    """Render header across width breakpoints."""
+    ctx = HeaderContext(
+        title="Meeseeks",
+        version="0.1.0",
+        status_label="Ready",
+        status_color="green",
+        model="openai/gpt-4o-mini",
+        session_id="session-123",
+        base_url="http://127.0.0.1:4136/v1",
+        langfuse_enabled=False,
+        langfuse_reason="disabled",
+        builtin_enabled=1,
+        builtin_disabled=2,
+        external_enabled=3,
+        external_disabled=1,
+    )
+
+    cases = [
+        (120, ["model", "session", "base"]),
+        (80, ["model", "session"]),
+        (60, ["Langfuse:", "Tools:"]),
+    ]
+    for width, expected in cases:
+        console = Console(record=True, width=width)
+        render_header(console, ctx)
+        output = console.export_text()
+        for token in expected:
+            assert token in output
 
 
 def test_run_cli_single_query(monkeypatch, tmp_path):
