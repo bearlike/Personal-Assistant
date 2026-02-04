@@ -110,8 +110,8 @@ def test_auto_manifest_from_mcp_config(tmp_path, monkeypatch):
     monkeypatch.setenv("MESEEKS_CONFIG_DIR", str(tmp_path))
 
     monkeypatch.setattr(
-        "core.tool_registry.discover_mcp_tool_details",
-        lambda _config: {"srv": [{"name": "tool-a", "schema": None}]},
+        "core.tool_registry.discover_mcp_tool_details_with_failures",
+        lambda _config: ({"srv": [{"name": "tool-a", "schema": None}]}, {}),
     )
 
     registry = load_registry()
@@ -119,3 +119,48 @@ def test_auto_manifest_from_mcp_config(tmp_path, monkeypatch):
     assert any(tool_id.startswith("mcp_srv_tool_a") for tool_id in tool_ids)
     manifest_path = tmp_path / "tool-manifest.auto.json"
     assert manifest_path.exists()
+
+
+def test_auto_manifest_marks_failed_server(tmp_path, monkeypatch):
+    """Disable cached MCP tools when discovery fails."""
+    config_path = tmp_path / "mcp.json"
+    config_path.write_text(
+        '{"servers": {"srv": {"transport": "http", "url": "http://example"}}}',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("MESEEKS_MCP_CONFIG", str(config_path))
+    monkeypatch.delenv("MESEEKS_TOOL_MANIFEST", raising=False)
+    monkeypatch.setenv("MESEEKS_CONFIG_DIR", str(tmp_path))
+
+    manifest_path = tmp_path / "tool-manifest.auto.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "tools": [
+                    {
+                        "tool_id": "mcp_srv_tool_a",
+                        "name": "Tool A",
+                        "description": "Test tool",
+                        "kind": "mcp",
+                        "server": "srv",
+                        "tool": "tool-a",
+                        "enabled": True,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        "core.tool_registry.discover_mcp_tool_details_with_failures",
+        lambda _config: ({}, {"srv": RuntimeError("boom")}),
+    )
+
+    registry = load_registry()
+    spec = next(
+        spec for spec in registry.list_specs(include_disabled=True)
+        if spec.tool_id == "mcp_srv_tool_a"
+    )
+    assert spec.enabled is False
+    assert "Discovery failed" in spec.metadata.get("disabled_reason", "")

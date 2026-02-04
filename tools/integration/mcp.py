@@ -14,6 +14,21 @@ from core.common import MockSpeaker, get_logger, get_mock_speaker
 logging = get_logger(name="tools.integration.mcp")
 
 
+def _log_discovery_failure(server_name: str, exc: Exception) -> None:
+    logging.warning("Failed to discover MCP tools for {}: {}", server_name, exc)
+    exceptions = getattr(exc, "exceptions", None)
+    if isinstance(exceptions, tuple):
+        for idx, sub in enumerate(exceptions, start=1):
+            logging.warning(
+                "MCP discovery sub-exception {} for {}: {}", idx, server_name, sub
+            )
+            logging.opt(exception=sub).debug(
+                "MCP discovery sub-exception traceback"
+            )
+    else:
+        logging.opt(exception=exc).debug("MCP discovery traceback")
+
+
 def _normalize_mcp_config(config: dict[str, Any]) -> dict[str, Any]:
     """Normalize legacy MCP config keys for adapter compatibility."""
     servers = config.get("servers", {})
@@ -122,9 +137,9 @@ def _tool_schema_payload(tool: Any) -> dict[str, Any] | None:
     return _schema_from_args_schema(args_schema)
 
 
-async def _discover_mcp_tool_details_async(
+async def _discover_mcp_tool_details_with_failures_async(
     config: dict[str, Any],
-) -> dict[str, list[dict[str, Any]]]:
+) -> tuple[dict[str, list[dict[str, Any]]], dict[str, Exception]]:
     try:
         from langchain_mcp_adapters.client import MultiServerMCPClient
     except Exception as exc:  # pragma: no cover - runtime dependency
@@ -134,9 +149,16 @@ async def _discover_mcp_tool_details_async(
 
     servers = config.get("servers", {})
     discovered: dict[str, list[dict[str, Any]]] = {}
+    failures: dict[str, Exception] = {}
     for server_name, server_config in servers.items():
-        client = MultiServerMCPClient({server_name: server_config})
-        tools = await client.get_tools(server_name=server_name)
+        try:
+            client = MultiServerMCPClient({server_name: server_config})
+            tools = await client.get_tools(server_name=server_name)
+        except Exception as exc:
+            _log_discovery_failure(server_name, exc)
+            failures[server_name] = exc
+            discovered[server_name] = []
+            continue
         details: list[dict[str, Any]] = []
         for tool in tools:
             details.append(
@@ -146,7 +168,14 @@ async def _discover_mcp_tool_details_async(
                 }
             )
         discovered[server_name] = sorted(details, key=lambda item: item.get("name", ""))
-    return discovered
+    return discovered, failures
+
+
+async def _discover_mcp_tool_details_async(
+    config: dict[str, Any],
+) -> dict[str, list[dict[str, Any]]]:
+    details, _ = await _discover_mcp_tool_details_with_failures_async(config)
+    return details
 
 
 def discover_mcp_tools(config: dict[str, Any]) -> dict[str, list[str]]:
@@ -161,6 +190,15 @@ def discover_mcp_tools(config: dict[str, Any]) -> dict[str, list[str]]:
 def discover_mcp_tool_details(config: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
     """Discover MCP tool names and schemas per server from configuration."""
     return _run_async(_discover_mcp_tool_details_async(_normalize_mcp_config(config)))
+
+
+def discover_mcp_tool_details_with_failures(
+    config: dict[str, Any],
+) -> tuple[dict[str, list[dict[str, Any]]], dict[str, Exception]]:
+    """Discover MCP tool names, schemas, and per-server failures."""
+    return _run_async(
+        _discover_mcp_tool_details_with_failures_async(_normalize_mcp_config(config))
+    )
 
 
 def tool_auto_approved(

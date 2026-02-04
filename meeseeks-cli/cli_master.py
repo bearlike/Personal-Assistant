@@ -75,7 +75,7 @@ from cli_context import CliState, CommandContext  # noqa: E402
 from cli_dialogs import DialogFactory  # noqa: E402
 
 from core.classes import ActionStep, TaskQueue  # noqa: E402
-from core.common import MockSpeaker, format_action_argument  # noqa: E402
+from core.common import MockSpeaker, format_action_argument, get_logger  # noqa: E402
 from core.components import resolve_langfuse_status  # noqa: E402
 from core.hooks import HookManager  # noqa: E402
 from core.permissions import PermissionDecision  # noqa: E402
@@ -88,6 +88,8 @@ from tools.integration.mcp import (  # noqa: E402
     save_mcp_config,
     tool_auto_approved,
 )
+
+logging = get_logger(name="meeseeks.cli")
 
 
 def _resolve_session_id(
@@ -347,6 +349,16 @@ def run_cli(args: argparse.Namespace) -> int:
         Exit code for the CLI process.
     """
     console = Console(color_system=None if args.no_color else "auto")
+    log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+    verbosity = getattr(args, "verbose", 0)
+    if verbosity > 0:
+        logging.info(
+            "CLI logging set to {} via --verbose (count={}).",
+            log_level,
+            verbosity,
+        )
+    else:
+        logging.info("CLI logging set to {}.", log_level)
     store = SessionStore(root_dir=args.session_dir)
     session_id = _resolve_session_id(store, args.session, args.tag, args.fork)
     state = CliState(
@@ -374,6 +386,19 @@ def run_cli(args: argparse.Namespace) -> int:
     external_disabled = sum(
         1 for spec in all_specs if spec.kind == "mcp" and not spec.enabled
     )
+    try:
+        config = _load_mcp_config()
+        configured_servers = set(config.get("servers", {}).keys())
+        discovered_servers = {
+            spec.metadata.get("server")
+            for spec in all_specs
+            if spec.kind == "mcp" and spec.metadata.get("server")
+        }
+        missing_servers = configured_servers - discovered_servers
+        if missing_servers:
+            external_disabled += len(missing_servers)
+    except Exception:
+        pass
     version = _resolve_cli_version()
     header_ctx = HeaderContext(
         title="Meeseeks",

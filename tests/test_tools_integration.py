@@ -12,6 +12,7 @@ from tools.integration.mcp import (
     _load_mcp_config,
     _prepare_mcp_input,
     discover_mcp_tool_details,
+    discover_mcp_tool_details_with_failures,
     discover_mcp_tools,
 )
 
@@ -119,6 +120,32 @@ def test_mcp_discovery_includes_schema(monkeypatch):
     schema = discovered["srv"][0]["schema"]
     assert schema["required"] == ["question"]
     assert schema["properties"]["question"]["type"] == "string"
+
+
+def test_mcp_discovery_records_failures(monkeypatch):
+    """Capture per-server discovery failures without raising."""
+    class DummyTool:
+        def __init__(self, name):
+            self.name = name
+
+    class DummyClient:
+        def __init__(self, servers):
+            self.servers = servers
+
+        async def get_tools(self, server_name):
+            if server_name == "bad":
+                raise RuntimeError("boom")
+            return [DummyTool("tool_one")]
+
+    module = types.ModuleType("langchain_mcp_adapters.client")
+    module.MultiServerMCPClient = DummyClient
+    monkeypatch.setitem(sys.modules, "langchain_mcp_adapters.client", module)
+
+    config = {"servers": {"good": {"transport": "stdio"}, "bad": {"transport": "stdio"}}}
+    discovered, failures = discover_mcp_tool_details_with_failures(config)
+    assert discovered["good"][0]["name"] == "tool_one"
+    assert discovered["bad"] == []
+    assert "bad" in failures
 
 
 def test_mcp_discovery_handles_dict_schema(monkeypatch):

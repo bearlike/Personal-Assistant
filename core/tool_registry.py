@@ -13,7 +13,10 @@ from typing import Any, Protocol
 from core.classes import ActionStep, set_available_tools
 from core.common import MockSpeaker, get_logger
 from core.components import resolve_home_assistant_status
-from tools.integration.mcp import _load_mcp_config, discover_mcp_tool_details
+from tools.integration.mcp import (
+    _load_mcp_config,
+    discover_mcp_tool_details_with_failures,
+)
 
 logging = get_logger(name="core.tool_registry")
 
@@ -267,15 +270,55 @@ def _build_manifest_payload(
 
 def _ensure_auto_manifest(mcp_config_path: str) -> str | None:
     manifest_path = _default_manifest_cache_path()
+    existing_manifest: dict[str, Any] | None = None
+    if os.path.exists(manifest_path):
+        try:
+            with open(manifest_path, encoding="utf-8") as handle:
+                existing_manifest = json.load(handle)
+        except Exception as exc:
+            logging.warning("Failed to read existing MCP manifest: {}", exc)
 
     try:
         config = _load_mcp_config(mcp_config_path)
-        mcp_tools = discover_mcp_tool_details(config)
+        mcp_tools, failures = discover_mcp_tool_details_with_failures(config)
     except Exception as exc:
         logging.warning("Failed to auto-discover MCP tools: {}", exc)
         return manifest_path if os.path.exists(manifest_path) else None
 
     payload = _build_manifest_payload(mcp_tools)
+    if failures and existing_manifest:
+        payload_tools = payload.get("tools", [])
+        if not isinstance(payload_tools, list):
+            payload_tools = []
+        tools_by_id: dict[str, dict[str, Any]] = {}
+        for tool in payload_tools:
+            if not isinstance(tool, dict):
+                continue
+            tool_id = tool.get("tool_id")
+            if not tool_id:
+                continue
+            tools_by_id[str(tool_id)] = tool
+        cached_tools = existing_manifest.get("tools", [])
+        if not isinstance(cached_tools, list):
+            cached_tools = []
+        for tool in cached_tools:
+            if not isinstance(tool, dict):
+                continue
+            if tool.get("kind") != "mcp":
+                continue
+            server_name = tool.get("server")
+            if server_name not in failures:
+                continue
+            tool_id = tool.get("tool_id")
+            if not tool_id:
+                continue
+            disabled_tool = dict(tool)
+            disabled_tool["enabled"] = False
+            disabled_tool["disabled_reason"] = (
+                f"Discovery failed: {failures[server_name]}"
+            )
+            tools_by_id[tool_id] = disabled_tool
+        payload["tools"] = list(tools_by_id.values())
     try:
         with open(manifest_path, "w", encoding="utf-8") as handle:
             json.dump(payload, handle, indent=2)

@@ -72,7 +72,7 @@ def _configure_logging() -> None:
     if _should_use_cli_dark_logs():
         format_str = (
             "<dim>{time:YYYY-MM-DD HH:mm:ss} [{extra[name]}] "
-            "<level>{level}</level> {message}</dim>"
+            "<level>{level}</level> {message}{exception}</dim>"
         )
     else:
         format_str = "{time:YYYY-MM-DD HH:mm:ss} [{extra[name]}] <level>{level}</level> {message}"
