@@ -206,36 +206,30 @@ def test_mcp_invoke_async_success(monkeypatch, tmp_path):
     assert result == "out:hi"
 
 
-def test_mcp_prepare_input_wraps_string_for_schema():
-    """Wrap string inputs when MCP tool declares args_schema fields."""
-    class DummyArgsSchema:
-        model_fields = {"query": object()}
-
-    tool = types.SimpleNamespace(args_schema=DummyArgsSchema)
-    payload = _prepare_mcp_input(tool, "hi")
-    assert payload == {"query": "hi"}
-
-
-def test_mcp_prepare_input_prefers_query_field():
-    """Pick a sensible field when multiple args are available."""
-    class DummyArgsSchema:
-        model_fields = {"query": object(), "other": object()}
-
-    tool = types.SimpleNamespace(args_schema=DummyArgsSchema)
-    payload = _prepare_mcp_input(tool, "hello")
-    assert payload == {"query": "hello"}
-
-
-def test_mcp_prepare_input_handles_dict_schema():
-    """Wrap string input using JSON schema dictionaries."""
-    tool = types.SimpleNamespace(
-        args_schema={
-            "required": ["query"],
-            "properties": {"query": {"type": "string"}},
-        }
-    )
-    payload = _prepare_mcp_input(tool, "hello")
-    assert payload == {"query": "hello"}
+@pytest.mark.parametrize(
+    ("schema", "argument", "expected"),
+    [
+        (types.SimpleNamespace(model_fields={"query": object()}), "hi", {"query": "hi"}),
+        (
+            types.SimpleNamespace(model_fields={"query": object(), "other": object()}),
+            "hello",
+            {"query": "hello"},
+        ),
+        (
+            {
+                "required": ["query"],
+                "properties": {"query": {"type": "string"}},
+            },
+            "hello",
+            {"query": "hello"},
+        ),
+    ],
+)
+def test_mcp_prepare_input_variants(schema, argument, expected):
+    """Normalize string payloads for MCP tools with schemas."""
+    tool = types.SimpleNamespace(args_schema=schema)
+    payload = _prepare_mcp_input(tool, argument)
+    assert payload == expected
 
 
 def test_mcp_prepare_input_parses_json_string():

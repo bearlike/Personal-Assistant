@@ -141,6 +141,71 @@ def test_orchestrate_session_replans_on_failure(monkeypatch, tmp_path):
     assert "Last tool failure:" in captured["query"]
 
 
+def test_orchestrate_session_replans_after_real_failure(monkeypatch, tmp_path):
+    """Include real tool failure details in the replan prompt."""
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
+    captured = {}
+
+    class DummyTool:
+        def run(self, _step):
+            return get_mock_speaker()(content="ok")
+
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="mcp_bad_schema",
+            name="Bad schema tool",
+            description="MCP tool with strict schema",
+            factory=lambda: DummyTool(),
+            kind="mcp",
+            metadata={
+                "schema": {
+                    "required": ["query"],
+                    "properties": {"query": {"type": "string"}},
+                }
+            },
+        )
+    )
+    call_count = Counter()
+
+    def _first_step():
+        return ActionStep(
+            action_consumer="mcp_bad_schema",
+            action_type="get",
+            action_argument={"foo": "bar", "baz": "qux"},
+        )
+
+    def fake_generate(*_args, **kwargs):
+        call_count.bump()
+        if call_count.count == 2:
+            captured["query"] = kwargs.get("user_query")
+            return TaskQueue(action_steps=[])
+        return TaskQueue(action_steps=[_first_step()])
+
+    policy = PermissionPolicy(
+        rules=[],
+        default_by_action={"get": PermissionDecision.ALLOW, "set": PermissionDecision.ALLOW},
+        default_decision=PermissionDecision.ALLOW,
+    )
+
+    monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
+    monkeypatch.setattr(task_master, "_should_synthesize_response", lambda *_a, **_k: False)
+
+    task_master.orchestrate_session(
+        "hello",
+        max_iters=2,
+        session_id=session_id,
+        session_store=session_store,
+        tool_registry=registry,
+        permission_policy=policy,
+        approval_callback=lambda *_args: True,
+    )
+
+    assert "Last tool failure:" in captured["query"]
+    assert "Missing required fields: query" in captured["query"]
+
+
 def test_run_action_plan_records_last_error():
     """Record the most recent tool failure for replanning."""
     set_available_tools(["boom_tool"])
@@ -167,6 +232,20 @@ def test_run_action_plan_records_last_error():
     task_master.run_action_plan(queue, tool_registry=registry)
     assert queue.last_error is not None
     assert "boom_tool" in queue.last_error
+
+
+def test_run_action_plan_missing_tool_records_last_error():
+    """Capture failures when a tool is missing from the registry."""
+    registry = ToolRegistry()
+    step = ActionStep(
+        action_consumer="missing_tool",
+        action_type="get",
+        action_argument="payload",
+    )
+    queue = TaskQueue(action_steps=[step])
+    task_master.run_action_plan(queue, tool_registry=registry)
+    assert queue.last_error is not None
+    assert "tool not available" in queue.last_error
 
 
 def test_run_action_plan_coerces_mcp_string_payload():

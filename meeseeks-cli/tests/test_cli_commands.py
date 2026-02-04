@@ -193,6 +193,21 @@ def test_command_mcp(monkeypatch, tmp_path):
     assert "MCP" in context.console.export_text()
 
 
+def test_command_mcp_shows_servers_without_tools(monkeypatch, tmp_path):
+    """Render configured MCP servers even when no tools are discovered."""
+    context = _make_context(tmp_path)
+    registry = get_registry()
+
+    config_path = tmp_path / "mcp.json"
+    config_path.write_text(json.dumps({"servers": {"srv": {"transport": "stdio"}}}))
+    monkeypatch.setenv("MESEEKS_MCP_CONFIG", str(config_path))
+
+    registry.execute("/mcp", context, [])
+    output = context.console.export_text()
+    assert "srv" in output
+    assert "No MCP tools configured." in output
+
+
 def test_render_mcp_invalid_json(monkeypatch, tmp_path):
     """Handle invalid MCP config JSON gracefully."""
     context = _make_context(tmp_path)

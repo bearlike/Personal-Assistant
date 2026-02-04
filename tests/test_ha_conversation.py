@@ -372,7 +372,7 @@ def test_agent_process_success():
     async def fake_query(messages):
         return {"response": "hi", "context": {}, "session_id": "sid", "task_result": "hi"}
 
-    agent.query = fake_query  # type: ignore[assignment]
+    agent.query = fake_query
 
     ConversationInput = sys.modules[
         "homeassistant.components.conversation"
@@ -394,7 +394,7 @@ def test_agent_process_error():
     async def fake_query(messages):
         raise HomeAssistantError("boom")
 
-    agent.query = fake_query  # type: ignore[assignment]
+    agent.query = fake_query
 
     ConversationInput = sys.modules[
         "homeassistant.components.conversation"
