@@ -10,7 +10,8 @@ A terminal frontend for Meeseeks. It runs the same orchestration loop as the API
 
 ## Run
 ```bash
-meeseeks
+uv sync --extra cli
+uv run meeseeks
 ```
 
 ## MCP setup (required for /mcp tools)

@@ -8,12 +8,23 @@ This guide walks through local setup, environment configuration, MCP setup, and 
 - Docker (optional, for container runs)
 
 ## Install dependencies
+
+### User installation (core only)
 ```bash
-uv venv .venv
-uv pip install -e .[dev]
-uv pip install -e packages/meeseeks_core -e packages/meeseeks_tools \
-  -e apps/meeseeks_api -e apps/meeseeks_chat -e apps/meeseeks_cli \
-  -e meeseeks_ha_conversation
+uv sync
+```
+
+### Optional components (from project root)
+- CLI: `uv sync --extra cli`
+- API: `uv sync --extra api`
+- Chat UI: `uv sync --extra chat`
+- Home Assistant integration: `uv sync --extra ha`
+- Tools bundle: `uv sync --extra tools`
+- Everything optional: `uv sync --all-extras`
+
+### Developer installation (all components + dev/test/docs)
+```bash
+uv sync --all-extras --all-groups
 ```
 
 ## Environment setup
@@ -24,7 +35,7 @@ uv pip install -e packages/meeseeks_core -e packages/meeseeks_tools \
    - `DEFAULT_MODEL` (or `ACTION_PLAN_MODEL`)
 3. If you use an OpenAI-compatible base URL and your model name has no provider
    prefix, Meeseeks will call `openai/<model>` automatically.
-3. Optional runtime paths:
+4. Optional runtime paths:
    - `MESEEKS_SESSION_DIR` for session transcript storage
    - `MESEEKS_TOOL_MANIFEST` if you want a custom tool list (disables MCP auto-discovery)
 
@@ -44,9 +55,9 @@ If you override the manifest, keep at least one tool enabled for tasks that need
 - Home Assistant: set `HA_URL` + `HA_TOKEN` (or disable with `MESEEKS_HOME_ASSISTANT_ENABLED=0`).
 
 ## Run interfaces (local)
-- API: `meeseeks-api` (or `python -m meeseeks_api.backend`)
-- Chat UI: `meeseeks-chat`
-- CLI: `meeseeks`
+- CLI: `uv run meeseeks`
+- API: `uv run meeseeks-api` (or `uv run python -m meeseeks_api.backend`)
+- Chat UI: `uv run meeseeks-chat`
 - Home Assistant integration: install `meeseeks_ha_conversation/` as a custom component and point it at the API.
 
 ## Docker (optional)
@@ -57,8 +68,6 @@ If you override the manifest, keep at least one tool enabled for tasks that need
 ## Docs (optional)
 If you want to build the docs locally:
 ```bash
-uv venv .venv
-uv pip install -e .[docs] -e packages/meeseeks_core -e packages/meeseeks_tools \
-  -e meeseeks_ha_conversation
-mkdocs serve
+uv sync --all-extras --group docs
+uv run mkdocs serve
 ```
