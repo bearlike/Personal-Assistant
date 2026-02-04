@@ -14,21 +14,26 @@ Scope: this file applies to the root `tests/` suite and shared test patterns.
 - Avoid pulling in real MCP servers or external HTTP.
 
 ## Pitfalls / gotchas
-- Over-mocking hides real behavior. Mock only the LLM call or tool execution boundary.
-- Ensure tool schema mismatches are covered (JSON args vs string args).
-- When a real failure triggers a replan, disable response synthesis to avoid pulling the LLM dependency into tests.
-- Tests that depend on missing tools should use an empty registry and assert `last_error` includes “tool not available”.
-- Keep tests deterministic: fixed timestamps, fixed session IDs when needed.
-- Treat language models as black-box APIs with non-deterministic output; avoid anthropomorphic language in docs/changes.
+- Over-mocking hides real behavior. Mock only the LLM call boundary and tool execution boundary.
+- Schema mismatches must be exercised (string args, dict args, invalid schema, required fields).
+- Replan tests should include failure context (“Last tool failure: …”) in the next prompt.
+- When a failure triggers replan, disable response synthesis or stub it to avoid network calls.
+- Missing-tool tests should assert `last_error` and follow the same path as production.
+- Keep tests deterministic: fixed timestamps, fixed session IDs, explicit env.
+- Treat language models as black-box APIs with non-deterministic output; avoid anthropomorphic language.
 
 ## Preferred patterns
 - Use fake tools that implement the same `ToolSpec` interface.
 - Validate tool-call reflection: tool output must be passed to response synthesis.
-- Use integration-style tests for CLI or API that cover end-to-end behavior with minimal stubs.
-- Parameterize micro-variants instead of duplicating tests (e.g., MCP schema coercion).
+- Favor integration-style tests that cover a full turn: user → plan → tool → replan/response.
+- Parameterize micro-variants instead of duplicating tests (schema coercion, tool discovery).
+- Use a single “scenario” test to cover multiple branches rather than many micro-tests.
+- Use lightweight stubs for CLI I/O (dummy input/output) to avoid terminal dependencies.
 
 ## Cross-project insights (for test design)
-- Validate tool outputs before final response (detect false positives).
-- Test turn boundaries (user -> plan -> tool -> response) and approval flows.
-- Track context changes and summarization triggers without making network calls.
-- Surface and assert error context in replan prompts (e.g., “Last tool failure: …”) to avoid silent fallback.
+- Reference implementations emphasize integration tests with mocked model/tool servers.
+- Assert outbound request payloads and event ordering rather than only return values.
+- Build tests around “event streams” (plan, tool call, tool result, response) to catch orchestration regressions.
+- Prefer harness-style helpers to simulate model responses without HTTP.
+- Exercise error paths with structured exceptions to verify logging and replan behavior.
+- Track context updates (summary, recent events) via stored session state.
