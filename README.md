@@ -15,16 +15,12 @@
 
 
 
-> Look at me, I'm Mr Meeseeks.
+https://github.com/user-attachments/assets/78754e8f-828a-4c54-9e97-29cbeacbc3bc
+> Meeseeks runs right in your terminal, browser, or hosted as an API.
 
+# Intro
 
-<p align="center">
-    <img src="docs/screenshot_chat_app_1.png" alt="Screenshot of Meeseks WebUI" height="512px">
-</p>
-
-# Project Motivation 🚀
-Meeseeks is a personal assistant built on an LLM-driven orchestration loop. It breaks a request into atomic steps, runs tools, and returns a synthesized response. The core loop can replan after tool failures and keeps short-term state while sessions persist on disk.
-
+Meeseeks is an AI assistant running on an Agent orchestration loop. It breaks your requests down into atomic steps, executes the necessary tools, and then synthesizes the results for you. This core loop is smart enough to replan if a tool fails, maintaining short-term state in memory while saving long-term sessions to disk.
 
 <details>
 <summary><i>Legends (Expand to View) </i></summary>
@@ -35,7 +31,7 @@ Meeseeks is a personal assistant built on an LLM-driven orchestration loop. It b
 
 </details>
 
-# Features 🔥
+# Features
 
 <table align="center">
     <tr>
@@ -45,36 +41,34 @@ Meeseeks is a personal assistant built on an LLM-driven orchestration loop. It b
     <tr>
         <td align="center"><img src="docs/screenshot_ha_assist_1.png" alt="Screenshot" height="512px"></td>
         <td align="center"><img src="docs/screenshot_ha_assist_2.png" alt="Screenshot" height="512px"></td>
+        <td align="center"><img src="docs/screenshot_chat_app_1.png" alt="Screenshot of Meeseks WebUI" height="512px"></td>
     </tr>
 </table>
 
-- (✅) Optional [LangFuse](https://github.com/langfuse/langfuse) integrations for observability (auto-disabled if not configured).
-- (✅) LiteLLM-backed LLM gateway with OpenAI-compatible base URLs for provider-agnostic model selection.
-- (✅) Use natural language to interact with integrations and tools.
-- (✅) Simple REST API interface for 3rd party tools to interface with Meeseeks.
-- (✅) Handles complex user queries by breaking them into actionable steps, executing these steps, and then summarizing on the results.
-- (✅) Optional [Home Assistant Conversation Integration](https://www.home-assistant.io/integrations/conversation/) to allow voice assistance via [**HA Assist**](https://www.home-assistant.io/voice_control/).
-- (✅) A chat Interface using `streamlit` that shows the action plan, user types, and response from the LLM.
-- (✅) Terminal CLI for interactive sessions with plan + tool result visibility.
-- (✅) MCP tool visibility and model switch wizard in the CLI.
-- (✅) Plan -> act -> observe loop with re-planning on tool failures.
-- (✅) Session transcripts with lightweight compaction for long-running chats.
-- (✅) Tool registry with MCP auto-discovery and optional manifest override.
-- (✅) Permission gate + hooks around tool execution for safer runs.
-- (✅) Tool response synthesis before user-facing replies.
+- (✅) **Observability:** Includes optional LangFuse integration for tracking; it stays off if unconfigured.
+- (✅) **Model Gateway:** Uses LiteLLM for an OpenAI-compatible setup, letting you pick any provider easily.
+- (✅) **Natural Interaction:** Just talk naturally to control your integrations and tools.
+- (✅) **API Access:** Offers a simple REST API so third-party tools can connect to Meeseeks.
+- (✅) **Complex Task Handling:** Breaks big queries into steps, executes them, and summarizes the results for you.
+- (✅) **Home Assistant:** Connects with Home Assistant's Conversation Integration for voice control via HA Assist.
+- (✅) **Web Chat:** Features a Streamlit interface showing action plans, input types, and LLM responses.
+- (✅) **CLI Power:** Runs interactive terminal sessions with full visibility into plans and tool results.
+- (✅) **CLI Controls:** See MCP tools clearly and switch models using a wizard right in the terminal.
+- (✅) **Smart Execution:** Follows a plan-act-observe loop and automatically replans if a tool fails.
+- (✅) **Memory:** Keeps session transcripts and compacts them to handle long chats efficiently.
+- (✅) **Tool Management:** Auto-discovers MCP tools in the registry and supports manual manifest overrides.
+- (✅) **Safety:** Uses permission gates and hooks to secure tool execution.
+- (✅) **Synthesized Replies:** Processes tool outputs first to give you a clean, final answer.
 
-## Extras 👽
+## Extras
+
 Optional feature that users can choose to install to further optimize their experience.
+
 - (📅) **`Quality`** Use [CRITIC reflection framework](https://arxiv.org/pdf/2305.11738) to reflect on a response to a task/query using external tools via [`[^]`](https://llamahub.ai/l/agent/llama-index-agent-introspective).
 - (🚧) **`Privacy`** Integrate with [microsoft/presidio](https://github.com/microsoft/presidio) for customizable PII de-identification.
 
-## Integrations 📦
-- (✅) [Home Assistant](https://github.com/home-assistant/core)
-- (🚧) Google Calendar
-- (🚧) Google Search, Search recent ArXiv papers and summaries, Yahoo Finance, Yelp
-- (🧐) Android Debugging Shell
+## Monorepo layout
 
-## Monorepo layout 🧭
 - `core/`: orchestration loop, schemas, session storage, compaction, tool registry.
 - `tools/`: tool implementations and integrations (including Home Assistant and MCP).
 - `meeseeks-api/`: Flask REST API for programmatic access.
@@ -83,7 +77,8 @@ Optional feature that users can choose to install to further optimize their expe
 - `meeseeks_ha_conversation/`: Home Assistant integration that routes voice to the API.
 - `prompts/`: planner prompt and examples.
 
-## Architecture (short) 🧩
+## Architecture (short)
+
 Requests flow through a single core engine used by every interface, so behavior stays consistent across UI, API, and voice.
 
 ```mermaid
@@ -96,12 +91,13 @@ flowchart LR
   API --> Core
   CLI --> Core
   Core --> Tools
-  Tools --> HomeAssistant
+  Tools --> HomeAssistant (built-in)
   Tools --> MCP
   Core --> SessionStore
 ```
 
 ## Documentation
+
 - [docs/index.md](docs/index.md) - product overview and architecture
 - [docs/getting-started.md](docs/getting-started.md) - setup guide (env, MCP, configs, run paths)
 - [docs/components.md](docs/components.md) - monorepo map
