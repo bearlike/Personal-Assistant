@@ -28,7 +28,7 @@ loguru = "^0.7.2"
 
 [tool.poetry.group.dev.dependencies]
 flake8 = "^7.0.0"
-pytest = "^8.2.0"
+pytest = "^9.0.2"
 autopep8 = "^2.1.0"
 pylint = "^3.1.0"
 ruff = "^0.6.9"
