@@ -12,7 +12,17 @@ dependencies = [
   "meeseeks-core>=2.0.0-alpha",
 ]
 
+[project.scripts]
+meeseeks = "meeseeks_cli.cli_master:main"
+
 [project.optional-dependencies]
+cli = ["meeseeks-cli>=2.0.0-alpha"]
+api = ["meeseeks-api>=2.0.0-alpha"]
+chat = ["meeseeks-chat>=2.0.0-alpha"]
+ha = ["meeseeks-ha-conversation>=2.0.0-alpha"]
+tools = ["meeseeks-tools>=2.0.0-alpha"]
+
+[dependency-groups]
 dev = [
   "autopep8==2.1.0",
   "flake8==7.0.0",
@@ -30,18 +40,16 @@ docs = [
   "mkdocs-material",
   "mkdocstrings[python]",
 ]
-cli = ["meeseeks-cli>=2.0.0-alpha"]
-api = ["meeseeks-api>=2.0.0-alpha"]
-chat = ["meeseeks-chat>=2.0.0-alpha"]
-ha = ["meeseeks-ha-conversation>=2.0.0-alpha"]
-tools = ["meeseeks-tools>=2.0.0-alpha"]
 
 [tool.uv.workspace]
-members = ["packages/*", "apps/*", "meeseeks_ha_conversation"]
+members = ["packages/*"]
+
+[tool.uv]
+default-groups = []
 
 [tool.uv.sources]
-meeseeks-core = { path = "packages/meeseeks_core" }
-meeseeks-tools = { path = "packages/meeseeks_tools" }
+meeseeks-core = { workspace = true }
+meeseeks-tools = { workspace = true }
 meeseeks-cli = { path = "apps/meeseeks_cli" }
 meeseeks-api = { path = "apps/meeseeks_api" }
 meeseeks-chat = { path = "apps/meeseeks_chat" }

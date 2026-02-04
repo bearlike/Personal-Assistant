@@ -39,11 +39,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv venv .venv
-          uv pip install -e .[dev]
-          uv pip install -e packages/meeseeks_core -e packages/meeseeks_tools \
-            -e apps/meeseeks_api -e apps/meeseeks_chat -e apps/meeseeks_cli \
-            -e meeseeks_ha_conversation
+          uv sync --all-extras --group dev
 
       - name: Run pytest with coverage
         run: |
