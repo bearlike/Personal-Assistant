@@ -102,11 +102,14 @@ def test_orchestrate_session_replans_on_failure(monkeypatch, tmp_path):
     """Replan when an action plan fails once."""
     generate_calls = Counter()
     run_calls = Counter()
+    captured = {}
     session_store = SessionStore(root_dir=str(tmp_path))
     session_id = session_store.create_session()
 
     def fake_generate(*args, **kwargs):
         generate_calls.bump()
+        if generate_calls.count == 2:
+            captured["query"] = kwargs.get("user_query")
         return make_task_queue("say hi")
 
     def fake_run(task_queue, **kwargs):
@@ -114,6 +117,7 @@ def test_orchestrate_session_replans_on_failure(monkeypatch, tmp_path):
         if run_calls.count == 1:
             task_queue.action_steps[0].result = None
             task_queue.task_result = "failed"
+            task_queue.last_error = "home_assistant_tool (get) failed: boom"
         else:
             MockSpeaker = get_mock_speaker()
             task_queue.action_steps[0].result = MockSpeaker(content="ok")
@@ -134,6 +138,35 @@ def test_orchestrate_session_replans_on_failure(monkeypatch, tmp_path):
     assert task_queue.task_result == "ok"
     assert generate_calls.count == 2
     assert run_calls.count == 2
+    assert "Last tool failure:" in captured["query"]
+
+
+def test_run_action_plan_records_last_error():
+    """Record the most recent tool failure for replanning."""
+    set_available_tools(["boom_tool"])
+
+    class BoomTool:
+        def run(self, step):
+            raise RuntimeError("boom")
+
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="boom_tool",
+            name="Boom",
+            description="Boom",
+            factory=lambda: BoomTool(),
+        )
+    )
+    step = ActionStep(
+        action_consumer="boom_tool",
+        action_type="get",
+        action_argument="go",
+    )
+    queue = TaskQueue(action_steps=[step])
+    task_master.run_action_plan(queue, tool_registry=registry)
+    assert queue.last_error is not None
+    assert "boom_tool" in queue.last_error
 
 
 def test_run_action_plan_coerces_mcp_string_payload():

@@ -681,6 +681,13 @@ def run_action_plan(
         hook_manager = default_hook_manager()
 
     results: list[str] = []
+    task_queue.last_error = None
+
+    def _record_failure(step: ActionStep, reason: str) -> None:
+        note = f"{step.action_consumer} ({step.action_type}) failed"
+        if reason:
+            note = f"{note}: {reason}"
+        task_queue.last_error = note
 
     for idx, action_step in enumerate(task_queue.action_steps):
         logging.debug("Processing ActionStep: {}", action_step)
@@ -733,6 +740,7 @@ def run_action_plan(
             logging.error(
                 "No tool found for consumer: {}", action_step.action_consumer
             )
+            _record_failure(action_step, "tool not available")
             continue
 
         spec = tool_registry.get_spec(action_step.action_consumer)
@@ -740,6 +748,7 @@ def run_action_plan(
             schema_error = _coerce_mcp_action_argument(action_step, spec)
             if schema_error:
                 logging.error("Invalid MCP tool input: {}", schema_error)
+                _record_failure(action_step, schema_error)
                 action_step.result = None
                 if event_logger is not None:
                     event_logger(
@@ -800,6 +809,7 @@ def run_action_plan(
                 )
         except Exception as e:
             logging.error("Error processing action step: {}", e)
+            _record_failure(action_step, str(e))
             tool_registry.disable(action_step.action_consumer, f"Runtime error: {e}")
             action_step.result = None
             if event_logger is not None:
@@ -1023,8 +1033,12 @@ def orchestrate_session(
             break
 
         if iteration < max_iters - 1:
+            failure_note = ""
+            if task_queue.last_error:
+                failure_note = f"Last tool failure: {task_queue.last_error}\n"
             revised_query = (
                 f"{user_query}\n\nPrevious tool results:\n{task_queue.task_result or ''}\n"
+                f"{failure_note}"
                 "Please revise the action plan to resolve remaining tasks."
             )
             events = session_store.load_transcript(session_id)

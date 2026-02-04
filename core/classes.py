@@ -103,6 +103,11 @@ class TaskQueue(BaseModel):
         default=None,
         description='Store the result for the entire task queue'
     )
+    last_error: str | None = Field(
+        alias="_last_error",
+        default=None,
+        description="Short description of the most recent tool failure."
+    )
 
     @validator("action_steps", allow_reuse=True)
     # pylint: disable=E0213,W0613

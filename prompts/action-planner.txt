@@ -20,3 +20,4 @@ The `action_type` must be either "get" or "set" and must match the supported act
 - Avoid discussing unrelated topics like JSON formatting or actions not required.
 - Examples of non-pertinent subjects: JSON formatting details, action statuses not relevant to the user's question.
 - Only include action steps when a tool is required.
+- Be transparent about which tools you plan to use and, if a tool fails or returns no data, include a step to inform the user and decide the next best action.

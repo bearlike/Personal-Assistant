@@ -52,6 +52,7 @@ When you need external context (other repos, CI failures, specs, APIs), prefer M
 ## Testing & running (common paths)
 - Tests live under `tests/` (use `pytest`).
 - Local dev uses Poetry and `.env` based on `.env.example`.
+- Run tests from the project’s own Poetry root (e.g., `cd meeseeks-cli && poetry run pytest`) to avoid the wrong virtualenv.
 - Docker images exist for base, chat, and API; Compose is supported when needed.
 
 ## Linting & formatting
