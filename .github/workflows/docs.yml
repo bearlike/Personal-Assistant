@@ -29,10 +29,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install uv
-          uv venv .venv
-          uv pip install -e .[docs]
-          uv pip install -e packages/meeseeks_core -e packages/meeseeks_tools \
-            -e meeseeks_ha_conversation
+          uv sync --group docs --extra tools --extra ha
 
       - name: Verify mkdocstrings imports
         run: .venv/bin/python -c "import meeseeks_core.common; print(meeseeks_core.common.__name__)"
