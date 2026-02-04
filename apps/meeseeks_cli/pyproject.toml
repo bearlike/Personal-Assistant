@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-observability = ["langfuse>=2.29.3,<3.0.0"]
+observability = ["langfuse>=2.29.3,<4.0.0"]
 
 [project.scripts]
 meeseeks = "meeseeks_cli.cli_master:main"
