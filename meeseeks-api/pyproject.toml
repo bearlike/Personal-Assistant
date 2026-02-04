@@ -24,7 +24,7 @@ tiktoken = "^0.7.0"
 [tool.poetry.group.dev.dependencies]
 flake8 = "^7.0.0"
 pytest = "^8.2.0"
-autopep8 = "^2.1.0"
+autopep8 = "^2.3.2"
 pylint = "^3.1.0"
 ruff = "^0.6.9"
 mypy = "^1.11.2"
