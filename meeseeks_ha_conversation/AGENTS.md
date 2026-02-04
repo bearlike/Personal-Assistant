@@ -16,6 +16,7 @@ Scope: this file applies to `meeseeks_ha_conversation/` (home automation integra
 - API failures raise `ApiJsonError` or client exceptions; callers must handle these.
 - Conversation history is not yet used; do not assume multi-turn context is preserved.
 - Must remain fully async; avoid blocking calls or synchronous HTTP.
+- Treat language models as black-box APIs with non-deterministic output; avoid anthropomorphic language in docs/changes.
 
 ## Testing guidance
 - Use async client test utilities or monkeypatch `_session.request` for deterministic behavior.

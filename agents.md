@@ -36,6 +36,7 @@ When you need external context (other repos, CI failures, specs, APIs), prefer M
 - Use Gitmoji + Conventional Commit format (e.g., `✨ feat: add session summary pass-through`).
 - Do not push unless explicitly requested.
 - Use `.github/git-commit-instructions.md` for commit + PR titles and bodies.
+- Treat language models as black-box APIs with non-deterministic output; avoid anthropomorphic language and describe changes objectively (e.g., “updated prompts/instructions”).
 
 ## Orchestration insights (transferable)
 - Separate tool execution from user-facing response: synthesize after tool results, don't dump raw tool output.

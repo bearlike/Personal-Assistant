@@ -18,6 +18,7 @@ Scope: this file applies to the `meeseeks-chat/` UI app. It captures runtime beh
 - UI session state is per-browser tab; multi-tab behavior can fork sessions unexpectedly.
 - The local rolling memory buffer is separate from core session summaries.
 - If core orchestration changes the shape of `TaskQueue`, update UI formatting here.
+- Treat language models as black-box APIs with non-deterministic output; avoid anthropomorphic language in docs/changes.
 
 ## Testing guidance
 - Keep tests light: mock `orchestrate_session` and `generate_action_plan` only.

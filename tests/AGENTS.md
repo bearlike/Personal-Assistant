@@ -16,6 +16,7 @@ Scope: this file applies to the root `tests/` suite and shared test patterns.
 - Over-mocking hides real behavior. Mock only the LLM call or tool execution boundary.
 - Ensure tool schema mismatches are covered (JSON args vs string args).
 - Keep tests deterministic: fixed timestamps, fixed session IDs when needed.
+- Treat language models as black-box APIs with non-deterministic output; avoid anthropomorphic language in docs/changes.
 
 ## Preferred patterns
 - Use fake tools that implement the same `ToolSpec` interface.

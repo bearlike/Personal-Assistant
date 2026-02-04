@@ -19,6 +19,7 @@ Scope: this file applies to the `meeseeks-api/` package. It captures runtime beh
 - `MASTER_API_TOKEN` default is insecure; production should override it.
 - No heartbeat or health endpoint; external deployments must handle liveness checks.
 - The API returns the whole `TaskQueue` including action steps; ensure tool results are safe to expose.
+- Treat language models as black-box APIs with non-deterministic output; avoid anthropomorphic language in docs/changes.
 
 ## Testing guidance
 - `meeseeks-api/tests` mock `orchestrate_session` and focus on response schema.

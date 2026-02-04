@@ -92,6 +92,7 @@ If you add a new interactive flow, use `DialogFactory` instead of writing custom
 - Do not print raw tool output as the final answer; let the core synthesize.
 - Tests should drive a real CLI flow with fake tools/LLM outputs; avoid over-mocking.
 - Keep permission prompts deterministic in tests (auto-approve or stub).
+- Treat language models as black-box APIs with non-deterministic output; avoid anthropomorphic language in docs/changes.
 
 ## Keep this file updated
 Whenever you change:
