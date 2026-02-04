@@ -12,12 +12,12 @@ plugins:
       handlers:
         python:
           paths:
+            - .
             - packages/meeseeks_core/src
             - packages/meeseeks_tools/src
             - apps/meeseeks_api/src
             - apps/meeseeks_chat/src
             - apps/meeseeks_cli/src
-            - meeseeks_ha_conversation
           options:
             docstring_style: google
             show_source: true
