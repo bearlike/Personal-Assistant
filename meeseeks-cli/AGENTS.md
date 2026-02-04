@@ -28,7 +28,10 @@ Scope: this file applies to the `meeseeks-cli/` package only. It covers the term
 If you change any of these, update this file.
 
 ## Dialogs / Prompts (Interactive Toolkit)
-We use the interactive dialog toolkit only for prompts, not for overall output.
+We use Rich for the normal CLI rendering (header, plans, tool cards, responses).
+We use Textual only for full-screen style prompts (dialogs), not for the main output.
+Do not run Rich rendering and Textual dialogs concurrently: Textual runs a blocking app loop
+and mixing it with live Rich rendering/spinners can deadlock or break terminal state.
 
 Location: `meeseeks-cli/cli_dialogs.py`
 
