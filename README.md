@@ -91,8 +91,8 @@ flowchart LR
   API --> Core
   CLI --> Core
   Core --> Tools
-  Tools --> HomeAssistant (built-in)
-  Tools --> MCP
+  Tools --> HomeAssistant
+  Tools --> External_MCPs
   Core --> SessionStore
 ```
 
