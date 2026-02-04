@@ -55,7 +55,7 @@ def _parse_verbosity(argv: list[str]) -> int | None:
 def _bootstrap_cli_logging_env(argv: list[str]) -> None:
     """Configure logging environment for the CLI before core imports."""
     os.environ["MEESEEKS_CLI"] = "1"
-    os.environ.setdefault("MEESEEKS_CLI_LOG_STYLE", "dark")
+    os.environ.setdefault("MEESEEKS_LOG_STYLE", "dark")
     verbosity = _parse_verbosity(argv)
     if verbosity is not None:
         os.environ["LOG_LEVEL"] = _verbosity_to_level(verbosity)

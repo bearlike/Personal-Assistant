@@ -39,16 +39,14 @@ def _resolve_log_level() -> str:
     level_name = os.getenv("LOG_LEVEL")
     if level_name:
         return level_name.strip().upper()
-    if os.getenv("MEESEEKS_CLI") == "1":
-        return "INFO"
     return "DEBUG"
 
 
 def _should_use_cli_dark_logs() -> bool:
-    return (
-        os.getenv("MEESEEKS_CLI") == "1"
-        and os.getenv("MEESEEKS_CLI_LOG_STYLE", "").lower() == "dark"
-    )
+    style = os.getenv("MEESEEKS_LOG_STYLE", "")
+    if not style:
+        style = os.getenv("MEESEEKS_CLI_LOG_STYLE", "")
+    return style.lower() == "dark"
 
 
 def _configure_logging() -> None:
