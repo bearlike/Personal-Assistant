@@ -58,8 +58,8 @@ jobs:
         run: |
           .venv/bin/coverage xml \
             --data-file "${COVERAGE_FILE}" \
-            --include "*/meeseeks_core/*" \
-            --include "meeseeks_core/*" \
+            --include "packages/meeseeks_core/src/meeseeks_core/*" \
+            --include "*/packages/meeseeks_core/src/meeseeks_core/*" \
             -o coverage-core.xml
 
       - name: Upload coverage artifact
