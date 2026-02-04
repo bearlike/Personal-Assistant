@@ -4,12 +4,12 @@
 Meeseeks is a multi-agent LLM personal assistant that decomposes user requests into atomic actions, runs them through tools, and returns a synthesized response. It ships multiple interfaces (CLI, chat UI, REST API, Home Assistant) that share the same core engine.
 
 ## Core entry points
-- `core/task_master.py`: action planning + task execution loop
-- `core/classes.py`: `ActionStep`, `TaskQueue`, `AbstractTool` contracts
-- `tools/`: tool implementations and integration glue
-- `meeseeks-chat/chat_master.py`: Streamlit UI
-- `meeseeks-api/backend.py`: Flask API
-- `meeseeks-cli/cli_master.py`: terminal CLI
+- `packages/meeseeks_core/src/meeseeks_core/task_master.py`: action planning + task execution loop
+- `packages/meeseeks_core/src/meeseeks_core/classes.py`: `ActionStep`, `TaskQueue`, `AbstractTool` contracts
+- `packages/meeseeks_tools/src/meeseeks_tools/`: tool implementations and integration glue
+- `apps/meeseeks_chat/src/meeseeks_chat/chat_master.py`: Streamlit UI
+- `apps/meeseeks_api/src/meeseeks_api/backend.py`: Flask API
+- `apps/meeseeks_cli/src/meeseeks_cli/cli_master.py`: terminal CLI
 - `meeseeks_ha_conversation/`: Home Assistant integration
 
 ## How to get context fast
@@ -37,6 +37,7 @@ When you need external context (other repos, CI failures, specs, APIs), prefer M
 - Do not push unless explicitly requested.
 - Use `.github/git-commit-instructions.md` for commit + PR titles and bodies.
 - Treat language models as black-box APIs with non-deterministic output; avoid anthropomorphic language and describe changes objectively (e.g., “updated prompts/instructions”).
+- Keep type hints precise; avoid loosening to `Any` unless no accurate alternative exists.
 
 ## Orchestration insights (transferable)
 - Separate tool execution from user-facing response: synthesize after tool results, don't dump raw tool output.
@@ -52,13 +53,13 @@ When you need external context (other repos, CI failures, specs, APIs), prefer M
 
 ## Testing & running (common paths)
 - Tests live under `tests/` (use `pytest`).
-- Local dev uses Poetry and `.env` based on `.env.example`.
-- Run tests from the project’s own Poetry root (e.g., `cd meeseeks-cli && poetry run pytest`) to avoid the wrong virtualenv.
-- Docker images exist for base, chat, and API; Compose is supported when needed.
+- Local dev uses `uv` and `.env` based on `.env.example`.
+- Run tests from repo root after installing with `uv pip install -e ...`.
+- Dockerfiles live under `docker/` for base, chat, and API; Compose is supported when needed.
 
 ## Linting & formatting
-- Primary linting uses `ruff` (root + subpackages). Auto-fix with `poetry run ruff check --fix .`.
-- Type checking uses `mypy`. Run from repo root for core/tools/HA, and run inside `meeseeks-api/` or `meeseeks-chat/` for those components.
+- Primary linting uses `ruff` (root + subpackages). Auto-fix with `.venv/bin/ruff check --fix .`.
+- Type checking uses `mypy`. Run from repo root after installing with `uv`.
 - `flake8`, `pylint`, and `autopep8` are still available as dev tools (legacy or ad‑hoc use).
 - Helper targets: `make lint`, `make lint-fix`, and `make typecheck`.
 - Pre-commit hooks are defined in `.pre-commit-config.yaml` (install with `make precommit-install`).

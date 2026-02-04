@@ -1,10 +1,9 @@
 """Tests for core class behaviors."""
 import os
 
+import meeseeks_core.classes as classes
 import pytest
-
-import core.classes as classes
-from core.classes import ActionStep, TaskQueue, create_task_queue, set_available_tools
+from meeseeks_core.classes import ActionStep, TaskQueue, create_task_queue, set_available_tools
 
 
 def test_action_step_normalization():
@@ -47,7 +46,7 @@ def test_action_step_invalid_entries():
 
 def test_save_json(tmp_path, monkeypatch):
     """Write JSON payloads using the tool helper."""
-    from core.classes import AbstractTool
+    from meeseeks_core.classes import AbstractTool
 
     class DummyTool(AbstractTool):
         def set_state(self, action_step=None):

@@ -1,7 +1,7 @@
 """Tests for tool registry loading behavior."""
 import json
 
-from core.tool_registry import load_registry
+from meeseeks_core.tool_registry import load_registry
 
 
 def test_default_registry(monkeypatch):
@@ -28,7 +28,7 @@ def test_default_registry_homeassistant_enabled(monkeypatch):
 
 def test_registry_disables_on_factory_error():
     """Disable tools that fail during initialization."""
-    from core.tool_registry import ToolRegistry, ToolSpec
+    from meeseeks_core.tool_registry import ToolRegistry, ToolSpec
 
     def _boom():
         raise RuntimeError("nope")
@@ -113,7 +113,7 @@ def test_auto_manifest_from_mcp_config(tmp_path, monkeypatch):
     manifest_path.write_text("{bad json", encoding="utf-8")
 
     monkeypatch.setattr(
-        "core.tool_registry.discover_mcp_tool_details_with_failures",
+        "meeseeks_tools.integration.mcp.discover_mcp_tool_details_with_failures",
         lambda _config: (
             {"srv": [{"name": " ", "schema": None}, {"name": "tool-a", "schema": None}]},
             {},
@@ -142,11 +142,11 @@ def test_auto_manifest_marks_failed_server(tmp_path, monkeypatch):
     manifest_path.write_text(json.dumps({"tools": "bad"}), encoding="utf-8")
 
     monkeypatch.setattr(
-        "core.tool_registry.discover_mcp_tool_details_with_failures",
+        "meeseeks_tools.integration.mcp.discover_mcp_tool_details_with_failures",
         lambda _config: ({}, {"srv": RuntimeError("boom")}),
     )
     monkeypatch.setattr(
-        "core.tool_registry._build_manifest_payload",
+        "meeseeks_core.tool_registry._build_manifest_payload",
         lambda _tools: {"tools": "bad"},
     )
 
@@ -199,7 +199,7 @@ def test_auto_manifest_marks_failed_server(tmp_path, monkeypatch):
     )
 
     monkeypatch.setattr(
-        "core.tool_registry._build_manifest_payload",
+        "meeseeks_core.tool_registry._build_manifest_payload",
         lambda _tools: {"tools": [{"tool_id": "mcp_srv_tool_a"}, {"name": "bad"}, "bad"]},
     )
 

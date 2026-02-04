@@ -3,13 +3,17 @@
 This guide walks through local setup, environment configuration, MCP setup, and how to run each interface.
 
 ## Prerequisites
-- Python 3.11+
-- Poetry
+- Python 3.10+
+- uv
 - Docker (optional, for container runs)
 
 ## Install dependencies
 ```bash
-poetry install
+uv venv .venv
+uv pip install -e .[dev]
+uv pip install -e packages/meeseeks_core -e packages/meeseeks_tools \
+  -e apps/meeseeks_api -e apps/meeseeks_chat -e apps/meeseeks_cli \
+  -e meeseeks_ha_conversation
 ```
 
 ## Environment setup
@@ -40,20 +44,21 @@ If you override the manifest, keep at least one tool enabled for tasks that need
 - Home Assistant: set `HA_URL` + `HA_TOKEN` (or disable with `MESEEKS_HOME_ASSISTANT_ENABLED=0`).
 
 ## Run interfaces (local)
-- API: `python meeseeks-api/backend.py`
-- Chat UI: `streamlit run meeseeks-chat/chat_master.py`
-- CLI: `python meeseeks-cli/cli_master.py`
+- API: `meeseeks-api` (or `python -m meeseeks_api.backend`)
+- Chat UI: `meeseeks-chat`
+- CLI: `meeseeks`
 - Home Assistant integration: install `meeseeks_ha_conversation/` as a custom component and point it at the API.
 
 ## Docker (optional)
-- Build images using the provided Dockerfiles for API/chat.
+- Build images using `docker/Dockerfile.api` and `docker/Dockerfile.chat`.
 - Provide the same `.env` values as local.
 - Persist `MESEEKS_SESSION_DIR` if you want transcripts across restarts.
 
 ## Docs (optional)
 If you want to build the docs locally:
 ```bash
-pip install -r requirements-docs.txt
-export PYTHONPATH="$PWD"
+uv venv .venv
+uv pip install -e .[docs] -e packages/meeseeks_core -e packages/meeseeks_tools \
+  -e meeseeks_ha_conversation
 mkdocs serve
 ```

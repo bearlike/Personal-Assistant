@@ -62,7 +62,7 @@ Example body:
 - Add schema-aware MCP input coercion and update tool manifest.
 - Fix tool response synthesis step to keep user-facing output clean.
 
-Tests: poetry run pytest tests/test_orchestration.py -q
+Tests: .venv/bin/pytest tests/test_orchestration.py -q
 ```
 
 ## PR titles and bodies

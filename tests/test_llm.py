@@ -2,7 +2,7 @@
 import sys
 import types
 
-from core.llm import allows_temperature, build_chat_model, resolve_reasoning_effort
+from meeseeks_core.llm import allows_temperature, build_chat_model, resolve_reasoning_effort
 
 
 def test_resolve_reasoning_effort_defaults(monkeypatch):

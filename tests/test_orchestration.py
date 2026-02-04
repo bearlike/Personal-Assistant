@@ -2,18 +2,17 @@
 import json
 
 from langchain_core.runnables import RunnableLambda  # noqa: E402
-
-from core import task_master  # noqa: E402
-from core.classes import ActionStep, TaskQueue, set_available_tools  # noqa: E402
-from core.common import get_mock_speaker  # noqa: E402
-from core.hooks import HookManager  # noqa: E402
-from core.permissions import (  # noqa: E402
+from meeseeks_core import task_master  # noqa: E402
+from meeseeks_core.classes import ActionStep, TaskQueue, set_available_tools  # noqa: E402
+from meeseeks_core.common import get_mock_speaker  # noqa: E402
+from meeseeks_core.hooks import HookManager  # noqa: E402
+from meeseeks_core.permissions import (  # noqa: E402
     PermissionDecision,
     PermissionPolicy,
     PermissionRule,
 )
-from core.session_store import SessionStore  # noqa: E402
-from core.tool_registry import ToolRegistry, ToolSpec  # noqa: E402
+from meeseeks_core.session_store import SessionStore  # noqa: E402
+from meeseeks_core.tool_registry import ToolRegistry, ToolSpec  # noqa: E402
 
 
 class Counter:

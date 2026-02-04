@@ -1,6 +1,6 @@
 """Tests for session store persistence helpers."""
-from core.compaction import should_compact, summarize_events
-from core.session_store import SessionStore
+from meeseeks_core.compaction import should_compact, summarize_events
+from meeseeks_core.session_store import SessionStore
 
 
 def test_session_store_roundtrip(tmp_path):

@@ -17,13 +17,14 @@ Meeseeks is a personal assistant that breaks a request into small actions, runs 
 - Optional components (Langfuse, Home Assistant) auto-disable when not configured or when failures occur.
 
 ## Subprojects and how they fit
-- `core/`: orchestration loop, schemas, session storage, compaction, tool registry.
-- `tools/`: tool implementations and integrations.
-- `meeseeks-api/`: Flask API that exposes the assistant over HTTP.
-- `meeseeks-chat/`: Streamlit UI for interactive chat.
-- `meeseeks-cli/`: Terminal CLI for interactive sessions.
+- `packages/meeseeks_core/`: orchestration loop, schemas, session storage, compaction, tool registry.
+- `packages/meeseeks_tools/`: tool implementations and integrations.
+- `apps/meeseeks_api/`: Flask API that exposes the assistant over HTTP.
+- `apps/meeseeks_chat/`: Streamlit UI for interactive chat.
+- `apps/meeseeks_cli/`: Terminal CLI for interactive sessions.
 - `meeseeks_ha_conversation/`: Home Assistant integration that routes voice requests to the API.
-- `prompts/`: planner prompt and examples.
+
+Prompts are packaged under `packages/meeseeks_core/src/meeseeks_core/prompts/`.
 
 ## Architecture in a glance
 - The UI or API sends a user request into the core orchestrator.

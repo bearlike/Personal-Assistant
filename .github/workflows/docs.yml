@@ -14,8 +14,6 @@ permissions:
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
-    env:
-      PYTHONPATH: ${{ github.workspace }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,13 +28,17 @@ jobs:
       - name: Install docs dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements-docs.txt
+          python -m pip install uv
+          uv venv .venv
+          uv pip install -e .[docs]
+          uv pip install -e packages/meeseeks_core -e packages/meeseeks_tools \
+            -e meeseeks_ha_conversation
 
       - name: Verify mkdocstrings imports
-        run: python -c "import core.common; print(core.common.__name__)"
+        run: .venv/bin/python -c "import meeseeks_core.common; print(meeseeks_core.common.__name__)"
 
       - name: Build docs
-        run: mkdocs build
+        run: .venv/bin/mkdocs build
 
       - name: Configure git for mike
         run: |
@@ -45,7 +47,7 @@ jobs:
 
       - name: Deploy dev docs
         if: github.ref == 'refs/heads/main'
-        run: mike deploy --push dev
+        run: .venv/bin/mike deploy --push dev
 
       - name: Deploy versioned docs
         if: startsWith(github.ref, 'refs/tags/v')
@@ -53,8 +55,8 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           DOCS_VERSION="${VERSION%.*}"
           echo "DOCS_VERSION=$DOCS_VERSION" >> "$GITHUB_ENV"
-          mike deploy --push --update-aliases "$DOCS_VERSION" latest
-          mike set-default --push latest
+          .venv/bin/mike deploy --push --update-aliases "$DOCS_VERSION" latest
+          .venv/bin/mike set-default --push latest
 
       - name: Smoke test versioned site
         if: startsWith(github.ref, 'refs/tags/v')
