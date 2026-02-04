@@ -22,8 +22,8 @@ def test_generate_action_plan_helper(monkeypatch):
     """Return a formatted action plan with the generated queue."""
     steps = [
         ActionStep(
-            action_consumer="talk_to_user_tool",
-            action_type="set",
+            action_consumer="home_assistant_tool",
+            action_type="get",
             action_argument="hello",
         )
     ]
@@ -36,7 +36,7 @@ def test_generate_action_plan_helper(monkeypatch):
     plan, returned = chat_master.generate_action_plan_helper("hello")
     assert returned == task_queue
     assert plan == [
-        "Using `talk_to_user_tool` with `set` to `hello`",
+        "Using `home_assistant_tool` with `get` to `hello`",
     ]
 
 
@@ -52,8 +52,8 @@ def test_run_action_plan_helper(monkeypatch, tmp_path):
 
     steps = [
         ActionStep(
-            action_consumer="talk_to_user_tool",
-            action_type="set",
+            action_consumer="home_assistant_tool",
+            action_type="get",
             action_argument="hello",
         )
     ]
@@ -137,12 +137,12 @@ def test_main_flow(monkeypatch, tmp_path):
     def fake_generate(user_input):
         steps = [
             ActionStep(
-                action_consumer="talk_to_user_tool",
-                action_type="set",
+                action_consumer="home_assistant_tool",
+                action_type="get",
                 action_argument="hello",
             )
         ]
-        return ["Using `talk_to_user_tool` with `set` to `hello`"], TaskQueue(
+        return ["Using `home_assistant_tool` with `get` to `hello`"], TaskQueue(
             action_steps=steps
         )
 

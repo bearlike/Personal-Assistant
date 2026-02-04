@@ -105,6 +105,23 @@ def test_command_automatic(tmp_path):
     assert context.state.auto_approve_all is True
 
 
+def test_command_automatic_confirm(monkeypatch, tmp_path):
+    """Enable automatic approvals via confirmation prompt."""
+    context = _make_context(tmp_path)
+    registry = get_registry()
+
+    class DummyDialogs:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def confirm(self, *args, **kwargs):
+            return True
+
+    monkeypatch.setattr(cli_commands, "DialogFactory", DummyDialogs)
+    assert registry.execute("/automatic", context, []) is True
+    assert context.state.auto_approve_all is True
+
+
 def test_command_models(monkeypatch, tmp_path):
     """Select a model via the CLI wizard."""
     context = _make_context(tmp_path)
@@ -117,6 +134,28 @@ def test_command_models(monkeypatch, tmp_path):
     context.prompt_func = lambda _: "1"
     assert registry.execute("/models", context, []) is True
     assert context.state.model_name == "model-a"
+
+
+def test_command_models_textual_selection(monkeypatch, tmp_path):
+    """Select a model via Textual dialog path."""
+    context = _make_context(tmp_path)
+    registry = get_registry()
+
+    class DummyDialogs:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def can_use_textual(self):
+            return True
+
+        def select_one(self, *args, **kwargs):
+            return "model-b"
+
+    monkeypatch.setattr(cli_commands, "DialogFactory", DummyDialogs)
+    monkeypatch.setattr(cli_commands, "_fetch_models", lambda: ["model-a", "model-b"])
+
+    assert registry.execute("/models", context, []) is True
+    assert context.state.model_name == "model-b"
 
 
 def test_command_models_invalid_choice(monkeypatch, tmp_path):
@@ -192,6 +231,60 @@ def test_command_mcp(monkeypatch, tmp_path):
     registry.execute("/mcp", context, [])
     assert "MCP" in context.console.export_text()
 
+
+def test_command_mcp_shows_servers_without_tools(monkeypatch, tmp_path):
+    """Render configured MCP servers even when no tools are discovered."""
+    context = _make_context(tmp_path)
+    registry = get_registry()
+
+    config_path = tmp_path / "mcp.json"
+    config_path.write_text(json.dumps({"servers": {"srv": {"transport": "stdio"}}}))
+    monkeypatch.setenv("MESEEKS_MCP_CONFIG", str(config_path))
+
+    registry.execute("/mcp", context, [])
+    output = context.console.export_text()
+    assert "srv" in output
+    assert "No MCP tools configured." in output
+
+
+def test_command_mcp_selects_single_tool(monkeypatch, tmp_path):
+    """Filter MCP tools via interactive selection."""
+    context = _make_context(tmp_path)
+    registry = get_registry()
+
+    context.tool_registry.register(
+        ToolSpec(
+            tool_id="mcp_tool_one",
+            name="Tool One",
+            description="Tool One",
+            factory=lambda: None,
+            kind="mcp",
+            metadata={"server": "srv", "tool": "tool_one"},
+        )
+    )
+    context.tool_registry.register(
+        ToolSpec(
+            tool_id="mcp_tool_two",
+            name="Tool Two",
+            description="Tool Two",
+            factory=lambda: None,
+            kind="mcp",
+            metadata={"server": "srv", "tool": "tool_two"},
+        )
+    )
+
+    class DummyDialogs:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def select_one(self, _title, _options, **_kwargs):
+            return "mcp_tool_two"
+
+    monkeypatch.setattr(cli_commands, "DialogFactory", DummyDialogs)
+    registry.execute("/mcp", context, [])
+    output = context.console.export_text()
+    assert "mcp_tool_two" in output
+    assert "mcp_tool_one" not in output
 
 def test_render_mcp_invalid_json(monkeypatch, tmp_path):
     """Handle invalid MCP config JSON gracefully."""

@@ -2,6 +2,7 @@
 """Task planning and orchestration loop for Meeseeks."""
 
 # Standard library modules
+import json
 import os
 import warnings
 from collections.abc import Callable
@@ -17,6 +18,7 @@ from pydantic.v1 import BaseModel, Field
 
 from core.classes import ActionStep, OrchestrationState, TaskQueue, get_task_master_examples
 from core.common import (
+    format_action_argument,
     get_logger,
     get_mock_speaker,
     get_system_prompt,
@@ -40,7 +42,7 @@ from core.permissions import (
 )
 from core.session_store import SessionStore
 from core.token_budget import get_token_budget
-from core.tool_registry import ToolRegistry, load_registry
+from core.tool_registry import ToolRegistry, ToolSpec, load_registry
 from core.types import ActionStepPayload, Event, EventRecord
 
 logging = get_logger(name="core.task_master")
@@ -54,6 +56,11 @@ load_dotenv()
 def _event_payload_text(event: EventRecord) -> str:
     payload = event.get("payload", "")
     if isinstance(payload, dict):
+        if "action_argument" in payload:
+            payload = dict(payload)
+            payload["action_argument"] = format_action_argument(
+                payload.get("action_argument")
+            )
         return str(
             payload.get("text")
             or payload.get("message")
@@ -72,6 +79,111 @@ def _render_event_lines(events: list[EventRecord]) -> str:
             continue
         lines.append(f"- {event_type}: {text}")
     return "\n".join(lines).strip()
+
+
+def _render_tool_schema_line(spec: ToolSpec) -> str | None:
+    schema = spec.metadata.get("schema") if spec.metadata else None
+    if not isinstance(schema, dict):
+        return None
+    required = schema.get("required") or []
+    properties = schema.get("properties") or {}
+    if not isinstance(properties, dict):
+        properties = {}
+    field_names = list(required) or list(properties.keys())
+    if not field_names:
+        return None
+    parts: list[str] = []
+    for name in field_names:
+        if not isinstance(name, str):
+            continue
+        prop = properties.get(name, {})
+        if not isinstance(prop, dict):
+            prop = {}
+        piece = name
+        prop_type = prop.get("type")
+        if isinstance(prop_type, str):
+            piece += f": {prop_type}"
+        description = prop.get("description")
+        if isinstance(description, str) and description:
+            piece += f" - {description}"
+        parts.append(piece)
+    if not parts:
+        return None
+    return f"- {spec.tool_id}: " + "; ".join(parts)
+
+
+def _coerce_mcp_action_argument(
+    action_step: ActionStep,
+    spec: ToolSpec,
+) -> str | None:
+    if spec.kind != "mcp":
+        return None
+    schema = spec.metadata.get("schema") if spec.metadata else None
+    if not isinstance(schema, dict):
+        return None
+    required = schema.get("required") or []
+    properties = schema.get("properties") or {}
+    if not isinstance(properties, dict):
+        properties = {}
+    expected_fields = list(required) or list(properties.keys())
+
+    argument = action_step.action_argument
+    if isinstance(argument, str):
+        stripped = argument.strip()
+        if stripped.startswith("{") and stripped.endswith("}"):
+            try:
+                parsed = json.loads(stripped)
+            except json.JSONDecodeError:
+                parsed = None
+            if isinstance(parsed, dict):
+                action_step.action_argument = parsed
+                argument = parsed
+        if isinstance(argument, str):
+            if expected_fields:
+                preferred_fields = ["query", "question", "input", "text", "q"]
+                target_field = None
+                if len(expected_fields) == 1:
+                    target_field = expected_fields[0]
+                else:
+                    for preferred in preferred_fields:
+                        if preferred in expected_fields:
+                            target_field = preferred
+                            break
+                if target_field:
+                    action_step.action_argument = {target_field: argument}
+                    return None
+            fields = ", ".join(expected_fields) if expected_fields else "schema-defined fields"
+            return f"Expected JSON object with fields: {fields}."
+
+    if isinstance(argument, dict):
+        if required:
+            missing = [name for name in required if name not in argument]
+            if missing:
+                if len(required) == 1 and len(argument) == 1:
+                    required_field = required[0]
+                    value = next(iter(argument.values()))
+                    prop = properties.get(required_field, {})
+                    if (
+                        isinstance(prop, dict)
+                        and prop.get("type") == "array"
+                        and isinstance(value, str)
+                    ):
+                        items = prop.get("items")
+                        if isinstance(items, dict) and items.get("type") == "string":
+                            value = [value]
+                    if (
+                        isinstance(prop, dict)
+                        and prop.get("type") == "string"
+                        and isinstance(value, list)
+                        and len(value) == 1
+                    ):
+                        value = value[0]
+                    action_step.action_argument = {required_field: value}
+                    return None
+                return f"Missing required fields: {', '.join(missing)}."
+        return None
+
+    return "Unsupported action_argument type for MCP tool."
 
 
 def _serialize_action_step(step: ActionStep) -> ActionStepPayload:
@@ -253,7 +365,8 @@ def _reflect_on_step(
         return (prompt | model | parser).invoke(
             {
                 "title": action_step.title or action_step.action_consumer,
-                "objective": action_step.objective or action_step.action_argument,
+                "objective": action_step.objective
+                or format_action_argument(action_step.action_argument),
                 "checklist": "; ".join(action_step.execution_checklist or []),
                 "expected": action_step.expected_output or "Not specified",
                 "result": result_text,
@@ -265,24 +378,76 @@ def _reflect_on_step(
 
 
 def _build_direct_response(message: str) -> TaskQueue:
-    """Create a TaskQueue with a direct talk-to-user response.
+    """Create a TaskQueue with a direct response payload.
 
     Args:
         message: Plaintext response to return to the user.
 
     Returns:
-        TaskQueue populated with a single talk-to-user action and result.
+        TaskQueue populated with the response result.
     """
-    step = ActionStep(
-        action_consumer="talk_to_user_tool",
-        action_type="set",
-        action_argument=message,
-    )
-    task_queue = TaskQueue(action_steps=[step])
-    MockSpeaker = get_mock_speaker()
-    step.result = MockSpeaker(content=message)
+    task_queue = TaskQueue(action_steps=[])
     task_queue.task_result = message
     return task_queue
+
+
+def _collect_tool_outputs(task_queue: TaskQueue) -> list[str]:
+    outputs: list[str] = []
+    for step in task_queue.action_steps:
+        if step.result is None:
+            continue
+        content = getattr(step.result, "content", step.result)
+        outputs.append(str(content))
+    return outputs
+
+
+def _should_synthesize_response(task_queue: TaskQueue) -> bool:
+    if not task_queue.action_steps:
+        return True
+    return bool(_collect_tool_outputs(task_queue))
+
+
+def _synthesize_response(
+    user_query: str,
+    tool_outputs: list[str],
+    model_name: str | None,
+    session_summary: str | None,
+    recent_events: list[EventRecord] | None,
+    selected_events: list[EventRecord] | None,
+    tool_registry: ToolRegistry | None,
+) -> str:
+    if model_name is None:
+        model_name = os.getenv("DEFAULT_MODEL", "gpt-3.5-turbo")
+    system_prompt = _augment_system_prompt(
+        get_system_prompt("response-synthesizer"),
+        tool_registry,
+        session_summary=session_summary,
+        recent_events=recent_events,
+        selected_events=selected_events,
+    )
+    prompt = ChatPromptTemplate(
+        messages=[
+            SystemMessage(content=system_prompt),
+            HumanMessagePromptTemplate.from_template(
+                "User request: {user_query}\n\nTool outputs:\n{tool_outputs}\n\n"
+                "Respond to the user using the tool outputs."
+            ),
+        ],
+        input_variables=["user_query", "tool_outputs"],
+    )
+    model = build_chat_model(
+        model_name=model_name,
+        temperature=0.3,
+        openai_api_base=os.getenv("OPENAI_API_BASE"),
+    )
+    output = (prompt | model).invoke(
+        {
+            "user_query": user_query.strip(),
+            "tool_outputs": "\n".join(f"- {item}" for item in tool_outputs),
+        }
+    )
+    content = getattr(output, "content", output)
+    return str(content).strip()
 
 
 def _augment_system_prompt(
@@ -324,6 +489,15 @@ def _augment_system_prompt(
                 f"- {tool['tool_id']}: {tool['description']}" for tool in catalog
             )
             sections.append(f"Available tools:\n{tool_lines}")
+        schema_lines: list[str] = []
+        for spec in tool_registry.list_specs():
+            if spec.kind != "mcp":
+                continue
+            line = _render_tool_schema_line(spec)
+            if line:
+                schema_lines.append(line)
+        if schema_lines:
+            sections.append("MCP tool input schemas:\n" + "\n".join(schema_lines))
         tool_prompts: list[str] = []
         for spec in tool_registry.list_specs():
             if not spec.prompt_path:
@@ -507,6 +681,13 @@ def run_action_plan(
         hook_manager = default_hook_manager()
 
     results: list[str] = []
+    task_queue.last_error = None
+
+    def _record_failure(step: ActionStep, reason: str) -> None:
+        note = f"{step.action_consumer} ({step.action_type}) failed"
+        if reason:
+            note = f"{note}: {reason}"
+        task_queue.last_error = note
 
     for idx, action_step in enumerate(task_queue.action_steps):
         logging.debug("Processing ActionStep: {}", action_step)
@@ -559,7 +740,30 @@ def run_action_plan(
             logging.error(
                 "No tool found for consumer: {}", action_step.action_consumer
             )
+            _record_failure(action_step, "tool not available")
             continue
+
+        spec = tool_registry.get_spec(action_step.action_consumer)
+        if spec is not None:
+            schema_error = _coerce_mcp_action_argument(action_step, spec)
+            if schema_error:
+                logging.error("Invalid MCP tool input: {}", schema_error)
+                _record_failure(action_step, schema_error)
+                action_step.result = None
+                if event_logger is not None:
+                    event_logger(
+                        {
+                            "type": "tool_result",
+                            "payload": {
+                                "action_consumer": action_step.action_consumer,
+                                "action_type": action_step.action_type,
+                                "action_argument": action_step.action_argument,
+                                "result": None,
+                                "error": schema_error,
+                            },
+                        }
+                    )
+                continue
 
         try:
             action_result = tool.run(action_step)
@@ -605,6 +809,7 @@ def run_action_plan(
                 )
         except Exception as e:
             logging.error("Error processing action step: {}", e)
+            _record_failure(action_step, str(e))
             tool_registry.disable(action_step.action_consumer, f"Runtime error: {e}")
             action_step.result = None
             if event_logger is not None:
@@ -620,6 +825,10 @@ def run_action_plan(
                         },
                     }
                 )
+            MockSpeaker = get_mock_speaker()
+            hook_manager.run_post_tool_use(
+                action_step, MockSpeaker(content=f"Tool error: {e}")
+            )
 
     task_queue.task_result = " ".join(results).strip()
 
@@ -763,7 +972,7 @@ def orchestrate_session(
     context_events = [
         event
         for event in events
-        if event.get("type") in {"user", "tool_result"}
+        if event.get("type") in {"user", "assistant", "tool_result"}
     ]
     recent_events = context_events[-recent_limit:] if recent_limit > 0 else []
     candidate_events = (
@@ -824,15 +1033,19 @@ def orchestrate_session(
             break
 
         if iteration < max_iters - 1:
+            failure_note = ""
+            if task_queue.last_error:
+                failure_note = f"Last tool failure: {task_queue.last_error}\n"
             revised_query = (
                 f"{user_query}\n\nPrevious tool results:\n{task_queue.task_result or ''}\n"
+                f"{failure_note}"
                 "Please revise the action plan to resolve remaining tasks."
             )
             events = session_store.load_transcript(session_id)
             context_events = [
                 event
                 for event in events
-                if event.get("type") in {"user", "tool_result"}
+                if event.get("type") in {"user", "assistant", "tool_result"}
             ]
             recent_events = context_events[-recent_limit:] if recent_limit > 0 else []
             candidate_events = (
@@ -869,6 +1082,23 @@ def orchestrate_session(
                     "payload": {"steps": revised_steps},
                 },
             )
+
+    if state.done and _should_synthesize_response(task_queue):
+        tool_outputs = _collect_tool_outputs(task_queue)
+        response = _synthesize_response(
+            user_query=user_query,
+            tool_outputs=tool_outputs,
+            model_name=resolved_model_name,
+            session_summary=state.summary,
+            recent_events=recent_events,
+            selected_events=selected_events,
+            tool_registry=tool_registry,
+        )
+        task_queue.task_result = response
+        session_store.append_event(
+            session_id,
+            {"type": "assistant", "payload": {"text": response}},
+        )
 
     if not state.done:
         state.done_reason = "max_iterations_reached"

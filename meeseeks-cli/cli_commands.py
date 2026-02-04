@@ -22,7 +22,7 @@ from cli_dialogs import DialogFactory  # noqa: E402
 
 from core.task_master import orchestrate_session  # noqa: E402
 from core.token_budget import get_token_budget  # noqa: E402
-from core.tool_registry import ToolRegistry, load_registry  # noqa: E402
+from core.tool_registry import ToolRegistry, ToolSpec, load_registry  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -275,8 +275,8 @@ def _refresh_mcp_registry(context: CommandContext) -> None:
 
 def _maybe_select_mcp_specs(
     context: CommandContext,
-    mcp_specs: list[object],
-) -> list[object] | None:
+    mcp_specs: list[ToolSpec],
+) -> list[ToolSpec] | None:
     if context.prompt_func is None:
         return None
     dialogs = DialogFactory(console=context.console, prompt_func=context.prompt_func)
@@ -471,7 +471,7 @@ def _handle_model_wizard(
 def _render_mcp(
     console: Console,
     tool_registry: ToolRegistry,
-    mcp_specs: list[object] | None = None,
+    mcp_specs: list[ToolSpec] | None = None,
 ) -> None:
     config_path = os.getenv("MESEEKS_MCP_CONFIG")
     if config_path and os.path.exists(config_path):

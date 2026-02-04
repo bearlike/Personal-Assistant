@@ -11,13 +11,7 @@ from core.permissions import (
 def test_default_policy_allows_get():
     """Allow default get actions under permissive policy."""
     policy = PermissionPolicy(
-        rules=[
-            PermissionRule(
-                tool_id="talk_to_user_tool",
-                action_type="*",
-                decision=PermissionDecision.ALLOW,
-            )
-        ],
+        rules=[],
         default_by_action={"get": PermissionDecision.ALLOW, "set": PermissionDecision.ASK},
         default_decision=PermissionDecision.ASK,
     )

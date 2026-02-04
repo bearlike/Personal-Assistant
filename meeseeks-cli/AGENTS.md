@@ -1,33 +1,37 @@
-# Meeseeks CLI — UI/Terminal Guidance
+# Meeseeks CLI - UI/Terminal Guidance
 
-Scope: this file applies to the `meeseeks-cli/` package only. It covers the terminal UI (Rich + Textual) and how CLI output is produced.
+Scope: this file applies to the `meeseeks-cli/` package only. It covers the terminal UI (renderer + dialog toolkit) and how CLI output is produced.
 
 ## Goals (UI)
 - Keep the terminal UI simple, fast, and readable.
-- Prefer built-in components from Rich/Textual over custom rendering.
+- Prefer built-in components from the rendering/dialog toolkits over custom rendering.
 - Stay DRY/KISS: build reusable UI helpers instead of ad‑hoc formatting.
 - Preserve terminal scrollback (no full-screen takeovers).
 
 ## Rendering Pipeline (How we produce output)
 - Entry point: `meeseeks-cli/cli_master.py` (`run_cli`).
-- Rendering is **Rich**-based and printed via a single `Console` instance.
+- Rendering is done via a single console renderer instance.
 - High-level sections:
-  - Ready panel with model/base URL (within the same border).
-  - Action plan checklist (Panel + Text + Group).
-  - Tool results as cards (Panel + Columns).
-  - Response panel (Markdown in a bold border).
-- Logging is gated by `--debug` and themed darker for CLI runs.
+  - Startup header panel plus a ready line with session info.
+- Action plan checklist (panel + text + group).
+- Tool results as cards (panel + columns).
+- Response panel (Markdown in a bold border).
+- Logging is gated by `-v/--verbose` and themed darker for CLI runs.
+- Tool execution shows a lightweight spinner while a tool is running.
 
 ### Section styles (keep consistent)
 - Action Plan: checklist in a panel titled `:clipboard: Action Plan`, border `cyan`.
 - Tool Results: per-tool panels, title prefix `:wrench:`, border `magenta`.
 - Response: `:speech_balloon: Response`, border `bold green`.
-- Tool result cards dim older steps (only the latest stays normal).
+- Tool result cards dim unless they are the current focus; outputs are collapsed unless verbose and JSON renders formatted.
 
 If you change any of these, update this file.
 
-## Dialogs / Prompts (Textual)
-We use **Textual** only for interactive dialogs, not for overall output.
+## Dialogs / Prompts (Interactive Toolkit)
+We use Rich for the normal CLI rendering (header, plans, tool cards, responses).
+We use Textual only for full-screen style prompts (dialogs), not for the main output.
+Do not run Rich rendering and Textual dialogs concurrently: Textual runs a blocking app loop
+and mixing it with live Rich rendering/spinners can deadlock or break terminal state.
 
 Location: `meeseeks-cli/cli_dialogs.py`
 
@@ -38,12 +42,13 @@ Location: `meeseeks-cli/cli_dialogs.py`
 - `confirm`: yes/no
 
 Key behaviors:
-- Runs **inline** (`run(inline=True)`) to avoid clearing scrollback.
+- Runs **inline** to avoid clearing scrollback.
 - Auto-fallback to plain prompt when no TTY or `MEESEEKS_DISABLE_TEXTUAL=1`.
 - Escape/Q cancels; Enter accepts.
+- Interactive app runs are blocking; do not use them for long-lived UI in the REPL loop.
 
 ### Commands currently using dialogs
-- `/models`: Textual single-select model picker (TTY only).
+- `/models`: single-select model picker (TTY only).
 - `/tag` (no args): Text input for tag name.
 - `/fork` (no args): Text input for optional tag.
 - `/mcp select`: Multi-select to filter MCP tools displayed.
@@ -67,23 +72,30 @@ If you add a new interactive flow, use `DialogFactory` instead of writing custom
 ## Core Files (UI-related)
 - `meeseeks-cli/cli_master.py`: main loop, output sections, startup panel.
 - `meeseeks-cli/cli_commands.py`: commands, model wizard, MCP listing.
-- `meeseeks-cli/cli_dialogs.py`: Textual dialog factory.
+- `meeseeks-cli/cli_dialogs.py`: dialog factory.
 - `meeseeks-cli/cli_context.py`: state shared across commands.
 
 ## Environment knobs (UI-relevant)
 - `OPENAI_API_BASE` / `OPENAI_BASE_URL`: printed in the ready panel.
 - `DEFAULT_MODEL` / `ACTION_PLAN_MODEL`: used when `--model` is not set.
-- `MEESEEKS_DISABLE_TEXTUAL=1`: disable Textual dialogs (force fallback).
-- `MEESEEKS_CLI=1`: set at startup to tag CLI logging.
-- `MEESEEKS_CLI_LOG_STYLE=dark`: default log styling for the CLI.
+- `MEESEEKS_DISABLE_TEXTUAL=1`: disable dialogs (force fallback).
+- `MEESEEKS_CLI=1`: set at startup to tag CLI runtime context.
+- `MEESEEKS_LOG_STYLE=dark`: default log styling for the CLI.
 - `MESEEKS_MCP_CONFIG`: MCP server config used for discovery.
 - `MESEEKS_TOOL_MANIFEST`: optional override for tool registry.
 
 ## KISS / DRY rules for UI work
 - Reuse existing render helpers and dialogs; add small helpers if needed.
 - Avoid bespoke widgets or heavy layouting unless strictly required.
-- Prefer Rich/ Textual defaults; override only when UX needs it.
+- Prefer toolkit defaults; override only when UX needs it.
 - Keep new UI logic near existing UI code (`cli_master.py`, `cli_dialogs.py`).
+
+## Orchestration + testing guardrails (CLI-facing)
+- Show tool activity clearly (plan, spinner, tool panels) before final response.
+- Do not print raw tool output as the final answer; let the core synthesize.
+- Tests should drive a real CLI flow with fake tools/LLM outputs; avoid over-mocking.
+- Keep permission prompts deterministic in tests (auto-approve or stub).
+- Treat language models as black-box APIs with non-deterministic output; avoid anthropomorphic language in docs/changes.
 
 ## Keep this file updated
 Whenever you change:

@@ -1,6 +1,10 @@
 # Meeseeks Docs
 
-Meeseeks is a personal assistant that breaks a request into small actions, runs the right tools, and replies with a clean summary. This doc gives a quick product view and how the parts fit together.
+Meeseeks is a personal assistant that breaks a request into small actions, runs the right tools, and replies with a clean summary. This doc gives a quick product view and how the parts fit together. Use the links below for setup and deep dives.
+
+- [Getting started](getting-started.md)
+- [Components](components.md)
+- [API reference](reference.md)
 
 ## Features (quick view)
 - Plan -> act -> observe loop to keep work grounded in tool results.
@@ -42,12 +46,7 @@ flowchart LR
 ```
 
 ## Installation (local)
-- Prereqs: Python 3.11+, Poetry.
-- Install deps: `poetry install`.
-- Copy `.env.example` to `.env` and set the required values.
-- Run the API: `python meeseeks-api/backend.py`.
-- Run the chat UI: `streamlit run meeseeks-chat/chat_master.py`.
-- Run the CLI: `python meeseeks-cli/cli_master.py`.
+See [getting-started.md](getting-started.md) for full setup (env, MCP, configs, and how to run each interface).
 
 ## CLI quick commands
 - `/help` show commands
@@ -60,31 +59,4 @@ flowchart LR
 - `/quit` exit the CLI
 
 ## Deployment (Docker)
-- Dockerfiles are provided for the API and chat UI.
-- Provide the same environment values as local install.
-- Persist data if you want session transcripts (`MESEEKS_SESSION_DIR`).
-- Expose the API for Home Assistant or other clients to call.
-
-## Configuration notes
-- Tool catalog can be driven by a JSON manifest via `MESEEKS_TOOL_MANIFEST` (optional override; disables auto-discovery).
-- MCP tools use:
-  - `MESEEKS_MCP_CONFIG`: server connection info (see `configs/mcp.example.json`).
-  - A manifest is auto-generated on load (cached under `~/.meeseeks/`) unless you override it.
-
-### Add MCP servers (direct)
-1. Copy `configs/mcp.example.json` and set your server URL + headers.
-2. Set `MESEEKS_MCP_CONFIG=./configs/your-mcp.json` in `.env`.
-3. Start the app once; the tool manifest is auto-discovered and cached.
-4. Optional: add `auto_approve_tools` per server to allowlist tools (the CLI writes this if you pick “Yes, always”).
-
-Advanced override:
-- If you want a custom tool list, set `MESEEKS_TOOL_MANIFEST` to your own JSON.
-
-Notes:
-- If you override the manifest, include `talk_to_user_tool` or you will lose the default reply tool.
-- MCP tool names must match the server’s advertised tool list.
-
-### Optional components
-- Langfuse observability: set `LANGFUSE_PUBLIC_KEY` + `LANGFUSE_SECRET_KEY` (or disable via `LANGFUSE_ENABLED=0`).
-- Home Assistant tools: set `HA_URL` + `HA_TOKEN` (or disable via `MESEEKS_HOME_ASSISTANT_ENABLED=0`).
-- Optional components auto-disable on init/runtime/auth errors with logs.
+See [getting-started.md](getting-started.md) for Docker setup and environment requirements.

@@ -11,7 +11,7 @@ class ActionStepPayload(TypedDict):
     """Serialized action step data sent to/from orchestration."""
     action_consumer: str
     action_type: str
-    action_argument: str
+    action_argument: str | dict[str, Any]
     title: NotRequired[str]
     objective: NotRequired[str]
     execution_checklist: NotRequired[list[str]]
@@ -35,13 +35,18 @@ class ToolResultPayload(TypedDict):
     """Payload describing the outcome of a tool invocation."""
     action_consumer: str
     action_type: str
-    action_argument: str
+    action_argument: str | dict[str, Any]
     result: str | None
     error: NotRequired[str]
 
 
 class UserPayload(TypedDict):
     """Payload describing a user message."""
+    text: str
+
+
+class AssistantPayload(TypedDict):
+    """Payload describing an assistant response."""
     text: str
 
 
@@ -57,6 +62,7 @@ EventPayload = (
     | PermissionPayload
     | ToolResultPayload
     | UserPayload
+    | AssistantPayload
     | CompletionPayload
     | dict[str, Any]
 )
@@ -76,6 +82,7 @@ class EventRecord(Event):
 __all__ = [
     "ActionPlanPayload",
     "ActionStepPayload",
+    "AssistantPayload",
     "CompletionPayload",
     "Event",
     "EventPayload",

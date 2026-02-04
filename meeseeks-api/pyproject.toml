@@ -17,7 +17,8 @@ coloredlogs = "^15.0.1"
 loguru = "^0.7.2"
 langchain-core = "^1.2.8"
 langchain-community = "^0.4.1"
-langchain-openai = "^1.1.7"
+langchain-litellm = "^0.4.0"
+litellm = "^1.81.0"
 tiktoken = "^0.7.0"
 
 [tool.poetry.group.dev.dependencies]

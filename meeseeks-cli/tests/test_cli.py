@@ -1,5 +1,6 @@
 """Tests for CLI helpers and workflows."""
 # ruff: noqa: I001
+import builtins
 import json
 import os
 import sys
@@ -10,6 +11,7 @@ sys.path.append(os.path.join(test_dir, ".."))
 sys.path.append(os.path.join(test_dir, "..", ".."))
 
 from core.classes import ActionStep, TaskQueue  # noqa: E402
+from core.common import get_mock_speaker  # noqa: E402
 from core.session_store import SessionStore  # noqa: E402
 from core.tool_registry import ToolRegistry, ToolSpec, load_registry  # noqa: E402
 from rich.console import Console  # noqa: E402
@@ -20,8 +22,16 @@ from cli_master import (  # noqa: E402
     _build_approval_callback,
     _format_steps,
     _parse_command,
+    _parse_verbosity,
     _resolve_session_id,
+    _resolve_cli_version,
     _run_query,
+    _truncate_middle,
+    _verbosity_to_level,
+    _bootstrap_cli_logging_env,
+    _format_model,
+    render_header,
+    HeaderContext,
 )
 
 
@@ -167,8 +177,8 @@ def test_run_query(monkeypatch, tmp_path):
 
     def fake_generate(*args, **kwargs):
         step = ActionStep(
-            action_consumer="talk_to_user_tool",
-            action_type="set",
+            action_consumer="home_assistant_tool",
+            action_type="get",
             action_argument="hi",
         )
         task_queue = TaskQueue(action_steps=[step])
@@ -179,8 +189,8 @@ def test_run_query(monkeypatch, tmp_path):
         captured["tool_registry"] = kwargs.get("tool_registry")
         captured["session_id"] = kwargs.get("session_id")
         step = ActionStep(
-            action_consumer="talk_to_user_tool",
-            action_type="set",
+            action_consumer="home_assistant_tool",
+            action_type="get",
             action_argument="hi",
         )
         task_queue = TaskQueue(action_steps=[step])
@@ -203,9 +213,260 @@ def test_run_query(monkeypatch, tmp_path):
     assert captured["session_id"] == session_id
 
 
+def test_run_query_renders_tool_output_and_response(monkeypatch, tmp_path):
+    """Render tool output and final response in verbose mode."""
+    store = SessionStore(root_dir=str(tmp_path))
+    session_id = store.create_session()
+    state = CliState(session_id=session_id, show_plan=False)
+    tool_registry = ToolRegistry()
+    tool_registry.register(
+        ToolSpec(
+            tool_id="mcp_tool",
+            name="MCP Tool",
+            description="Tool",
+            factory=lambda: None,
+            kind="mcp",
+        )
+    )
+    console = Console(record=True)
+
+    def fake_orchestrate(*_args, **_kwargs):
+        step = ActionStep(
+            action_consumer="mcp_tool",
+            action_type="get",
+            action_argument="payload",
+        )
+        step.result = get_mock_speaker()(content={"foo": "bar"})
+        task_queue = TaskQueue(action_steps=[step])
+        task_queue.task_result = "final response"
+        return task_queue
+
+    monkeypatch.setattr("cli_master.orchestrate_session", fake_orchestrate)
+
+    _run_query(
+        console,
+        store,
+        state,
+        tool_registry,
+        "hi",
+        types.SimpleNamespace(max_iters=1, verbose=1),
+        prompt_func=lambda _: "y",
+    )
+
+    output = console.export_text()
+    assert '"foo": "bar"' in output
+    assert "final response" in output
+
+
+def test_run_query_hides_output_when_not_verbose(monkeypatch, tmp_path):
+    """Hide tool output in non-verbose mode."""
+    store = SessionStore(root_dir=str(tmp_path))
+    session_id = store.create_session()
+    state = CliState(session_id=session_id, show_plan=False)
+    tool_registry = ToolRegistry()
+    tool_registry.register(
+        ToolSpec(
+            tool_id="mcp_tool",
+            name="MCP Tool",
+            description="Tool",
+            factory=lambda: None,
+            kind="mcp",
+        )
+    )
+    console = Console(record=True)
+
+    def fake_orchestrate(*_args, **_kwargs):
+        step = ActionStep(
+            action_consumer="mcp_tool",
+            action_type="get",
+            action_argument="payload",
+        )
+        step.result = get_mock_speaker()(content={"foo": "bar"})
+        return TaskQueue(action_steps=[step])
+
+    monkeypatch.setattr("cli_master.orchestrate_session", fake_orchestrate)
+
+    _run_query(
+        console,
+        store,
+        state,
+        tool_registry,
+        "hi",
+        types.SimpleNamespace(max_iters=1, verbose=0),
+        prompt_func=lambda _: "y",
+    )
+
+    output = console.export_text()
+    assert "output hidden" in output
+
+
+def test_run_query_renders_partial_tool_results(monkeypatch, tmp_path):
+    """Render mixed tool results when a step fails and a later step succeeds."""
+    store = SessionStore(root_dir=str(tmp_path))
+    session_id = store.create_session()
+    state = CliState(session_id=session_id, show_plan=False)
+    tool_registry = ToolRegistry()
+    tool_registry.register(
+        ToolSpec(
+            tool_id="tool_one",
+            name="Tool One",
+            description="Tool One",
+            factory=lambda: None,
+        )
+    )
+    tool_registry.register(
+        ToolSpec(
+            tool_id="tool_two",
+            name="Tool Two",
+            description="Tool Two",
+            factory=lambda: None,
+        )
+    )
+    console = Console(record=True)
+
+    def fake_orchestrate(*_args, **_kwargs):
+        first = ActionStep(
+            action_consumer="tool_one",
+            action_type="get",
+            action_argument="payload",
+        )
+        second = ActionStep(
+            action_consumer="tool_two",
+            action_type="get",
+            action_argument="payload",
+        )
+        second.result = get_mock_speaker()(content="ok")
+        queue = TaskQueue(action_steps=[first, second])
+        queue.task_result = "final response"
+        return queue
+
+    monkeypatch.setattr("cli_master.orchestrate_session", fake_orchestrate)
+
+    _run_query(
+        console,
+        store,
+        state,
+        tool_registry,
+        "hi",
+        types.SimpleNamespace(max_iters=1, verbose=1),
+        prompt_func=lambda _: "y",
+    )
+
+    output = console.export_text()
+    assert "(no result)" in output
+    assert "ok" in output
+
+
+def test_run_query_dims_tool_panels_after_response(monkeypatch, tmp_path):
+    """Disable highlight when a final response exists."""
+    store = SessionStore(root_dir=str(tmp_path))
+    session_id = store.create_session()
+    state = CliState(session_id=session_id, show_plan=False)
+    tool_registry = ToolRegistry()
+    console = Console(record=True)
+    captured: dict[str, object] = {}
+
+    def fake_orchestrate(*_args, **_kwargs):
+        step = ActionStep(
+            action_consumer="tool",
+            action_type="get",
+            action_argument="payload",
+        )
+        step.result = get_mock_speaker()(content="ok")
+        queue = TaskQueue(action_steps=[step])
+        queue.task_result = "final"
+        return queue
+
+    def fake_render(*_args, **kwargs):
+        captured["highlight_latest"] = kwargs.get("highlight_latest")
+
+    monkeypatch.setattr("cli_master.orchestrate_session", fake_orchestrate)
+    monkeypatch.setattr("cli_master._render_results_with_registry", fake_render)
+
+    _run_query(
+        console,
+        store,
+        state,
+        tool_registry,
+        "hi",
+        types.SimpleNamespace(max_iters=1, verbose=0),
+        prompt_func=lambda _: "y",
+    )
+
+    assert captured["highlight_latest"] is False
+
+
+def test_render_header_responsive_modes():
+    """Render header across width breakpoints."""
+    ctx = HeaderContext(
+        title="Meeseeks",
+        version="0.1.0",
+        status_label="Ready",
+        status_color="green",
+        model="openai/gpt-4o-mini",
+        session_id="session-123",
+        base_url="http://127.0.0.1:4136/v1",
+        langfuse_enabled=False,
+        langfuse_reason="disabled",
+        builtin_enabled=1,
+        builtin_disabled=2,
+        external_enabled=3,
+        external_disabled=1,
+    )
+
+    cases = [
+        (120, ["model", "session", "base"]),
+        (90, ["model", "session", "base"]),
+        (60, ["Langfuse:", "Tools:"]),
+    ]
+    for width, expected in cases:
+        console = Console(record=True, width=width)
+        render_header(console, ctx)
+        output = console.export_text()
+        for token in expected:
+            assert token in output
+
+
+def test_cli_bootstrap_and_format_helpers(monkeypatch):
+    """Cover CLI helper branches in a single flow."""
+    assert _truncate_middle("abcdef", 0) == ""
+    assert _truncate_middle("abcdef", 3) == "abc"
+    assert _truncate_middle("abcdef", 4) == "a...abcdef"
+    assert _parse_verbosity(["prog", "-vv"]) == 2
+    assert _parse_verbosity(["prog", "--verbose=3"]) == 3
+    assert _verbosity_to_level(0) == "WARNING"
+    assert _verbosity_to_level(1) == "DEBUG"
+    assert _verbosity_to_level(2) == "TRACE"
+
+    monkeypatch.delenv("LOG_LEVEL", raising=False)
+    _bootstrap_cli_logging_env(["prog"])
+    assert os.getenv("LOG_LEVEL") == "WARNING"
+    _bootstrap_cli_logging_env(["prog", "-vv"])
+    assert os.getenv("LOG_LEVEL") == "TRACE"
+
+    monkeypatch.setenv("VERSION", "9.9.9")
+    assert _resolve_cli_version() == "9.9.9"
+    monkeypatch.delenv("VERSION", raising=False)
+    assert _resolve_cli_version()
+
+    def _raise_os_error(*_args, **_kwargs):
+        raise OSError()
+
+    monkeypatch.setattr(builtins, "open", _raise_os_error)
+    assert _resolve_cli_version() == "0.0.0"
+    assert _format_model("gpt-4o", 10).plain == "gpt-4o"
+
+
 def test_run_cli_single_query(monkeypatch, tmp_path):
     """Execute CLI in single-query mode."""
     from cli_master import run_cli
+
+    config_path = tmp_path / "mcp.json"
+    config_path.write_text(
+        '{"servers": {"missing": {"transport": "http", "url": "http://example"}}}',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("MESEEKS_MCP_CONFIG", str(config_path))
 
     args = types.SimpleNamespace(
         query="hi",
@@ -219,19 +480,25 @@ def test_run_cli_single_query(monkeypatch, tmp_path):
         session_dir=str(tmp_path),
         history_file=str(tmp_path / "history"),
         auto_approve=False,
+        verbose=1,
     )
+
+    def fake_header(*args, **kwargs):
+        return None
 
     def fake_orchestrate(*args, **kwargs):
         step = ActionStep(
-            action_consumer="talk_to_user_tool",
-            action_type="set",
+            action_consumer="home_assistant_tool",
+            action_type="get",
             action_argument="hi",
         )
         task_queue = TaskQueue(action_steps=[step])
         task_queue.task_result = "ok"
         return task_queue
 
+    monkeypatch.setattr("cli_master.render_header", fake_header)
     monkeypatch.setattr("cli_master.orchestrate_session", fake_orchestrate)
+    monkeypatch.setattr("cli_master.load_registry", lambda: ToolRegistry())
     assert run_cli(args) == 0
 
 
@@ -265,6 +532,7 @@ def test_run_cli_interactive_quit(monkeypatch, tmp_path):
             self.calls += 1
             return "/quit"
 
+    monkeypatch.setattr("cli_master.render_header", lambda *args, **kwargs: None)
     monkeypatch.setattr("cli_master.FileHistory", DummyHistory)
     monkeypatch.setattr("cli_master.PromptSession", lambda *args, **kwargs: DummySession())
     assert run_cli(args) == 0

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Model configuration helpers for ChatOpenAI."""
+"""Model configuration helpers for ChatLiteLLM."""
 from __future__ import annotations
 
 import json
@@ -73,17 +73,25 @@ def allows_temperature(model_name: str | None, reasoning_effort: str | None) -> 
     return False
 
 
+def _resolve_litellm_model(model_name: str, openai_api_base: str | None) -> str:
+    if "/" in model_name:
+        return model_name
+    if openai_api_base:
+        return f"openai/{model_name}"
+    return model_name
+
+
 def build_chat_model(
     model_name: str,
     temperature: float,
     *,
     openai_api_base: str | None = None,
 ) -> Any:
-    """Build a ChatOpenAI model with reasoning-effort compatibility."""
+    """Build a ChatLiteLLM model with reasoning-effort compatibility."""
     try:
-        from langchain_openai import ChatOpenAI
+        from langchain_litellm import ChatLiteLLM
     except ImportError as exc:  # pragma: no cover - dependency guard
-        raise ImportError("langchain-openai is required to build ChatOpenAI") from exc
+        raise ImportError("langchain-litellm is required to build ChatLiteLLM") from exc
 
     reasoning_effort = resolve_reasoning_effort(model_name)
     allow_temp = allows_temperature(model_name, reasoning_effort)
@@ -102,15 +110,16 @@ def build_chat_model(
         model_kwargs["reasoning_effort"] = reasoning_effort
 
     kwargs: dict[str, Any] = {
-        "base_url": openai_api_base,
-        "model": model_name,
+        "model": _resolve_litellm_model(model_name, openai_api_base),
     }
+    if openai_api_base:
+        kwargs["api_base"] = openai_api_base
     if temperature_value is not None:
         kwargs["temperature"] = temperature_value
     if model_kwargs:
         kwargs["model_kwargs"] = model_kwargs
 
-    return ChatOpenAI(**kwargs)
+    return ChatLiteLLM(**kwargs)
 
 
 __all__ = [

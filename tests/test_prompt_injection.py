@@ -54,3 +54,32 @@ def test_prompt_includes_recent_and_selected_events(monkeypatch):
     )
     assert "Recent conversation" in prompt
     assert "Relevant earlier context" in prompt
+
+
+def test_prompt_includes_mcp_schema(monkeypatch, tmp_path):
+    """Include MCP tool schema hints in the prompt when available."""
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(
+        """{
+  "tools": [
+    {
+      "tool_id": "mcp_srv_tool",
+      "name": "Test Tool",
+      "description": "Test",
+      "kind": "mcp",
+      "server": "srv",
+      "tool": "ask",
+      "schema": {
+        "required": ["question"],
+        "properties": {"question": {"type": "string", "description": "Query"}}
+      }
+    }
+  ]
+}""",
+        encoding="utf-8",
+    )
+    registry = load_registry(str(manifest_path))
+    prompt = _build_prompt(registry)
+    assert "MCP tool input schemas" in prompt
+    assert "mcp_srv_tool" in prompt
+    assert "question" in prompt

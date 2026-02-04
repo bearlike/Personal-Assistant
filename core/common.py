@@ -2,6 +2,7 @@
 """Common helpers shared across the assistant runtime."""
 from __future__ import annotations
 
+import json
 import logging as logging_real
 import os
 import sys
@@ -38,16 +39,14 @@ def _resolve_log_level() -> str:
     level_name = os.getenv("LOG_LEVEL")
     if level_name:
         return level_name.strip().upper()
-    if os.getenv("MEESEEKS_CLI") == "1":
-        return "INFO"
     return "DEBUG"
 
 
 def _should_use_cli_dark_logs() -> bool:
-    return (
-        os.getenv("MEESEEKS_CLI") == "1"
-        and os.getenv("MEESEEKS_CLI_LOG_STYLE", "").lower() == "dark"
-    )
+    style = os.getenv("MEESEEKS_LOG_STYLE", "")
+    if not style:
+        style = os.getenv("MEESEEKS_CLI_LOG_STYLE", "")
+    return style.lower() == "dark"
 
 
 def _configure_logging() -> None:
@@ -73,7 +72,7 @@ def _configure_logging() -> None:
     if _should_use_cli_dark_logs():
         format_str = (
             "<dim>{time:YYYY-MM-DD HH:mm:ss} [{extra[name]}] "
-            "<level>{level}</level> {message}</dim>"
+            "<level>{level}</level> {message}{exception}</dim>"
         )
     else:
         format_str = "{time:YYYY-MM-DD HH:mm:ss} [{extra[name]}] <level>{level}</level> {message}"
@@ -147,6 +146,20 @@ def get_system_prompt(name: str = "action-planner") -> str:
     logging.debug("Getting system prompt from `{}`", system_prompt_path)
     del logging
     return system_prompt.strip()
+
+
+def format_action_argument(argument: Any) -> str:
+    """Format an action argument for logs and prompts.
+
+    Args:
+        argument: Action argument payload.
+
+    Returns:
+        String representation suitable for display.
+    """
+    if isinstance(argument, dict):
+        return json.dumps(argument, ensure_ascii=True)
+    return str(argument)
 
 
 def ha_render_system_prompt(

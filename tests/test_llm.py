@@ -32,15 +32,32 @@ def test_build_chat_model_includes_reasoning_effort(monkeypatch):
     monkeypatch.delenv("MESEEKS_REASONING_EFFORT_MODELS", raising=False)
     captured: dict[str, object] = {}
 
-    class DummyChatOpenAI:
+    class DummyChatLiteLLM:
         def __init__(self, **kwargs):
             captured.update(kwargs)
 
-    module = types.ModuleType("langchain_openai")
-    module.ChatOpenAI = DummyChatOpenAI
-    monkeypatch.setitem(sys.modules, "langchain_openai", module)
+    module = types.ModuleType("langchain_litellm")
+    module.ChatLiteLLM = DummyChatLiteLLM
+    monkeypatch.setitem(sys.modules, "langchain_litellm", module)
 
     build_chat_model(model_name="gpt-5.2", temperature=0.2, openai_api_base=None)
     model_kwargs = captured.get("model_kwargs") or {}
     assert model_kwargs.get("reasoning_effort") == "medium"
     assert "temperature" not in captured
+
+
+def test_build_chat_model_prefixes_openai_model(monkeypatch):
+    """Prefix OpenAI-compatible models when a base URL is provided."""
+    captured: dict[str, object] = {}
+
+    class DummyChatLiteLLM:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    module = types.ModuleType("langchain_litellm")
+    module.ChatLiteLLM = DummyChatLiteLLM
+    monkeypatch.setitem(sys.modules, "langchain_litellm", module)
+
+    build_chat_model(model_name="gpt-4o", temperature=0.0, openai_api_base="http://host/v1")
+    assert captured["model"] == "openai/gpt-4o"
+    assert captured["api_base"] == "http://host/v1"

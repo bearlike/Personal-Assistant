@@ -12,7 +12,7 @@ def test_default_registry(monkeypatch):
     tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
     enabled_ids = {spec.tool_id for spec in registry.list_specs()}
     assert "home_assistant_tool" in tool_ids
-    assert "talk_to_user_tool" in enabled_ids
+    assert "talk_to_user_tool" not in enabled_ids
 
 
 def test_default_registry_homeassistant_enabled(monkeypatch):
@@ -48,19 +48,6 @@ def test_registry_disables_on_factory_error():
     )
     assert spec.enabled is False
     assert "Initialization failed" in spec.metadata.get("disabled_reason", "")
-
-
-def test_registry_talk_to_user_skips_llm(monkeypatch, tmp_path):
-    """Keep TalkToUser enabled even if LLM initialization would fail."""
-    monkeypatch.setenv("CACHE_DIR", str(tmp_path))
-
-    def _boom(*_args, **_kwargs):
-        raise RuntimeError("LLM init should be skipped")
-
-    monkeypatch.setattr("core.classes.build_chat_model", _boom)
-    registry = load_registry()
-    tool = registry.get("talk_to_user_tool")
-    assert tool is not None
 
 
 def test_manifest_local_tool(tmp_path, monkeypatch):
@@ -108,7 +95,7 @@ def test_manifest_empty_falls_back(tmp_path, monkeypatch):
     tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
     enabled_ids = {spec.tool_id for spec in registry.list_specs()}
     assert "home_assistant_tool" in tool_ids
-    assert "talk_to_user_tool" in enabled_ids
+    assert "talk_to_user_tool" not in enabled_ids
 
 
 def test_auto_manifest_from_mcp_config(tmp_path, monkeypatch):
@@ -122,9 +109,15 @@ def test_auto_manifest_from_mcp_config(tmp_path, monkeypatch):
     monkeypatch.delenv("MESEEKS_TOOL_MANIFEST", raising=False)
     monkeypatch.setenv("MESEEKS_CONFIG_DIR", str(tmp_path))
 
+    manifest_path = tmp_path / "tool-manifest.auto.json"
+    manifest_path.write_text("{bad json", encoding="utf-8")
+
     monkeypatch.setattr(
-        "core.tool_registry.discover_mcp_tools",
-        lambda _config: {"srv": ["tool-a"]},
+        "core.tool_registry.discover_mcp_tool_details_with_failures",
+        lambda _config: (
+            {"srv": [{"name": " ", "schema": None}, {"name": "tool-a", "schema": None}]},
+            {},
+        ),
     )
 
     registry = load_registry()
@@ -132,3 +125,88 @@ def test_auto_manifest_from_mcp_config(tmp_path, monkeypatch):
     assert any(tool_id.startswith("mcp_srv_tool_a") for tool_id in tool_ids)
     manifest_path = tmp_path / "tool-manifest.auto.json"
     assert manifest_path.exists()
+
+
+def test_auto_manifest_marks_failed_server(tmp_path, monkeypatch):
+    """Disable cached MCP tools when discovery fails."""
+    config_path = tmp_path / "mcp.json"
+    config_path.write_text(
+        '{"servers": {"srv": {"transport": "http", "url": "http://example"}}}',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("MESEEKS_MCP_CONFIG", str(config_path))
+    monkeypatch.delenv("MESEEKS_TOOL_MANIFEST", raising=False)
+    monkeypatch.setenv("MESEEKS_CONFIG_DIR", str(tmp_path))
+
+    manifest_path = tmp_path / "tool-manifest.auto.json"
+    manifest_path.write_text(json.dumps({"tools": "bad"}), encoding="utf-8")
+
+    monkeypatch.setattr(
+        "core.tool_registry.discover_mcp_tool_details_with_failures",
+        lambda _config: ({}, {"srv": RuntimeError("boom")}),
+    )
+    monkeypatch.setattr(
+        "core.tool_registry._build_manifest_payload",
+        lambda _tools: {"tools": "bad"},
+    )
+
+    load_registry()
+
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "tools": [
+                    "bad",
+                    {"name": "No id"},
+                    {
+                        "tool_id": "local_tool",
+                        "name": "Local Tool",
+                        "description": "Local",
+                        "kind": "local",
+                        "enabled": True,
+                    },
+                    {
+                        "tool_id": "mcp_other_tool",
+                        "name": "Other Tool",
+                        "description": "Other",
+                        "kind": "mcp",
+                        "server": "other",
+                        "tool": "tool-other",
+                        "enabled": True,
+                    },
+                    {
+                        "tool_id": "",
+                        "name": "Missing ID",
+                        "description": "Missing",
+                        "kind": "mcp",
+                        "server": "srv",
+                        "tool": "tool-missing",
+                        "enabled": True,
+                    },
+                    {
+                        "tool_id": "mcp_srv_tool_a",
+                        "name": "Tool A",
+                        "description": "Test tool",
+                        "kind": "mcp",
+                        "server": "srv",
+                        "tool": "tool-a",
+                        "enabled": True,
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        "core.tool_registry._build_manifest_payload",
+        lambda _tools: {"tools": [{"tool_id": "mcp_srv_tool_a"}, {"name": "bad"}, "bad"]},
+    )
+
+    registry = load_registry()
+    spec = next(
+        spec for spec in registry.list_specs(include_disabled=True)
+        if spec.tool_id == "mcp_srv_tool_a"
+    )
+    assert spec.enabled is False
+    assert "Discovery failed" in spec.metadata.get("disabled_reason", "")
