@@ -25,12 +25,6 @@ class ComponentStatus:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-def _env_truthy(value: str | None) -> bool:
-    if value is None:
-        return False
-    return value.strip().lower() in {"1", "true", "yes", "on"}
-
-
 def _env_falsey(value: str | None) -> bool:
     if value is None:
         return False

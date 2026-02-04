@@ -169,14 +169,12 @@ def format_action_argument(argument: Any) -> str:
 
 def ha_render_system_prompt(
     all_entities: Any | None = None,
-    env: str = "prompts",
     name: str = "homeassistant-set-state",
 ) -> str:
     """Render the Home Assistant Jinja2 system prompt.
 
     Args:
         all_entities: Optional entity list for template substitution.
-        env: Template root directory name.
         name: Template file name without extension.
 
     Returns:

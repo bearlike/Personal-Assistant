@@ -671,14 +671,3 @@ class HomeAssistant(AbstractTool):
         MockSpeaker = get_mock_speaker()
         return MockSpeaker(content=cleaned_message)
 
-
-def test_homeassistant() -> HomeAssistant:
-    """Test the HomeAssistant class.
-
-    Returns:
-        Initialized HomeAssistant instance after a test call.
-    """
-    ha = HomeAssistant()
-    ha.update_cache()
-    ha.call_service("scene", "turn_on", "scene.strip_lights_white")
-    return ha

@@ -175,26 +175,6 @@ class OrchestrationState(BaseModel):
 class AbstractTool(abc.ABC):
     """Abstract base class for tools, providing common features and methods."""
 
-    def _setup_cache_dir(self, name: str) -> str:
-        """Set up and return the cache directory path.
-
-        Args:
-            name: Tool name used to construct the cache path.
-
-        Returns:
-            Absolute path to the cache directory.
-
-        Raises:
-            ValueError: If CACHE_DIR is not configured.
-        """
-        root_cache_dir = os.getenv("CACHE_DIR")
-        if not root_cache_dir:
-            raise ValueError("CACHE_DIR environment variable is not set.")
-        cache_path = os.path.join(
-            root_cache_dir, "..", ".cache", f"{name.lower().replace(' ', '_')}_tool")
-        os.makedirs(cache_path, exist_ok=True)
-        return os.path.abspath(cache_path)
-
     def __init__(
         self,
         name: str,
