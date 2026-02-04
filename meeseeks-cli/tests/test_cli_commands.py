@@ -114,9 +114,6 @@ def test_command_automatic_confirm(monkeypatch, tmp_path):
         def __init__(self, *args, **kwargs):
             pass
 
-        def can_use_textual(self):
-            return True
-
         def confirm(self, *args, **kwargs):
             return True
 
@@ -279,9 +276,6 @@ def test_command_mcp_selects_single_tool(monkeypatch, tmp_path):
     class DummyDialogs:
         def __init__(self, *args, **kwargs):
             pass
-
-        def can_use_textual(self):
-            return True
 
         def select_one(self, _title, _options, **_kwargs):
             return "mcp_tool_two"

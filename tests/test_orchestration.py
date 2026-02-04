@@ -141,17 +141,17 @@ def test_orchestrate_session_replans_on_failure(monkeypatch, tmp_path):
     assert "Last tool failure:" in captured["query"]
 
 
-def test_orchestrate_session_replans_after_real_failure(monkeypatch, tmp_path):
-    """Include real tool failure details in the replan prompt."""
+def test_orchestrate_session_schema_replan_and_context(monkeypatch, tmp_path):
+    """Exercise schema rendering, event formatting, and replan failures together."""
     session_store = SessionStore(root_dir=str(tmp_path))
     session_id = session_store.create_session()
-    captured = {}
+    captured: dict[str, str] = {}
 
+    registry = ToolRegistry()
     class DummyTool:
         def run(self, _step):
             return get_mock_speaker()(content="ok")
 
-    registry = ToolRegistry()
     registry.register(
         ToolSpec(
             tool_id="mcp_bad_schema",
@@ -162,35 +162,137 @@ def test_orchestrate_session_replans_after_real_failure(monkeypatch, tmp_path):
             metadata={
                 "schema": {
                     "required": ["query"],
-                    "properties": {"query": {"type": "string"}},
+                    "properties": "bad",
                 }
             },
         )
     )
+    registry.register(
+        ToolSpec(
+            tool_id="mcp_prop_bad",
+            name="Prop bad tool",
+            description="Tool with mixed schema properties",
+            factory=lambda: DummyTool(),
+            kind="mcp",
+            metadata={
+                "schema": {
+                    "properties": {
+                        "other": "bad",
+                        "query": {"type": "string", "description": "Search query"},
+                    }
+                }
+            },
+        )
+    )
+    registry.register(
+        ToolSpec(
+            tool_id="mcp_field_non_str",
+            name="Non-str field tool",
+            description="Schema with non-string field name",
+            factory=lambda: DummyTool(),
+            kind="mcp",
+            metadata={"schema": {"properties": {1: {"type": "string"}}}},
+        )
+    )
+    registry.register(
+        ToolSpec(
+            tool_id="mcp_schema_bad",
+            name="Schema bad tool",
+            description="Schema is not a dict",
+            factory=lambda: DummyTool(),
+            kind="mcp",
+            metadata={"schema": "oops"},
+        )
+    )
+    registry.register(
+        ToolSpec(
+            tool_id="mcp_no_preferred",
+            name="No preferred fields",
+            description="Schema without preferred fields",
+            factory=lambda: DummyTool(),
+            kind="mcp",
+            metadata={
+                "schema": {
+                    "properties": {"alpha": {"type": "string"}, "beta": {"type": "string"}},
+                }
+            },
+        )
+    )
+
+    session_store.append_event(
+        session_id,
+        {"type": "tool_result", "payload": {"action_argument": {"foo": "bar"}}},
+    )
+    session_store.append_event(
+        session_id,
+        {"type": "tool_result", "payload": {"action_argument": "plain"}},
+    )
+
     call_count = Counter()
 
-    def _first_step():
-        return ActionStep(
-            action_consumer="mcp_bad_schema",
-            action_type="get",
-            action_argument={"foo": "bar", "baz": "qux"},
-        )
-
-    def fake_generate(*_args, **kwargs):
+    def fake_model(messages):
+        if hasattr(messages, "to_messages"):
+            messages = messages.to_messages()
         call_count.bump()
-        if call_count.count == 2:
-            captured["query"] = kwargs.get("user_query")
-            return TaskQueue(action_steps=[])
-        return TaskQueue(action_steps=[_first_step()])
+        system = "\n".join(
+            msg.content for msg in messages if getattr(msg, "content", None)
+        )
+        if call_count.count == 1:
+            captured["system"] = system
+        else:
+            captured["query"] = messages[-1].content
+        if call_count.count == 1:
+            payload = {
+                "action_steps": [
+                    {
+                        "action_consumer": "mcp_bad_schema",
+                        "action_type": "get",
+                        "action_argument": {"foo": "bar", "baz": "qux"},
+                    },
+                    {
+                        "action_consumer": "mcp_prop_bad",
+                        "action_type": "get",
+                        "action_argument": '{"query": "ok"}',
+                    },
+                    {
+                        "action_consumer": "mcp_prop_bad",
+                        "action_type": "get",
+                        "action_argument": "{bad}",
+                    },
+                    {
+                        "action_consumer": "mcp_schema_bad",
+                        "action_type": "get",
+                        "action_argument": "ok",
+                    },
+                    {
+                        "action_consumer": "mcp_bad_schema",
+                        "action_type": "get",
+                        "action_argument": {"foo": "bar"},
+                    },
+                    {
+                        "action_consumer": "mcp_no_preferred",
+                        "action_type": "get",
+                        "action_argument": "plain",
+                    },
+                ]
+            }
+        else:
+            payload = {"action_steps": []}
+        return json.dumps(payload)
+
+    monkeypatch.setattr(
+        task_master,
+        "build_chat_model",
+        lambda **_kwargs: RunnableLambda(fake_model),
+    )
+    monkeypatch.setattr(task_master, "_should_synthesize_response", lambda *_a, **_k: False)
+    monkeypatch.setenv("MEESEEKS_CONTEXT_SELECTION", "0")
 
     policy = PermissionPolicy(
         rules=[],
         default_by_action={"get": PermissionDecision.ALLOW, "set": PermissionDecision.ALLOW},
         default_decision=PermissionDecision.ALLOW,
     )
-
-    monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
-    monkeypatch.setattr(task_master, "_should_synthesize_response", lambda *_a, **_k: False)
 
     task_master.orchestrate_session(
         "hello",
@@ -202,8 +304,10 @@ def test_orchestrate_session_replans_after_real_failure(monkeypatch, tmp_path):
         approval_callback=lambda *_args: True,
     )
 
+    assert '"foo": "bar"' in captured["system"]
+    assert "query: string - Search query" in captured["system"]
     assert "Last tool failure:" in captured["query"]
-    assert "Missing required fields: query" in captured["query"]
+    assert "Expected JSON object with fields" in captured["query"]
 
 
 def test_run_action_plan_records_last_error():
@@ -249,42 +353,82 @@ def test_run_action_plan_missing_tool_records_last_error():
 
 
 def test_run_action_plan_coerces_mcp_string_payload():
-    """Coerce string payloads into schema-shaped dicts for MCP tools."""
-    called = Counter()
-    captured = {}
+    """Coerce MCP payloads while handling array and scalar conversions."""
+    captured = []
 
     class DummyTool:
         def run(self, step):
-            called.bump()
-            captured["argument"] = step.action_argument
+            captured.append(step.action_argument)
             return get_mock_speaker()(content="ok")
 
     registry = ToolRegistry()
     registry.register(
         ToolSpec(
-            tool_id="mcp_srv_tool",
-            name="MCP Tool",
-            description="Test tool",
+            tool_id="mcp_array_tool",
+            name="Array MCP Tool",
+            description="Array schema tool",
             factory=lambda: DummyTool(),
             kind="mcp",
             metadata={
                 "schema": {
-                    "required": ["question"],
-                    "properties": {"question": {"type": "string"}},
+                    "required": ["query"],
+                    "properties": {"query": {"type": "array", "items": {"type": "string"}}},
                 }
             },
         )
     )
-    step = ActionStep(
-        action_consumer="mcp_srv_tool",
-        action_type="get",
-        action_argument="Who is Krishnakanth?",
+    registry.register(
+        ToolSpec(
+            tool_id="mcp_string_tool",
+            name="String MCP Tool",
+            description="String schema tool",
+            factory=lambda: DummyTool(),
+            kind="mcp",
+            metadata={
+                "schema": {
+                    "required": ["query"],
+                    "properties": {"query": {"type": "string"}},
+                }
+            },
+        )
     )
-    queue = TaskQueue(action_steps=[step])
+    registry.register(
+        ToolSpec(
+            tool_id="mcp_bad_tool",
+            name="Bad MCP Tool",
+            description="Unsupported payload type",
+            factory=lambda: DummyTool(),
+            kind="mcp",
+            metadata={
+                "schema": {
+                    "required": ["query"],
+                    "properties": {"query": {"type": "string"}},
+                }
+            },
+        )
+    )
+    steps = [
+        ActionStep(
+            action_consumer="mcp_array_tool",
+            action_type="get",
+            action_argument={"foo": "value"},
+        ),
+        ActionStep(
+            action_consumer="mcp_string_tool",
+            action_type="get",
+            action_argument={"foo": ["value"]},
+        ),
+        ActionStep.construct(
+            action_consumer="mcp_bad_tool",
+            action_type="get",
+            action_argument=["bad"],
+        ),
+    ]
+    queue = TaskQueue(action_steps=steps)
     task_master.run_action_plan(queue, tool_registry=registry)
-    assert called.count == 1
-    assert captured["argument"] == {"question": "Who is Krishnakanth?"}
-    assert queue.action_steps[0].result is not None
+    assert captured == [{"query": ["value"]}, {"query": "value"}]
+    assert queue.last_error is not None
+    assert "Unsupported action_argument type" in queue.last_error
 
 
 def test_orchestrate_session_passes_summary(monkeypatch, tmp_path):
@@ -316,6 +460,41 @@ def test_orchestrate_session_passes_summary(monkeypatch, tmp_path):
     )
 
     assert captured["summary"] == "previous summary"
+
+
+def test_response_synthesis_helpers(monkeypatch):
+    """Exercise tool output collection and synthesis defaults."""
+    queue = TaskQueue(
+        action_steps=[
+            ActionStep(
+                action_consumer="tool",
+                action_type="get",
+                action_argument="x",
+                result=None,
+            )
+        ]
+    )
+    assert task_master._collect_tool_outputs(queue) == []
+    assert task_master._should_synthesize_response(TaskQueue(action_steps=[])) is True
+
+    def _fake_model(_inputs):
+        return get_mock_speaker()(content="synthesized")
+
+    monkeypatch.setattr(
+        task_master,
+        "build_chat_model",
+        lambda **_kwargs: RunnableLambda(_fake_model),
+    )
+    result = task_master._synthesize_response(
+        user_query="hi",
+        tool_outputs=["output"],
+        model_name=None,
+        session_summary=None,
+        recent_events=None,
+        selected_events=None,
+        tool_registry=None,
+    )
+    assert result == "synthesized"
 
 
 def test_orchestrate_session_updates_summary_on_memory_keyword(monkeypatch, tmp_path):

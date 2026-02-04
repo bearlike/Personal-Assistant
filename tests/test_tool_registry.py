@@ -109,9 +109,15 @@ def test_auto_manifest_from_mcp_config(tmp_path, monkeypatch):
     monkeypatch.delenv("MESEEKS_TOOL_MANIFEST", raising=False)
     monkeypatch.setenv("MESEEKS_CONFIG_DIR", str(tmp_path))
 
+    manifest_path = tmp_path / "tool-manifest.auto.json"
+    manifest_path.write_text("{bad json", encoding="utf-8")
+
     monkeypatch.setattr(
         "core.tool_registry.discover_mcp_tool_details_with_failures",
-        lambda _config: ({"srv": [{"name": "tool-a", "schema": None}]}, {}),
+        lambda _config: (
+            {"srv": [{"name": " ", "schema": None}, {"name": "tool-a", "schema": None}]},
+            {},
+        ),
     )
 
     registry = load_registry()
@@ -133,10 +139,50 @@ def test_auto_manifest_marks_failed_server(tmp_path, monkeypatch):
     monkeypatch.setenv("MESEEKS_CONFIG_DIR", str(tmp_path))
 
     manifest_path = tmp_path / "tool-manifest.auto.json"
+    manifest_path.write_text(json.dumps({"tools": "bad"}), encoding="utf-8")
+
+    monkeypatch.setattr(
+        "core.tool_registry.discover_mcp_tool_details_with_failures",
+        lambda _config: ({}, {"srv": RuntimeError("boom")}),
+    )
+    monkeypatch.setattr(
+        "core.tool_registry._build_manifest_payload",
+        lambda _tools: {"tools": "bad"},
+    )
+
+    load_registry()
+
     manifest_path.write_text(
         json.dumps(
             {
                 "tools": [
+                    "bad",
+                    {"name": "No id"},
+                    {
+                        "tool_id": "local_tool",
+                        "name": "Local Tool",
+                        "description": "Local",
+                        "kind": "local",
+                        "enabled": True,
+                    },
+                    {
+                        "tool_id": "mcp_other_tool",
+                        "name": "Other Tool",
+                        "description": "Other",
+                        "kind": "mcp",
+                        "server": "other",
+                        "tool": "tool-other",
+                        "enabled": True,
+                    },
+                    {
+                        "tool_id": "",
+                        "name": "Missing ID",
+                        "description": "Missing",
+                        "kind": "mcp",
+                        "server": "srv",
+                        "tool": "tool-missing",
+                        "enabled": True,
+                    },
                     {
                         "tool_id": "mcp_srv_tool_a",
                         "name": "Tool A",
@@ -145,7 +191,7 @@ def test_auto_manifest_marks_failed_server(tmp_path, monkeypatch):
                         "server": "srv",
                         "tool": "tool-a",
                         "enabled": True,
-                    }
+                    },
                 ]
             }
         ),
@@ -153,8 +199,8 @@ def test_auto_manifest_marks_failed_server(tmp_path, monkeypatch):
     )
 
     monkeypatch.setattr(
-        "core.tool_registry.discover_mcp_tool_details_with_failures",
-        lambda _config: ({}, {"srv": RuntimeError("boom")}),
+        "core.tool_registry._build_manifest_payload",
+        lambda _tools: {"tools": [{"tool_id": "mcp_srv_tool_a"}, {"name": "bad"}, "bad"]},
     )
 
     registry = load_registry()

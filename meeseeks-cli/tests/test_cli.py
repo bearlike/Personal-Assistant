@@ -1,5 +1,6 @@
 """Tests for CLI helpers and workflows."""
 # ruff: noqa: I001
+import builtins
 import json
 import os
 import sys
@@ -21,8 +22,14 @@ from cli_master import (  # noqa: E402
     _build_approval_callback,
     _format_steps,
     _parse_command,
+    _parse_verbosity,
     _resolve_session_id,
+    _resolve_cli_version,
     _run_query,
+    _truncate_middle,
+    _verbosity_to_level,
+    _bootstrap_cli_logging_env,
+    _format_model,
     render_header,
     HeaderContext,
 )
@@ -409,7 +416,7 @@ def test_render_header_responsive_modes():
 
     cases = [
         (120, ["model", "session", "base"]),
-        (80, ["model", "session"]),
+        (90, ["model", "session", "base"]),
         (60, ["Langfuse:", "Tools:"]),
     ]
     for width, expected in cases:
@@ -420,9 +427,46 @@ def test_render_header_responsive_modes():
             assert token in output
 
 
+def test_cli_bootstrap_and_format_helpers(monkeypatch):
+    """Cover CLI helper branches in a single flow."""
+    assert _truncate_middle("abcdef", 0) == ""
+    assert _truncate_middle("abcdef", 3) == "abc"
+    assert _truncate_middle("abcdef", 4) == "a...abcdef"
+    assert _parse_verbosity(["prog", "-vv"]) == 2
+    assert _parse_verbosity(["prog", "--verbose=3"]) == 3
+    assert _verbosity_to_level(0) == "WARNING"
+    assert _verbosity_to_level(1) == "DEBUG"
+    assert _verbosity_to_level(2) == "TRACE"
+
+    monkeypatch.delenv("LOG_LEVEL", raising=False)
+    _bootstrap_cli_logging_env(["prog"])
+    assert os.getenv("LOG_LEVEL") == "WARNING"
+    _bootstrap_cli_logging_env(["prog", "-vv"])
+    assert os.getenv("LOG_LEVEL") == "TRACE"
+
+    monkeypatch.setenv("VERSION", "9.9.9")
+    assert _resolve_cli_version() == "9.9.9"
+    monkeypatch.delenv("VERSION", raising=False)
+    assert _resolve_cli_version()
+
+    def _raise_os_error(*_args, **_kwargs):
+        raise OSError()
+
+    monkeypatch.setattr(builtins, "open", _raise_os_error)
+    assert _resolve_cli_version() == "0.0.0"
+    assert _format_model("gpt-4o", 10).plain == "gpt-4o"
+
+
 def test_run_cli_single_query(monkeypatch, tmp_path):
     """Execute CLI in single-query mode."""
     from cli_master import run_cli
+
+    config_path = tmp_path / "mcp.json"
+    config_path.write_text(
+        '{"servers": {"missing": {"transport": "http", "url": "http://example"}}}',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("MESEEKS_MCP_CONFIG", str(config_path))
 
     args = types.SimpleNamespace(
         query="hi",
@@ -436,6 +480,7 @@ def test_run_cli_single_query(monkeypatch, tmp_path):
         session_dir=str(tmp_path),
         history_file=str(tmp_path / "history"),
         auto_approve=False,
+        verbose=1,
     )
 
     def fake_header(*args, **kwargs):
@@ -453,6 +498,7 @@ def test_run_cli_single_query(monkeypatch, tmp_path):
 
     monkeypatch.setattr("cli_master.render_header", fake_header)
     monkeypatch.setattr("cli_master.orchestrate_session", fake_orchestrate)
+    monkeypatch.setattr("cli_master.load_registry", lambda: ToolRegistry())
     assert run_cli(args) == 0
 
 

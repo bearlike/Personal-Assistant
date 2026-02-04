@@ -11,7 +11,6 @@ from tools.integration.mcp import (
     MCPToolRunner,
     _load_mcp_config,
     _prepare_mcp_input,
-    discover_mcp_tool_details,
     discover_mcp_tool_details_with_failures,
     discover_mcp_tools,
 )
@@ -86,47 +85,62 @@ def test_mcp_discovery_normalizes_config(monkeypatch):
     assert server["headers"] == {"Authorization": "Bearer token"}
 
 
-def test_mcp_discovery_includes_schema(monkeypatch):
-    """Include minimal schemas when discovering MCP tool details."""
-    class DummySchema:
-        model_fields = {"question": object()}
+def test_mcp_discovery_schema_and_runtime_failure(monkeypatch, tmp_path):
+    """Cover schema extraction and runtime error logging in one flow."""
+    config_path = tmp_path / "mcp.json"
+    config_path.write_text(
+        '{"servers": {"good": {"transport": "stdio"}, "bad": {"transport": "stdio"}}}'
+    )
+    monkeypatch.setenv("MESEEKS_MCP_CONFIG", str(config_path))
 
-        @staticmethod
-        def model_json_schema():
+    class SchemaModelJson:
+        def model_json_schema(self):
             return {
-                "required": ["question"],
-                "properties": {"question": {"type": "string", "description": "Query"}},
+                "required": "bad",
+                "properties": {"query": "bad"},
             }
 
-    class DummyTool:
-        def __init__(self, name):
-            self.name = name
-            self.args_schema = DummySchema
+    class SchemaLegacy:
+        def schema(self):
+            return {
+                "required": ["query"],
+                "properties": "bad",
+            }
 
-    class DummyClient:
-        def __init__(self, servers):
-            self.servers = servers
+    class SchemaNonDict:
+        def schema(self):
+            return "bad"
 
-        async def get_tools(self, server_name):
-            return [DummyTool("tool_one")]
+    class ToolA:
+        name = "tool_a"
+        args_schema = SchemaModelJson()
 
-    module = types.ModuleType("langchain_mcp_adapters.client")
-    module.MultiServerMCPClient = DummyClient
-    monkeypatch.setitem(sys.modules, "langchain_mcp_adapters.client", module)
+        async def ainvoke(self, _input):
+            raise DummyError()
 
-    config = {"servers": {"srv": {"transport": "stdio"}}}
-    discovered = discover_mcp_tool_details(config)
-    assert discovered["srv"][0]["name"] == "tool_one"
-    schema = discovered["srv"][0]["schema"]
-    assert schema["required"] == ["question"]
-    assert schema["properties"]["question"]["type"] == "string"
+    class ToolB:
+        name = "tool_b"
+        args_schema = SchemaLegacy()
 
+    class ToolC:
+        name = "tool_c"
+        args_schema = SchemaNonDict()
 
-def test_mcp_discovery_records_failures(monkeypatch):
-    """Capture per-server discovery failures without raising."""
-    class DummyTool:
-        def __init__(self, name):
-            self.name = name
+    class ToolD:
+        name = "tool_d"
+        args_schema = object()
+
+    class ToolE:
+        name = "tool_e"
+        args_schema = SchemaLegacy()
+
+        async def ainvoke(self, _input):
+            raise RuntimeError("plain")
+
+    class DummyError(Exception):
+        def __init__(self):
+            super().__init__("boom")
+            self.exceptions = (RuntimeError("sub1"), RuntimeError("sub2"))
 
     class DummyClient:
         def __init__(self, servers):
@@ -134,46 +148,34 @@ def test_mcp_discovery_records_failures(monkeypatch):
 
         async def get_tools(self, server_name):
             if server_name == "bad":
-                raise RuntimeError("boom")
-            return [DummyTool("tool_one")]
+                raise DummyError()
+            if server_name == "plain":
+                raise RuntimeError("plain")
+            return [ToolA(), ToolB(), ToolC(), ToolD(), ToolE()]
 
     module = types.ModuleType("langchain_mcp_adapters.client")
     module.MultiServerMCPClient = DummyClient
     monkeypatch.setitem(sys.modules, "langchain_mcp_adapters.client", module)
 
-    config = {"servers": {"good": {"transport": "stdio"}, "bad": {"transport": "stdio"}}}
-    discovered, failures = discover_mcp_tool_details_with_failures(config)
-    assert discovered["good"][0]["name"] == "tool_one"
-    assert discovered["bad"] == []
+    discovered, failures = discover_mcp_tool_details_with_failures(
+        {
+            "servers": {
+                "good": {"transport": "stdio"},
+                "bad": {"transport": "stdio"},
+                "plain": {"transport": "stdio"},
+            }
+        }
+    )
+    schema = discovered["good"][0]["schema"]
+    assert schema["required"] == []
     assert "bad" in failures
 
-
-def test_mcp_discovery_handles_dict_schema(monkeypatch):
-    """Support JSON schema dictionaries from MCP tools."""
-    class DummyTool:
-        def __init__(self, name):
-            self.name = name
-            self.args_schema = {
-                "required": ["query"],
-                "properties": {"query": {"type": "string", "description": "Search"}},
-            }
-
-    class DummyClient:
-        def __init__(self, servers):
-            self.servers = servers
-
-        async def get_tools(self, server_name):
-            return [DummyTool("tool_one")]
-
-    module = types.ModuleType("langchain_mcp_adapters.client")
-    module.MultiServerMCPClient = DummyClient
-    monkeypatch.setitem(sys.modules, "langchain_mcp_adapters.client", module)
-
-    config = {"servers": {"srv": {"transport": "stdio"}}}
-    discovered = discover_mcp_tool_details(config)
-    schema = discovered["srv"][0]["schema"]
-    assert schema["required"] == ["query"]
-    assert schema["properties"]["query"]["type"] == "string"
+    runner = MCPToolRunner(server_name="good", tool_name="tool_a")
+    with pytest.raises(DummyError):
+        asyncio.run(runner._invoke_async("hi"))
+    runner = MCPToolRunner(server_name="good", tool_name="tool_e")
+    with pytest.raises(RuntimeError):
+        asyncio.run(runner._invoke_async("hi"))
 
 
 def test_mcp_invoke_async_success(monkeypatch, tmp_path):
@@ -216,12 +218,45 @@ def test_mcp_invoke_async_success(monkeypatch, tmp_path):
             {"query": "hello"},
         ),
         (
+            types.SimpleNamespace(model_fields={"alpha": object(), "beta": object()}),
+            "hi",
+            "hi",
+        ),
+        (
             {
                 "required": ["query"],
                 "properties": {"query": {"type": "string"}},
             },
             "hello",
             {"query": "hello"},
+        ),
+        (
+            types.SimpleNamespace(__fields__={"question": object()}),
+            "hi",
+            {"question": "hi"},
+        ),
+        (
+            {
+                "required": ["query"],
+                "properties": {"query": {"type": "array", "items": {"type": "string"}}},
+            },
+            "hi",
+            {"query": ["hi"]},
+        ),
+        (
+            {"properties": "bad"},
+            "hello",
+            "hello",
+        ),
+        (
+            {"properties": {"query": {"type": "string"}}},
+            {"query": "hi"},
+            {"query": "hi"},
+        ),
+        (
+            {"properties": {"query": {"type": "string"}}},
+            123,
+            123,
         ),
     ],
 )
@@ -237,6 +272,8 @@ def test_mcp_prepare_input_parses_json_string():
     tool = types.SimpleNamespace(args_schema=None)
     payload = _prepare_mcp_input(tool, '{"question": "hi"}')
     assert payload == {"question": "hi"}
+    fallback = _prepare_mcp_input(tool, "{bad json}")
+    assert fallback == "{bad json}"
 
 
 def test_mcp_invoke_async_wraps_string_for_schema(monkeypatch, tmp_path):
