@@ -12,7 +12,7 @@ Scope: this file applies to the `meeseeks-cli/` package only. It covers the term
 - Entry point: `meeseeks-cli/cli_master.py` (`run_cli`).
 - Rendering is **Rich**-based and printed via a single `Console` instance.
 - High-level sections:
-  - Ready panel with model/base URL (within the same border).
+  - Startup header panel plus a ready line with session info.
   - Action plan checklist (Panel + Text + Group).
   - Tool results as cards (Panel + Columns).
   - Response panel (Markdown in a bold border).

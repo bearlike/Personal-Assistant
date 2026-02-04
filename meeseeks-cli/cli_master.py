@@ -14,6 +14,7 @@ from rich.columns import Columns
 from rich.console import Console, Group
 from rich.markdown import Markdown
 from rich.panel import Panel
+from rich.status import Status
 from rich.syntax import Syntax
 from rich.text import Text
 
@@ -139,6 +140,22 @@ def _resolve_display_model(model_name: str | None) -> str:
     )
 
 
+def _render_startup_header(console: Console, title: str, subtitle: str) -> None:
+    header = Text(title, style="bold cyan", justify="center")
+    body = Group(
+        header,
+        Text(subtitle, style="dim", justify="center"),
+    )
+    console.print(
+        Panel(
+            body,
+            box=box.HEAVY,
+            border_style="cyan",
+            padding=(0, 2),
+        )
+    )
+
+
 def run_cli(args: argparse.Namespace) -> int:
     """Run the CLI application loop.
 
@@ -161,12 +178,10 @@ def run_cli(args: argparse.Namespace) -> int:
     registry = get_registry()
 
     base_url = os.getenv("OPENAI_API_BASE") or os.getenv("OPENAI_BASE_URL")
-    ready_lines = [
-        Text("Meeseeks CLI ready"),
-        Text(f"Model: {_resolve_display_model(state.model_name)}", style="dim"),
-        Text(f"Base URL: {base_url or '(not set)'}", style="dim"),
-    ]
-    console.print(Panel(Group(*ready_lines), title="Meeseeks"))
+    model_name = _resolve_display_model(state.model_name)
+    subtitle = f"Model: {model_name} • Base URL: {base_url or '(not set)'}"
+    _render_startup_header(console, "Meeseeks", subtitle)
+    console.print("Meeseeks CLI ready")
     console.print(f"Session: {state.session_id}")
     console.print("Type /help for commands.\n")
 
@@ -255,7 +270,7 @@ def _run_query(
         task_queue,
         tool_registry,
         highlight_latest=not bool(task_queue.task_result),
-        verbose=args.verbose > 0,
+        verbose=getattr(args, "verbose", 0) > 0,
     )
     if task_queue.task_result:
         console.print(
@@ -401,6 +416,7 @@ def _render_results_with_registry(
 
 
 def _format_tool_output(result: object, content_style: str | None) -> Text | Syntax:
+    style = content_style or ""
     if isinstance(result, dict | list):
         return Syntax(
             json.dumps(result, indent=2, ensure_ascii=True),
@@ -422,15 +438,15 @@ def _format_tool_output(result: object, content_style: str | None) -> Text | Syn
                     theme="ansi_dark",
                     word_wrap=True,
                 )
-        return Text(result, style=content_style)
-    return Text(str(result), style=content_style)
+        return Text(result, style=style)
+    return Text(str(result), style=style)
 
 
 def _build_cli_hook_manager(
     console: Console,
     tool_registry: ToolRegistry,
 ) -> HookManager:
-    status_holder: dict[str, object] = {}
+    status_holder: dict[str, Status] = {}
     specs = _tool_specs_by_id(tool_registry)
 
     def _start_spinner(action_step: ActionStep) -> ActionStep:
