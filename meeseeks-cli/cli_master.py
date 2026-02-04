@@ -23,7 +23,7 @@ from rich.text import Text
 
 def _verbosity_to_level(verbosity: int) -> str:
     if verbosity <= 0:
-        return "INFO"
+        return "WARNING"
     if verbosity == 1:
         return "DEBUG"
     return "TRACE"
@@ -62,7 +62,7 @@ def _bootstrap_cli_logging_env(argv: list[str]) -> None:
         return
     existing_level = os.getenv("LOG_LEVEL", "").upper()
     if not existing_level:
-        os.environ["LOG_LEVEL"] = "INFO"
+        os.environ["LOG_LEVEL"] = "WARNING"
 
 
 _bootstrap_cli_logging_env(sys.argv)
