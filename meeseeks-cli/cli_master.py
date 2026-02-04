@@ -357,8 +357,6 @@ def run_cli(args: argparse.Namespace) -> int:
             log_level,
             verbosity,
         )
-    else:
-        logging.info("CLI logging set to {}.", log_level)
     store = SessionStore(root_dir=args.session_dir)
     session_id = _resolve_session_id(store, args.session, args.tag, args.fork)
     state = CliState(
