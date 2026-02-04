@@ -8,9 +8,13 @@ ARG TITLE="Meeseeks Chat: Personal Assistant"
 
 LABEL title=$TITLE
 
+# Install uv if base image doesn't have it
+RUN if ! command -v uv >/dev/null 2>&1; then pip install --no-cache-dir uv; fi
+
 # Install the meeseeks-chat dependencies
 WORKDIR /app/apps/meeseeks_chat
-RUN uv pip install --system -e .
+RUN uv pip install --system -e . \
+    && rm -rf /root/.cache/uv
 
 # Expose port 8502 for Streamlit
 EXPOSE 8502
