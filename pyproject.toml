@@ -25,7 +25,7 @@ tools = ["meeseeks-tools>=2.0.0-alpha"]
 [dependency-groups]
 dev = [
   "autopep8==2.1.0",
-  "flake8==7.0.0",
+  "flake8==7.3.0",
   "mypy==1.11.2",
   "pre-commit==3.7.1",
   "pylint==3.1.0",
