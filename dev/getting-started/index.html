@@ -334,6 +334,45 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Install dependencies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#user-installation-core-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User installation (core only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optional-components-from-project-root" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional components (from project root)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#developer-installation-all-components-devtestdocs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Developer installation (all components + dev/test/docs)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -510,6 +549,45 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Install dependencies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#user-installation-core-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User installation (core only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optional-components-from-project-root" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional components (from project root)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#developer-installation-all-components-devtestdocs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Developer installation (all components + dev/test/docs)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -602,12 +680,25 @@
 <p>This guide walks through local setup, environment configuration, MCP setup, and how to run each interface.</p>
 <h2 id="prerequisites">Prerequisites</h2>
 <ul>
-<li>Python 3.11+</li>
-<li>Poetry</li>
+<li>Python 3.10+</li>
+<li>uv</li>
 <li>Docker (optional, for container runs)</li>
 </ul>
 <h2 id="install-dependencies">Install dependencies</h2>
-<pre><code class="language-bash">poetry install
+<h3 id="user-installation-core-only">User installation (core only)</h3>
+<pre><code class="language-bash">uv sync
+</code></pre>
+<h3 id="optional-components-from-project-root">Optional components (from project root)</h3>
+<ul>
+<li>CLI: <code>uv sync --extra cli</code></li>
+<li>API: <code>uv sync --extra api</code></li>
+<li>Chat UI: <code>uv sync --extra chat</code></li>
+<li>Home Assistant integration: <code>uv sync --extra ha</code></li>
+<li>Tools bundle: <code>uv sync --extra tools</code></li>
+<li>Everything optional: <code>uv sync --all-extras</code></li>
+</ul>
+<h3 id="developer-installation-all-components-devtestdocs">Developer installation (all components + dev/test/docs)</h3>
+<pre><code class="language-bash">uv sync --all-extras --all-groups
 </code></pre>
 <h2 id="environment-setup">Environment setup</h2>
 <ol>
@@ -638,22 +729,21 @@ If you override the manifest, keep at least one tool enabled for tasks that need
 </ul>
 <h2 id="run-interfaces-local">Run interfaces (local)</h2>
 <ul>
-<li>API: <code>python meeseeks-api/backend.py</code></li>
-<li>Chat UI: <code>streamlit run meeseeks-chat/chat_master.py</code></li>
-<li>CLI: <code>python meeseeks-cli/cli_master.py</code></li>
+<li>CLI: <code>uv run meeseeks</code></li>
+<li>API: <code>uv run meeseeks-api</code> (or <code>uv run python -m meeseeks_api.backend</code>)</li>
+<li>Chat UI: <code>uv run meeseeks-chat</code></li>
 <li>Home Assistant integration: install <code>meeseeks_ha_conversation/</code> as a custom component and point it at the API.</li>
 </ul>
 <h2 id="docker-optional">Docker (optional)</h2>
 <ul>
-<li>Build images using the provided Dockerfiles for API/chat.</li>
+<li>Build images using <code>docker/Dockerfile.api</code> and <code>docker/Dockerfile.chat</code>.</li>
 <li>Provide the same <code>.env</code> values as local.</li>
 <li>Persist <code>MESEEKS_SESSION_DIR</code> if you want transcripts across restarts.</li>
 </ul>
 <h2 id="docs-optional">Docs (optional)</h2>
 <p>If you want to build the docs locally:</p>
-<pre><code class="language-bash">pip install -r requirements-docs.txt
-export PYTHONPATH=&quot;$PWD&quot;
-mkdocs serve
+<pre><code class="language-bash">uv sync --all-extras --group docs
+uv run mkdocs serve
 </code></pre>
 
 

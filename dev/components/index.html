@@ -380,15 +380,14 @@
 <h1 id="components">Components</h1>
 <p>This repository is a monorepo. Each component lives in its own folder:</p>
 <ul>
-<li><code>core/</code>: orchestration loop, schemas, session storage, compaction, tool registry.</li>
-<li><code>tools/</code>: tool implementations and integration glue.</li>
-<li><code>meeseeks-api/</code>: Flask API that exposes the assistant over HTTP.</li>
-<li><code>meeseeks-chat/</code>: Streamlit UI for interactive chat.</li>
-<li><code>meeseeks-cli/</code>: terminal CLI for interactive sessions.</li>
+<li><code>packages/meeseeks_core/</code>: orchestration loop, schemas, session storage, compaction, tool registry.</li>
+<li><code>packages/meeseeks_tools/</code>: tool implementations and integration glue.</li>
+<li><code>apps/meeseeks_api/</code>: Flask API that exposes the assistant over HTTP.</li>
+<li><code>apps/meeseeks_chat/</code>: Streamlit UI for interactive chat.</li>
+<li><code>apps/meeseeks_cli/</code>: terminal CLI for interactive sessions.</li>
 <li><code>meeseeks_ha_conversation/</code>: Home Assistant integration that routes voice requests to the API.</li>
-<li><code>prompts/</code>: planner prompt and examples.</li>
 </ul>
-<p>Note: the API/Chat/CLI folders use hyphens in their names, which makes them invalid Python module names. MkDocs + mkdocstrings can only render inline docstrings for importable modules, so those folders will not show API docs until we add a package shim or rename them.</p>
+<p>Prompts now live under <code>packages/meeseeks_core/src/meeseeks_core/prompts/</code> and are packaged with the core module.</p>
 
 
 

@@ -572,14 +572,14 @@
 </ul>
 <h2 id="subprojects-and-how-they-fit">Subprojects and how they fit</h2>
 <ul>
-<li><code>core/</code>: orchestration loop, schemas, session storage, compaction, tool registry.</li>
-<li><code>tools/</code>: tool implementations and integrations.</li>
-<li><code>meeseeks-api/</code>: Flask API that exposes the assistant over HTTP.</li>
-<li><code>meeseeks-chat/</code>: Streamlit UI for interactive chat.</li>
-<li><code>meeseeks-cli/</code>: Terminal CLI for interactive sessions.</li>
+<li><code>packages/meeseeks_core/</code>: orchestration loop, schemas, session storage, compaction, tool registry.</li>
+<li><code>packages/meeseeks_tools/</code>: tool implementations and integrations.</li>
+<li><code>apps/meeseeks_api/</code>: Flask API that exposes the assistant over HTTP.</li>
+<li><code>apps/meeseeks_chat/</code>: Streamlit UI for interactive chat.</li>
+<li><code>apps/meeseeks_cli/</code>: Terminal CLI for interactive sessions.</li>
 <li><code>meeseeks_ha_conversation/</code>: Home Assistant integration that routes voice requests to the API.</li>
-<li><code>prompts/</code>: planner prompt and examples.</li>
 </ul>
+<p>Prompts are packaged under <code>packages/meeseeks_core/src/meeseeks_core/prompts/</code>.</p>
 <h2 id="architecture-in-a-glance">Architecture in a glance</h2>
 <ul>
 <li>The UI or API sends a user request into the core orchestrator.</li>
