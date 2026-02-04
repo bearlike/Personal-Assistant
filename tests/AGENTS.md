@@ -3,7 +3,7 @@
 Scope: this file applies to the root `tests/` suite and shared test patterns.
 
 ## What we test
-- Orchestration loop (`core.task_master.orchestrate_session`): completion, replanning, max-iter behavior.
+- Orchestration loop (`meeseeks_core.task_master.orchestrate_session`): completion, replanning, max-iter behavior.
 - Tool registry behavior and tool disabling when init fails.
 - CLI integration flows using lightweight stubs.
  - MCP discovery: schema normalization, per-server failures, and CLI visibility even when tools are missing.

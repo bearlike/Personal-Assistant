@@ -4,35 +4,35 @@ This page is generated from inline docstrings via mkdocstrings.
 
 ## Core
 
-::: core.classes
+::: meeseeks_core.classes
 
-::: core.common
+::: meeseeks_core.common
 
-::: core.compaction
+::: meeseeks_core.compaction
 
-::: core.components
+::: meeseeks_core.components
 
-::: core.hooks
+::: meeseeks_core.hooks
 
-::: core.llm
+::: meeseeks_core.llm
 
-::: core.permissions
+::: meeseeks_core.permissions
 
-::: core.session_store
+::: meeseeks_core.session_store
 
-::: core.task_master
+::: meeseeks_core.task_master
 
-::: core.token_budget
+::: meeseeks_core.token_budget
 
-::: core.tool_registry
+::: meeseeks_core.tool_registry
 
-::: core.types
+::: meeseeks_core.types
 
 ## Tools
 
-::: tools.integration.homeassistant
+::: meeseeks_tools.integration.homeassistant
 
-::: tools.integration.mcp
+::: meeseeks_tools.integration.mcp
 
 ## Home Assistant Integration
 

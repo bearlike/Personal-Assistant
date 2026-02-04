@@ -1,5 +1,5 @@
 """Tests for optional component helpers."""
-from core.components import (
+from meeseeks_core.components import (
     ComponentStatus,
     format_component_status,
     resolve_home_assistant_status,

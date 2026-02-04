@@ -1,6 +1,6 @@
 """Tests for permission policy decisions."""
-from core.classes import ActionStep
-from core.permissions import (
+from meeseeks_core.classes import ActionStep
+from meeseeks_core.permissions import (
     PermissionDecision,
     PermissionPolicy,
     PermissionRule,

@@ -1,7 +1,8 @@
 """Tests for tool registry loading behavior."""
 import json
+from types import SimpleNamespace
 
-from core.tool_registry import load_registry
+from meeseeks_core.tool_registry import _ensure_auto_manifest, load_registry
 
 
 def test_default_registry(monkeypatch):
@@ -28,7 +29,7 @@ def test_default_registry_homeassistant_enabled(monkeypatch):
 
 def test_registry_disables_on_factory_error():
     """Disable tools that fail during initialization."""
-    from core.tool_registry import ToolRegistry, ToolSpec
+    from meeseeks_core.tool_registry import ToolRegistry, ToolSpec
 
     def _boom():
         raise RuntimeError("nope")
@@ -98,6 +99,216 @@ def test_manifest_empty_falls_back(tmp_path, monkeypatch):
     assert "talk_to_user_tool" not in enabled_ids
 
 
+def test_manifest_skips_missing_local_class(tmp_path, monkeypatch):
+    """Skip local tools that omit module/class metadata."""
+    monkeypatch.delenv("MESEEKS_HOME_ASSISTANT_ENABLED", raising=False)
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "tools": [
+                    {"tool_id": "bad_tool", "name": "Bad Tool", "module": "bad_module"}
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    registry = load_registry(str(manifest_path))
+    tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
+    assert "bad_tool" not in tool_ids
+    assert "home_assistant_tool" in tool_ids
+
+
+def test_manifest_skips_mcp_tool_when_support_missing(tmp_path, monkeypatch):
+    """Skip MCP tools when MCP adapters are unavailable."""
+    monkeypatch.setattr("meeseeks_core.tool_registry._load_mcp_support", lambda: None)
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "tools": [
+                    {
+                        "tool_id": "mcp_tool",
+                        "name": "MCP Tool",
+                        "description": "Test",
+                        "kind": "mcp",
+                        "server": "srv",
+                        "tool": "ask",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    registry = load_registry(str(manifest_path))
+    tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
+    assert "mcp_tool" not in tool_ids
+    assert "home_assistant_tool" in tool_ids
+
+
+def test_manifest_skips_mcp_tool_missing_server(tmp_path, monkeypatch):
+    """Skip MCP tools missing server/tool metadata."""
+    dummy_mcp = SimpleNamespace(MCPToolRunner=object)
+    monkeypatch.setattr("meeseeks_core.tool_registry._load_mcp_support", lambda: dummy_mcp)
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "tools": [
+                    {
+                        "tool_id": "mcp_tool",
+                        "name": "MCP Tool",
+                        "description": "Test",
+                        "kind": "mcp",
+                        "tool": "ask",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    registry = load_registry(str(manifest_path))
+    tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
+    assert "mcp_tool" not in tool_ids
+    assert "home_assistant_tool" in tool_ids
+
+
+def test_auto_manifest_returns_existing_when_mcp_missing(tmp_path, monkeypatch):
+    """Reuse existing manifest when MCP support is unavailable."""
+    manifest_path = tmp_path / "tool-manifest.auto.json"
+    manifest_path.write_text("{}", encoding="utf-8")
+    monkeypatch.setenv("MESEEKS_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setattr("meeseeks_core.tool_registry._load_mcp_support", lambda: None)
+
+    result = _ensure_auto_manifest(str(tmp_path / "mcp.json"))
+    assert result == str(manifest_path)
+
+
+def test_auto_manifest_handles_discovery_error(tmp_path, monkeypatch):
+    """Keep existing manifest when MCP discovery fails."""
+    manifest_path = tmp_path / "tool-manifest.auto.json"
+    manifest_path.write_text("{}", encoding="utf-8")
+    monkeypatch.setenv("MESEEKS_CONFIG_DIR", str(tmp_path))
+
+    class DummyMcpModule:
+        def _load_mcp_config(self, _path):
+            raise RuntimeError("boom")
+
+    monkeypatch.setattr(
+        "meeseeks_core.tool_registry._load_mcp_support",
+        lambda: DummyMcpModule(),
+    )
+
+    result = _ensure_auto_manifest(str(tmp_path / "mcp.json"))
+    assert result == str(manifest_path)
+
+
+def test_auto_manifest_handles_write_failure(tmp_path, monkeypatch):
+    """Return None when auto manifest write fails and no prior file exists."""
+    monkeypatch.setenv("MESEEKS_CONFIG_DIR", str(tmp_path))
+    manifest_path = tmp_path / "tool-manifest.auto.json"
+
+    class DummyMcpModule:
+        def _load_mcp_config(self, _path):
+            return {}
+
+        def discover_mcp_tool_details_with_failures(self, _config):
+            return ({}, {})
+
+    monkeypatch.setattr(
+        "meeseeks_core.tool_registry._load_mcp_support",
+        lambda: DummyMcpModule(),
+    )
+
+    import builtins
+
+    real_open = builtins.open
+
+    def fake_open(path, mode="r", *args, **kwargs):
+        if str(path) == str(manifest_path) and "w" in mode:
+            raise OSError("nope")
+        return real_open(path, mode, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "open", fake_open)
+
+    assert _ensure_auto_manifest(str(tmp_path / "mcp.json")) is None
+
+
+def test_manifest_missing_path_falls_back(tmp_path):
+    """Fall back to defaults when manifest path is missing."""
+    registry = load_registry(str(tmp_path / "missing.json"))
+    tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
+    assert "home_assistant_tool" in tool_ids
+
+
+def test_manifest_builds_mcp_factory(tmp_path, monkeypatch):
+    """Instantiate MCP tool runner from manifest entry."""
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "tools": [
+                    {
+                        "tool_id": "mcp_tool",
+                        "name": "MCP Tool",
+                        "description": "Test",
+                        "kind": "mcp",
+                        "server": "srv",
+                        "tool": "ask",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    class DummyMCPToolRunner:
+        def __init__(self, server_name: str, tool_name: str):
+            self.server_name = server_name
+            self.tool_name = tool_name
+
+        def run(self, _action_step):
+            return None
+
+    dummy_module = SimpleNamespace(MCPToolRunner=DummyMCPToolRunner)
+    monkeypatch.setattr("meeseeks_core.tool_registry._load_mcp_support", lambda: dummy_module)
+
+    registry = load_registry(str(manifest_path))
+    tool = registry.get("mcp_tool")
+    assert isinstance(tool, DummyMCPToolRunner)
+    assert tool.server_name == "srv"
+    assert tool.tool_name == "ask"
+
+
+def test_manifest_skips_empty_tool_id(tmp_path):
+    """Skip tools with empty tool_id values."""
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "tools": [
+                    {
+                        "tool_id": "",
+                        "name": "Missing ID",
+                        "description": "Missing",
+                        "module": "dummy_tool",
+                        "class": "DummyTool",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    registry = load_registry(str(manifest_path))
+    tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
+    assert "" not in tool_ids
+    assert "home_assistant_tool" in tool_ids
+
+
 def test_auto_manifest_from_mcp_config(tmp_path, monkeypatch):
     """Auto-generate a manifest when only MCP config is provided."""
     config_path = tmp_path / "mcp.json"
@@ -113,7 +324,7 @@ def test_auto_manifest_from_mcp_config(tmp_path, monkeypatch):
     manifest_path.write_text("{bad json", encoding="utf-8")
 
     monkeypatch.setattr(
-        "core.tool_registry.discover_mcp_tool_details_with_failures",
+        "meeseeks_tools.integration.mcp.discover_mcp_tool_details_with_failures",
         lambda _config: (
             {"srv": [{"name": " ", "schema": None}, {"name": "tool-a", "schema": None}]},
             {},
@@ -142,11 +353,11 @@ def test_auto_manifest_marks_failed_server(tmp_path, monkeypatch):
     manifest_path.write_text(json.dumps({"tools": "bad"}), encoding="utf-8")
 
     monkeypatch.setattr(
-        "core.tool_registry.discover_mcp_tool_details_with_failures",
+        "meeseeks_tools.integration.mcp.discover_mcp_tool_details_with_failures",
         lambda _config: ({}, {"srv": RuntimeError("boom")}),
     )
     monkeypatch.setattr(
-        "core.tool_registry._build_manifest_payload",
+        "meeseeks_core.tool_registry._build_manifest_payload",
         lambda _tools: {"tools": "bad"},
     )
 
@@ -199,7 +410,7 @@ def test_auto_manifest_marks_failed_server(tmp_path, monkeypatch):
     )
 
     monkeypatch.setattr(
-        "core.tool_registry._build_manifest_payload",
+        "meeseeks_core.tool_registry._build_manifest_payload",
         lambda _tools: {"tools": [{"tool_id": "mcp_srv_tool_a"}, {"name": "bad"}, "bad"]},
     )
 

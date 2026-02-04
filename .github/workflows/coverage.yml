@@ -4,8 +4,7 @@ on:
   push:
     paths:
       - "**/*.py"
-      - "pyproject.toml"
-      - "poetry.lock"
+      - "**/pyproject.toml"
   pull_request:
   workflow_dispatch:
     inputs:
@@ -33,29 +32,30 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Poetry
+      - name: Install uv
         run: |
           python -m pip install --upgrade pip
-          python -m pip install poetry
+          python -m pip install uv
 
       - name: Install dependencies
-        run: poetry install
+        run: |
+          uv sync --all-extras --group dev
 
       - name: Run pytest with coverage
         run: |
-          poetry run coverage run \
+          .venv/bin/coverage run \
             --data-file "${COVERAGE_FILE}" \
-            --source=core,tools,meeseeks_ha_conversation \
+            --source=meeseeks_core,meeseeks_tools,meeseeks_ha_conversation \
             -m pytest
-          poetry run coverage report --data-file "${COVERAGE_FILE}" --skip-covered
-          poetry run coverage xml --data-file "${COVERAGE_FILE}" -o coverage.xml
+          .venv/bin/coverage report --data-file "${COVERAGE_FILE}" --skip-covered
+          .venv/bin/coverage xml --data-file "${COVERAGE_FILE}" -o coverage.xml
 
       - name: Generate core-only coverage report
         run: |
-          poetry run coverage xml \
+          .venv/bin/coverage xml \
             --data-file "${COVERAGE_FILE}" \
-            --include "*/core/*" \
-            --include "core/*" \
+            --include "packages/meeseeks_core/src/meeseeks_core/*" \
+            --include "*/packages/meeseeks_core/src/meeseeks_core/*" \
             -o coverage-core.xml
 
       - name: Upload coverage artifact

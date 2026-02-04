@@ -69,13 +69,13 @@ Optional feature that users can choose to install to further optimize their expe
 
 ## Monorepo layout
 
-- `core/`: orchestration loop, schemas, session storage, compaction, tool registry.
-- `tools/`: tool implementations and integrations (including Home Assistant and MCP).
-- `meeseeks-api/`: Flask REST API for programmatic access.
-- `meeseeks-chat/`: Streamlit UI for interactive chat.
-- `meeseeks-cli/`: Terminal CLI frontend for interactive sessions.
+- `packages/meeseeks_core/`: orchestration loop, schemas, session storage, compaction, tool registry.
+- `packages/meeseeks_tools/`: tool implementations and integrations (including Home Assistant and MCP).
+- `apps/meeseeks_api/`: Flask REST API for programmatic access.
+- `apps/meeseeks_chat/`: Streamlit UI for interactive chat.
+- `apps/meeseeks_cli/`: Terminal CLI frontend for interactive sessions.
 - `meeseeks_ha_conversation/`: Home Assistant integration that routes voice to the API.
-- `prompts/`: planner prompt and examples.
+- `packages/meeseeks_core/src/meeseeks_core/prompts/`: planner prompts and tool instructions.
 
 ## Architecture (short)
 
@@ -102,6 +102,26 @@ flowchart LR
 - [docs/getting-started.md](docs/getting-started.md) - setup guide (env, MCP, configs, run paths)
 - [docs/components.md](docs/components.md) - monorepo map
 - [docs/reference.md](docs/reference.md) - API reference (mkdocstrings)
+
+## Installation (quick)
+
+User install (core only):
+```bash
+uv sync
+```
+
+Optional components:
+```bash
+uv sync --extra cli   # CLI
+uv sync --extra api   # REST API
+uv sync --extra chat  # Streamlit UI
+uv sync --extra ha    # Home Assistant integration
+```
+
+Developer install (all components + dev/test/docs):
+```bash
+uv sync --all-extras --all-groups
+```
 
 ---
 

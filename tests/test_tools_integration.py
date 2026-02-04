@@ -4,10 +4,9 @@ import sys
 import types
 
 import pytest
-
-from core.common import get_mock_speaker
-from tools.integration.homeassistant import HomeAssistant
-from tools.integration.mcp import (
+from meeseeks_core.common import get_mock_speaker
+from meeseeks_tools.integration.homeassistant import HomeAssistant
+from meeseeks_tools.integration.mcp import (
     MCPToolRunner,
     _load_mcp_config,
     _prepare_mcp_input,
@@ -373,7 +372,7 @@ def test_homeassistant_update_services(monkeypatch):
             return [{"domain": "scene"}]
 
     monkeypatch.setattr(
-        "tools.integration.homeassistant.requests.get",
+        "meeseeks_tools.integration.homeassistant.requests.get",
         lambda *args, **kwargs: DummyResponse(),
     )
     assert ha.update_services() is True
@@ -395,7 +394,7 @@ def test_homeassistant_update_entities(monkeypatch):
             ]
 
     monkeypatch.setattr(
-        "tools.integration.homeassistant.requests.get",
+        "meeseeks_tools.integration.homeassistant.requests.get",
         lambda *args, **kwargs: DummyResponse(),
     )
     assert ha.update_entities() is True
@@ -456,7 +455,7 @@ def test_homeassistant_call_service_success(monkeypatch):
             return "ok"
 
     monkeypatch.setattr(
-        "tools.integration.homeassistant.requests.post",
+        "meeseeks_tools.integration.homeassistant.requests.post",
         lambda *args, **kwargs: DummyResponse(),
     )
     ok, payload = ha.call_service("scene", "turn_on", "scene.lamp")
@@ -506,12 +505,12 @@ def test_homeassistant_set_state(monkeypatch):
             return "format"
 
     monkeypatch.setattr(
-        "tools.integration.homeassistant.PydanticOutputParser",
+        "meeseeks_tools.integration.homeassistant.PydanticOutputParser",
         DummyParser,
     )
     monkeypatch.setattr(HomeAssistant, "_create_set_prompt", lambda *_a, **_k: DummyChain())
     monkeypatch.setattr(
-        "tools.integration.homeassistant.ha_render_system_prompt",
+        "meeseeks_tools.integration.homeassistant.ha_render_system_prompt",
         lambda *args, **kwargs: "prompt",
     )
     monkeypatch.setattr(
@@ -537,7 +536,7 @@ def test_homeassistant_get_state(monkeypatch):
 
     monkeypatch.setattr(HomeAssistant, "_create_get_prompt", lambda *_a, **_k: DummyChain())
     monkeypatch.setattr(
-        "tools.integration.homeassistant.ha_render_system_prompt",
+        "meeseeks_tools.integration.homeassistant.ha_render_system_prompt",
         lambda *args, **kwargs: "prompt",
     )
     step = types.SimpleNamespace(action_argument="status")

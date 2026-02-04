@@ -1,5 +1,5 @@
 """Tests for token budget calculations."""
-from core.token_budget import (
+from meeseeks_core.token_budget import (
     get_context_window,
     get_token_budget,
 )
