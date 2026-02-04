@@ -1,6 +1,6 @@
 [project]
 name = "meeseeks-workspace"
-version = "1.0.0"
+version = "2.0.0-alpha"
 description = "Workspace package for the Meeseeks monorepo."
 readme = "README.md"
 requires-python = ">=3.10,<4.0"
@@ -8,6 +8,9 @@ authors = [
   { name = "Krishnakanth Alagiri", email = "mail@kanth.tech" },
 ]
 license = { text = "MIT" }
+dependencies = [
+  "meeseeks-core>=2.0.0-alpha",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -27,6 +30,22 @@ docs = [
   "mkdocs-material",
   "mkdocstrings[python]",
 ]
+cli = ["meeseeks-cli>=2.0.0-alpha"]
+api = ["meeseeks-api>=2.0.0-alpha"]
+chat = ["meeseeks-chat>=2.0.0-alpha"]
+ha = ["meeseeks-ha-conversation>=2.0.0-alpha"]
+tools = ["meeseeks-tools>=2.0.0-alpha"]
+
+[tool.uv.workspace]
+members = ["packages/*", "apps/*", "meeseeks_ha_conversation"]
+
+[tool.uv.sources]
+meeseeks-core = { path = "packages/meeseeks_core" }
+meeseeks-tools = { path = "packages/meeseeks_tools" }
+meeseeks-cli = { path = "apps/meeseeks_cli" }
+meeseeks-api = { path = "apps/meeseeks_api" }
+meeseeks-chat = { path = "apps/meeseeks_chat" }
+meeseeks-ha-conversation = { path = "meeseeks_ha_conversation" }
 
 [build-system]
 requires = ["hatchling>=1.25.0"]

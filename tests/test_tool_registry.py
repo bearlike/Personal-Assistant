@@ -2,7 +2,7 @@
 import json
 from types import SimpleNamespace
 
-from meeseeks_core.tool_registry import load_registry
+from meeseeks_core.tool_registry import _ensure_auto_manifest, load_registry
 
 
 def test_default_registry(monkeypatch):
@@ -173,6 +173,139 @@ def test_manifest_skips_mcp_tool_missing_server(tmp_path, monkeypatch):
     registry = load_registry(str(manifest_path))
     tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
     assert "mcp_tool" not in tool_ids
+    assert "home_assistant_tool" in tool_ids
+
+
+def test_auto_manifest_returns_existing_when_mcp_missing(tmp_path, monkeypatch):
+    """Reuse existing manifest when MCP support is unavailable."""
+    manifest_path = tmp_path / "tool-manifest.auto.json"
+    manifest_path.write_text("{}", encoding="utf-8")
+    monkeypatch.setenv("MESEEKS_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setattr("meeseeks_core.tool_registry._load_mcp_support", lambda: None)
+
+    result = _ensure_auto_manifest(str(tmp_path / "mcp.json"))
+    assert result == str(manifest_path)
+
+
+def test_auto_manifest_handles_discovery_error(tmp_path, monkeypatch):
+    """Keep existing manifest when MCP discovery fails."""
+    manifest_path = tmp_path / "tool-manifest.auto.json"
+    manifest_path.write_text("{}", encoding="utf-8")
+    monkeypatch.setenv("MESEEKS_CONFIG_DIR", str(tmp_path))
+
+    class DummyMcpModule:
+        def _load_mcp_config(self, _path):
+            raise RuntimeError("boom")
+
+    monkeypatch.setattr(
+        "meeseeks_core.tool_registry._load_mcp_support",
+        lambda: DummyMcpModule(),
+    )
+
+    result = _ensure_auto_manifest(str(tmp_path / "mcp.json"))
+    assert result == str(manifest_path)
+
+
+def test_auto_manifest_handles_write_failure(tmp_path, monkeypatch):
+    """Return None when auto manifest write fails and no prior file exists."""
+    monkeypatch.setenv("MESEEKS_CONFIG_DIR", str(tmp_path))
+    manifest_path = tmp_path / "tool-manifest.auto.json"
+
+    class DummyMcpModule:
+        def _load_mcp_config(self, _path):
+            return {}
+
+        def discover_mcp_tool_details_with_failures(self, _config):
+            return ({}, {})
+
+    monkeypatch.setattr(
+        "meeseeks_core.tool_registry._load_mcp_support",
+        lambda: DummyMcpModule(),
+    )
+
+    import builtins
+
+    real_open = builtins.open
+
+    def fake_open(path, mode="r", *args, **kwargs):
+        if str(path) == str(manifest_path) and "w" in mode:
+            raise OSError("nope")
+        return real_open(path, mode, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "open", fake_open)
+
+    assert _ensure_auto_manifest(str(tmp_path / "mcp.json")) is None
+
+
+def test_manifest_missing_path_falls_back(tmp_path):
+    """Fall back to defaults when manifest path is missing."""
+    registry = load_registry(str(tmp_path / "missing.json"))
+    tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
+    assert "home_assistant_tool" in tool_ids
+
+
+def test_manifest_builds_mcp_factory(tmp_path, monkeypatch):
+    """Instantiate MCP tool runner from manifest entry."""
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "tools": [
+                    {
+                        "tool_id": "mcp_tool",
+                        "name": "MCP Tool",
+                        "description": "Test",
+                        "kind": "mcp",
+                        "server": "srv",
+                        "tool": "ask",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    class DummyMCPToolRunner:
+        def __init__(self, server_name: str, tool_name: str):
+            self.server_name = server_name
+            self.tool_name = tool_name
+
+        def run(self, _action_step):
+            return None
+
+    dummy_module = SimpleNamespace(MCPToolRunner=DummyMCPToolRunner)
+    monkeypatch.setattr("meeseeks_core.tool_registry._load_mcp_support", lambda: dummy_module)
+
+    registry = load_registry(str(manifest_path))
+    tool = registry.get("mcp_tool")
+    assert isinstance(tool, DummyMCPToolRunner)
+    assert tool.server_name == "srv"
+    assert tool.tool_name == "ask"
+
+
+def test_manifest_skips_empty_tool_id(tmp_path):
+    """Skip tools with empty tool_id values."""
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "tools": [
+                    {
+                        "tool_id": "",
+                        "name": "Missing ID",
+                        "description": "Missing",
+                        "module": "dummy_tool",
+                        "class": "DummyTool",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    registry = load_registry(str(manifest_path))
+    tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
+    assert "" not in tool_ids
     assert "home_assistant_tool" in tool_ids
 
 
