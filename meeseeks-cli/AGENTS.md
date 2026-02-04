@@ -23,7 +23,7 @@ Scope: this file applies to the `meeseeks-cli/` package only. It covers the term
 - Action Plan: checklist in a panel titled `:clipboard: Action Plan`, border `cyan`.
 - Tool Results: per-tool panels, title prefix `:wrench:`, border `magenta`.
 - Response: `:speech_balloon: Response`, border `bold green`.
-- Tool result cards dim older steps (only the latest stays normal).
+- Tool result cards dim unless they are the current focus; outputs are collapsed unless verbose and JSON renders formatted.
 
 If you change any of these, update this file.
 

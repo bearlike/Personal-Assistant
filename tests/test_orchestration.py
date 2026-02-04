@@ -4,7 +4,7 @@ import json
 from langchain_core.runnables import RunnableLambda  # noqa: E402
 
 from core import task_master  # noqa: E402
-from core.classes import ActionStep, TaskQueue  # noqa: E402
+from core.classes import ActionStep, TaskQueue, set_available_tools  # noqa: E402
 from core.common import get_mock_speaker  # noqa: E402
 from core.hooks import HookManager  # noqa: E402
 from core.permissions import (  # noqa: E402
@@ -29,9 +29,10 @@ class Counter:
 
 def make_task_queue(message: str) -> TaskQueue:
     """Build a minimal task queue with a single action step."""
+    set_available_tools(["home_assistant_tool"])
     step = ActionStep(
-        action_consumer="talk_to_user_tool",
-        action_type="set",
+        action_consumer="home_assistant_tool",
+        action_type="get",
         action_argument=message,
     )
     return TaskQueue(action_steps=[step])
@@ -57,6 +58,7 @@ def test_orchestrate_session_completes(monkeypatch, tmp_path):
 
     monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
     monkeypatch.setattr(task_master, "run_action_plan", fake_run)
+    monkeypatch.setattr(task_master, "_synthesize_response", lambda **_kw: "done")
 
     task_queue = task_master.orchestrate_session(
         "hello",
@@ -80,15 +82,7 @@ def test_generate_action_plan_omits_disabled_tools(monkeypatch):
             message.content for message in messages if getattr(message, "content", None)
         )
         assert "home_assistant_tool" not in combined
-        payload = {
-            "action_steps": [
-                {
-                    "action_consumer": "talk_to_user_tool",
-                    "action_type": "set",
-                    "action_argument": "hello",
-                }
-            ]
-        }
+        payload = {"action_steps": []}
         return json.dumps(payload)
 
     monkeypatch.setattr(
@@ -101,7 +95,7 @@ def test_generate_action_plan_omits_disabled_tools(monkeypatch):
         "hi",
         tool_registry=registry,
     )
-    assert task_queue.action_steps[0].action_consumer == "talk_to_user_tool"
+    assert task_queue.action_steps == []
 
 
 def test_orchestrate_session_replans_on_failure(monkeypatch, tmp_path):
@@ -128,6 +122,7 @@ def test_orchestrate_session_replans_on_failure(monkeypatch, tmp_path):
 
     monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
     monkeypatch.setattr(task_master, "run_action_plan", fake_run)
+    monkeypatch.setattr(task_master, "_synthesize_response", lambda **_kw: "ok")
 
     task_queue = task_master.orchestrate_session(
         "hello",
@@ -199,6 +194,7 @@ def test_orchestrate_session_passes_summary(monkeypatch, tmp_path):
 
     monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
     monkeypatch.setattr(task_master, "run_action_plan", fake_run)
+    monkeypatch.setattr(task_master, "_synthesize_response", lambda **_kw: "ok")
 
     task_master.orchestrate_session(
         "hello",
@@ -226,6 +222,7 @@ def test_orchestrate_session_updates_summary_on_memory_keyword(monkeypatch, tmp_
 
     monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
     monkeypatch.setattr(task_master, "run_action_plan", fake_run)
+    monkeypatch.setattr(task_master, "_synthesize_response", lambda **_kw: "ok")
 
     task_master.orchestrate_session(
         "Remember these numbers 12345",
@@ -260,6 +257,7 @@ def test_orchestrate_session_passes_recent_events(monkeypatch, tmp_path):
 
     monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
     monkeypatch.setattr(task_master, "run_action_plan", fake_run)
+    monkeypatch.setattr(task_master, "_synthesize_response", lambda **_kw: "ok")
 
     task_master.orchestrate_session(
         "hello",
@@ -412,6 +410,7 @@ def test_orchestrate_session_context_selection(monkeypatch, tmp_path):
     monkeypatch.setattr(task_master, "_select_context_events", fake_select)
     monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
     monkeypatch.setattr(task_master, "run_action_plan", fake_run)
+    monkeypatch.setattr(task_master, "_synthesize_response", lambda **_kw: "ok")
 
     task_master.orchestrate_session(
         "hello",
@@ -677,6 +676,7 @@ def test_orchestrate_session_auto_compact(monkeypatch, tmp_path):
 
     monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
     monkeypatch.setattr(task_master, "run_action_plan", fake_run)
+    monkeypatch.setattr(task_master, "_synthesize_response", lambda **_kw: "done")
 
     task_master.orchestrate_session(
         "hello",

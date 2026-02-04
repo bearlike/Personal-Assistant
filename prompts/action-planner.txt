@@ -16,7 +16,7 @@ The `action_type` must be either "get" or "set" and must match the supported act
 - Each action must contain only one task instruction.
 - Your instructions in the action_argument must be very precise, isolated and atomic in nature.
 - Keep each action crisp, easy to understand and truthfully corresponding to the user query.
-- If a question doesn't relate to any accessible tools, answer truthfully to the best of your ability without making any assumptions. Use a conversational response tool if available.
+- If a question doesn't relate to any accessible tools, return an empty action_steps list and respond directly in the final response synthesis.
 - Avoid discussing unrelated topics like JSON formatting or actions not required.
 - Examples of non-pertinent subjects: JSON formatting details, action statuses not relevant to the user's question.
-- There should be at least one pair of `action_consumer` and an `action_argument`.
+- Only include action steps when a tool is required.

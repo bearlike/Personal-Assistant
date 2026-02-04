@@ -20,7 +20,7 @@ from core.types import ActionStepPayload
 
 load_dotenv()
 logging = get_logger(name="core.classes")
-AVAILABLE_TOOLS: list[str] = ["home_assistant_tool", "talk_to_user_tool"]
+AVAILABLE_TOOLS: list[str] = ["home_assistant_tool"]
 
 
 def set_available_tools(tool_ids: list[str]) -> None:
@@ -129,12 +129,6 @@ class TaskQueue(BaseModel):
             # Check if action_type is valid
             if action.action_type not in ["get", "set"]:
                 error_msg = f"`{action.action_type}` is not a valid action type."
-                error_msg_list.append(error_msg)
-
-            # Specific checks for "talk_to_user" consumer
-            if action.action_consumer == "talk_to_user_tool" and \
-                    action.action_type == "get":
-                error_msg = f"`{action.action_consumer}` does not support 'get' action type."
                 error_msg_list.append(error_msg)
 
             # Check for None argument
@@ -422,21 +416,6 @@ def get_task_master_examples(
                     "action_type": "set",
                     "action_argument": "Power on the Heater.",
                 },
-                {
-                    "title": "Confirm actions to user",
-                    "objective": "Let the user know the devices are being powered on.",
-                    "execution_checklist": [
-                        "Use talk_to_user_tool",
-                        "Confirm both devices",
-                    ],
-                    "expected_output": "User receives confirmation.",
-                    "action_consumer": "talk_to_user_tool",
-                    "action_type": "set",
-                    "action_argument": (
-                        "Got it, boss! I'm using Home Assistant to power on the strip lights "
-                        "and the heater."
-                    ),
-                },
             ],
             [
                 {
@@ -454,30 +433,7 @@ def get_task_master_examples(
             ]
         ]
     else:
-        examples = [
-            [
-                {
-                    "title": "Greet user",
-                    "objective": "Open the conversation and ask how to help.",
-                    "execution_checklist": ["Use talk_to_user_tool"],
-                    "expected_output": "User is prompted for next task.",
-                    "action_consumer": "talk_to_user_tool",
-                    "action_type": "set",
-                    "action_argument": "Got it, boss! How can I help you today?",
-                },
-            ],
-            [
-                {
-                    "title": "Request next task",
-                    "objective": "Ask the user for their next request.",
-                    "execution_checklist": ["Use talk_to_user_tool"],
-                    "expected_output": "User provides a follow-up request.",
-                    "action_consumer": "talk_to_user_tool",
-                    "action_type": "set",
-                    "action_argument": "Happy to help. What should I take care of next?",
-                },
-            ],
-        ]
+        examples = [[], []]
     if example_id not in range(0, len(examples)):
         raise ValueError(f"Invalid example ID: {example_id}")
 

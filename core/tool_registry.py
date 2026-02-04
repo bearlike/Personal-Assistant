@@ -204,18 +204,6 @@ def _default_registry() -> ToolRegistry:
             metadata={"disabled_reason": ha_status.reason} if not ha_status.enabled else {},
         )
     )
-    registry.register(
-        ToolSpec(
-            tool_id="talk_to_user_tool",
-            name="Talk to User",
-            description="Respond directly to the user.",
-            factory=_import_factory(
-                "tools.core.talk_to_user",
-                "TalkToUser",
-            ),
-            prompt_path="tools/talk-to-user",
-        )
-    )
     return registry
 
 
@@ -238,16 +226,6 @@ def _built_in_manifest_entries() -> list[dict[str, object]]:
     ha_status = resolve_home_assistant_status()
     entries: list[dict[str, object]] = [
         {
-            "tool_id": "talk_to_user_tool",
-            "name": "Talk to User",
-            "description": "Respond directly to the user.",
-            "module": "tools.core.talk_to_user",
-            "class": "TalkToUser",
-            "kind": "local",
-            "enabled": True,
-            "prompt": "tools/talk-to-user",
-        },
-        {
             "tool_id": "home_assistant_tool",
             "name": "Home Assistant",
             "description": "Manage smart home devices via Home Assistant.",
@@ -259,7 +237,7 @@ def _built_in_manifest_entries() -> list[dict[str, object]]:
         },
     ]
     if not ha_status.enabled and ha_status.reason:
-        entries[1]["disabled_reason"] = ha_status.reason
+        entries[0]["disabled_reason"] = ha_status.reason
     return entries
 
 

@@ -30,8 +30,6 @@ This page is generated from inline docstrings via mkdocstrings.
 
 ## Tools
 
-::: tools.core.talk_to_user
-
 ::: tools.integration.homeassistant
 
 ::: tools.integration.mcp

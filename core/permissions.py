@@ -107,13 +107,7 @@ def _default_policy() -> PermissionPolicy:
     Returns:
         PermissionPolicy with built-in defaults.
     """
-    rules = [
-        PermissionRule(
-            tool_id="talk_to_user_tool",
-            action_type="*",
-            decision=PermissionDecision.ALLOW,
-        )
-    ]
+    rules: list[PermissionRule] = []
     default_by_action = {
         "get": PermissionDecision.ALLOW,
         "set": PermissionDecision.ASK,

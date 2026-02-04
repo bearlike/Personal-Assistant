@@ -32,7 +32,7 @@ MCP tools are auto-discovered from a server config file.
 4. Start any interface once; a tool manifest is auto-generated and cached under `~/.meeseeks/`.
 
 Notes:
-- If you override the manifest, include `talk_to_user_tool` so the assistant can still reply.
+If you override the manifest, keep at least one tool enabled for tasks that need external actions.
 - MCP tool names must match the server's advertised tool list.
 
 ## Optional components

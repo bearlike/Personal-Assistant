@@ -167,8 +167,8 @@ def test_run_query(monkeypatch, tmp_path):
 
     def fake_generate(*args, **kwargs):
         step = ActionStep(
-            action_consumer="talk_to_user_tool",
-            action_type="set",
+            action_consumer="home_assistant_tool",
+            action_type="get",
             action_argument="hi",
         )
         task_queue = TaskQueue(action_steps=[step])
@@ -179,8 +179,8 @@ def test_run_query(monkeypatch, tmp_path):
         captured["tool_registry"] = kwargs.get("tool_registry")
         captured["session_id"] = kwargs.get("session_id")
         step = ActionStep(
-            action_consumer="talk_to_user_tool",
-            action_type="set",
+            action_consumer="home_assistant_tool",
+            action_type="get",
             action_argument="hi",
         )
         task_queue = TaskQueue(action_steps=[step])
@@ -223,8 +223,8 @@ def test_run_cli_single_query(monkeypatch, tmp_path):
 
     def fake_orchestrate(*args, **kwargs):
         step = ActionStep(
-            action_consumer="talk_to_user_tool",
-            action_type="set",
+            action_consumer="home_assistant_tool",
+            action_type="get",
             action_argument="hi",
         )
         task_queue = TaskQueue(action_steps=[step])

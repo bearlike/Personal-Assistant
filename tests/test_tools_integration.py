@@ -6,7 +6,6 @@ import types
 import pytest
 
 from core.common import get_mock_speaker
-from tools.core.talk_to_user import TalkToUser
 from tools.integration.homeassistant import HomeAssistant
 from tools.integration.mcp import (
     MCPToolRunner,
@@ -15,34 +14,6 @@ from tools.integration.mcp import (
     discover_mcp_tool_details,
     discover_mcp_tools,
 )
-
-
-def test_talk_to_user_set_state(monkeypatch, tmp_path):
-    """Echo the action argument when setting state."""
-    monkeypatch.setenv("CACHE_DIR", str(tmp_path))
-    tool = TalkToUser()
-    step = types.SimpleNamespace(action_argument="hello")
-    result = tool.set_state(step)
-    assert result.content == "hello"
-
-
-def test_talk_to_user_requires_step(monkeypatch, tmp_path):
-    """Require an action step for TalkToUser set_state."""
-    monkeypatch.setenv("CACHE_DIR", str(tmp_path))
-    tool = TalkToUser()
-    with pytest.raises(ValueError):
-        tool.set_state(None)
-
-
-def test_talk_to_user_skips_llm(monkeypatch, tmp_path):
-    """Ensure TalkToUser does not initialize an LLM client."""
-    monkeypatch.setenv("CACHE_DIR", str(tmp_path))
-
-    def _boom(*_args, **_kwargs):
-        raise AssertionError("build_chat_model should not be called")
-
-    monkeypatch.setattr("core.classes.build_chat_model", _boom)
-    TalkToUser()
 
 
 def test_mcp_config_requires_env(monkeypatch):

@@ -378,22 +378,15 @@ def _reflect_on_step(
 
 
 def _build_direct_response(message: str) -> TaskQueue:
-    """Create a TaskQueue with a direct talk-to-user response.
+    """Create a TaskQueue with a direct response payload.
 
     Args:
         message: Plaintext response to return to the user.
 
     Returns:
-        TaskQueue populated with a single talk-to-user action and result.
+        TaskQueue populated with the response result.
     """
-    step = ActionStep(
-        action_consumer="talk_to_user_tool",
-        action_type="set",
-        action_argument=message,
-    )
-    task_queue = TaskQueue(action_steps=[step])
-    MockSpeaker = get_mock_speaker()
-    step.result = MockSpeaker(content=message)
+    task_queue = TaskQueue(action_steps=[])
     task_queue.task_result = message
     return task_queue
 
@@ -401,8 +394,6 @@ def _build_direct_response(message: str) -> TaskQueue:
 def _collect_tool_outputs(task_queue: TaskQueue) -> list[str]:
     outputs: list[str] = []
     for step in task_queue.action_steps:
-        if step.action_consumer == "talk_to_user_tool":
-            continue
         if step.result is None:
             continue
         content = getattr(step.result, "content", step.result)
@@ -411,11 +402,8 @@ def _collect_tool_outputs(task_queue: TaskQueue) -> list[str]:
 
 
 def _should_synthesize_response(task_queue: TaskQueue) -> bool:
-    if any(
-        step.action_consumer == "talk_to_user_tool" and step.result is not None
-        for step in task_queue.action_steps
-    ):
-        return False
+    if not task_queue.action_steps:
+        return True
     return bool(_collect_tool_outputs(task_queue))
 
 

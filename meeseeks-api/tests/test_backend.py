@@ -16,8 +16,8 @@ class DummyQueue:
         self.task_result = result
         self.action_steps = [
             {
-                "action_consumer": "talk_to_user_tool",
-                "action_type": "set",
+                "action_consumer": "home_assistant_tool",
+                "action_type": "get",
                 "action_argument": "say",
                 "result": result,
             }

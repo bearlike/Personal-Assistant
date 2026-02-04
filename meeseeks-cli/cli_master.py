@@ -2,16 +2,19 @@
 """Terminal CLI for Meeseeks."""
 
 import argparse
+import json
 import os
 import sys
 from collections.abc import Callable, Iterable
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
+from rich import box
 from rich.columns import Columns
 from rich.console import Console, Group
 from rich.markdown import Markdown
 from rich.panel import Panel
+from rich.syntax import Syntax
 from rich.text import Text
 
 
@@ -247,7 +250,13 @@ def _run_query(
         hook_manager=hook_manager,
     )
 
-    _render_results_with_registry(console, task_queue, tool_registry)
+    _render_results_with_registry(
+        console,
+        task_queue,
+        tool_registry,
+        highlight_latest=not bool(task_queue.task_result),
+        verbose=args.verbose > 0,
+    )
     if task_queue.task_result:
         console.print(
             Panel(
@@ -347,6 +356,8 @@ def _render_results_with_registry(
     console: Console,
     task_queue: TaskQueue,
     tool_registry: ToolRegistry,
+    highlight_latest: bool = True,
+    verbose: bool = False,
 ) -> None:
     specs = _tool_specs_by_id(tool_registry)
     panels: list[Panel] = []
@@ -361,19 +372,23 @@ def _render_results_with_registry(
         result = None
         if step.result is not None:
             result = getattr(step.result, "content", step.result)
-        is_latest = index == last_index
+        is_latest = highlight_latest and index == last_index
         content_style = None if is_latest else "dim"
         border_style = "magenta" if is_latest else "dim magenta"
-        content = Text(
-            str(result) if result is not None else "(no result)",
-            style=content_style,
-        )
+        renderable: Text | Syntax
+        if result is None:
+            renderable = Text("(no result)", style="dim")
+        elif not verbose:
+            renderable = Text("(output hidden; use -v/--verbose)", style="dim")
+        else:
+            renderable = _format_tool_output(result, content_style)
         panels.append(
             Panel(
-                content,
+                renderable,
                 title=label,
                 border_style=border_style,
-                padding=(0, 1),
+                padding=(0, 0),
+                box=box.MINIMAL,
             )
         )
     if not panels:
@@ -385,6 +400,32 @@ def _render_results_with_registry(
     console.print(Columns(panels, expand=True))
 
 
+def _format_tool_output(result: object, content_style: str | None) -> Text | Syntax:
+    if isinstance(result, dict | list):
+        return Syntax(
+            json.dumps(result, indent=2, ensure_ascii=True),
+            "json",
+            theme="ansi_dark",
+            word_wrap=True,
+        )
+    if isinstance(result, str):
+        stripped = result.strip()
+        if stripped:
+            try:
+                parsed = json.loads(stripped)
+            except json.JSONDecodeError:
+                parsed = None
+            if isinstance(parsed, dict | list):
+                return Syntax(
+                    json.dumps(parsed, indent=2, ensure_ascii=True),
+                    "json",
+                    theme="ansi_dark",
+                    word_wrap=True,
+                )
+        return Text(result, style=content_style)
+    return Text(str(result), style=content_style)
+
+
 def _build_cli_hook_manager(
     console: Console,
     tool_registry: ToolRegistry,
@@ -393,8 +434,6 @@ def _build_cli_hook_manager(
     specs = _tool_specs_by_id(tool_registry)
 
     def _start_spinner(action_step: ActionStep) -> ActionStep:
-        if action_step.action_consumer == "talk_to_user_tool":
-            return action_step
         spec = specs.get(action_step.action_consumer)
         label = action_step.action_consumer
         if spec is not None and getattr(spec, "kind", "") == "mcp":
