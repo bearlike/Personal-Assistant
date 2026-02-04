@@ -9464,7 +9464,7 @@
 
     <div class="doc doc-contents first">
 
-        <p>Model configuration helpers for ChatOpenAI.</p>
+        <p>Model configuration helpers for ChatLiteLLM.</p>
 
 
 
@@ -9538,20 +9538,12 @@
 
     <div class="doc doc-contents ">
 
-        <p>Build a ChatOpenAI model with reasoning-effort compatibility.</p>
+        <p>Build a ChatLiteLLM model with reasoning-effort compatibility.</p>
 
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>core/llm.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 76</span>
-<span class="normal"> 77</span>
-<span class="normal"> 78</span>
-<span class="normal"> 79</span>
-<span class="normal"> 80</span>
-<span class="normal"> 81</span>
-<span class="normal"> 82</span>
-<span class="normal"> 83</span>
-<span class="normal"> 84</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 84</span>
 <span class="normal"> 85</span>
 <span class="normal"> 86</span>
 <span class="normal"> 87</span>
@@ -9580,17 +9572,26 @@
 <span class="normal">110</span>
 <span class="normal">111</span>
 <span class="normal">112</span>
-<span class="normal">113</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">build_chat_model</span><span class="p">(</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">build_chat_model</span><span class="p">(</span>
     <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">temperature</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">openai_api_base</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build a ChatOpenAI model with reasoning-effort compatibility.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build a ChatLiteLLM model with reasoning-effort compatibility.&quot;&quot;&quot;</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChatOpenAI</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">langchain_litellm</span><span class="w"> </span><span class="kn">import</span> <span class="n">ChatLiteLLM</span>
     <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># pragma: no cover - dependency guard</span>
-        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;langchain-openai is required to build ChatOpenAI&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;langchain-litellm is required to build ChatLiteLLM&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
 
     <span class="n">reasoning_effort</span> <span class="o">=</span> <span class="n">resolve_reasoning_effort</span><span class="p">(</span><span class="n">model_name</span><span class="p">)</span>
     <span class="n">allow_temp</span> <span class="o">=</span> <span class="n">allows_temperature</span><span class="p">(</span><span class="n">model_name</span><span class="p">,</span> <span class="n">reasoning_effort</span><span class="p">)</span>
@@ -9609,15 +9610,16 @@
         <span class="n">model_kwargs</span><span class="p">[</span><span class="s2">&quot;reasoning_effort&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">reasoning_effort</span>
 
     <span class="n">kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s2">&quot;base_url&quot;</span><span class="p">:</span> <span class="n">openai_api_base</span><span class="p">,</span>
-        <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="n">model_name</span><span class="p">,</span>
+        <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="n">_resolve_litellm_model</span><span class="p">(</span><span class="n">model_name</span><span class="p">,</span> <span class="n">openai_api_base</span><span class="p">),</span>
     <span class="p">}</span>
+    <span class="k">if</span> <span class="n">openai_api_base</span><span class="p">:</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;api_base&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">openai_api_base</span>
     <span class="k">if</span> <span class="n">temperature_value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;temperature&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">temperature_value</span>
     <span class="k">if</span> <span class="n">model_kwargs</span><span class="p">:</span>
         <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;model_kwargs&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">model_kwargs</span>
 
-    <span class="k">return</span> <span class="n">ChatOpenAI</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ChatLiteLLM</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>

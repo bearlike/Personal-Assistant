@@ -613,9 +613,11 @@
 <ol>
 <li>Copy <code>.env.example</code> to <code>.env</code>.</li>
 <li>Set at least:</li>
-<li><code>OPENAI_API_KEY</code> (or your compatible provider key)</li>
-<li><code>OPENAI_API_BASE</code> (if you are using a local or custom API base)</li>
+<li><code>OPENAI_API_KEY</code> (for your OpenAI-compatible endpoint)</li>
+<li><code>OPENAI_API_BASE</code> (LiteLLM proxy or other OpenAI-compatible base URL)</li>
 <li><code>DEFAULT_MODEL</code> (or <code>ACTION_PLAN_MODEL</code>)</li>
+<li>If you use an OpenAI-compatible base URL and your model name has no provider
+   prefix, Meeseeks will call <code>openai/&lt;model&gt;</code> automatically.</li>
 <li>Optional runtime paths:</li>
 <li><code>MESEEKS_SESSION_DIR</code> for session transcript storage</li>
 <li><code>MESEEKS_TOOL_MANIFEST</code> if you want a custom tool list (disables MCP auto-discovery)</li>
