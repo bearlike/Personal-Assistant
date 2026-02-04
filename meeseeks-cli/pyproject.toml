@@ -16,7 +16,7 @@ python-dotenv = "^1.0.1"
 langchain = "^1.2.8"
 langchain-litellm = "^0.4.0"
 litellm = "^1.81.0"
-langfuse = { version = "^2.29.3", optional = true }
+langfuse = { version = "^3.12.1", optional = true }
 jinja2 = "^3.1.4"
 jq = "^1.7.0"
 tiktoken = "^0.7.0"
