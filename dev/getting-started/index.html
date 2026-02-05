@@ -723,8 +723,12 @@
 <pre><code class="language-bash">uv sync --all-extras --all-groups
 </code></pre>
 <h2 id="git-hooks-recommended">Git hooks (recommended)</h2>
-<p>To enforce the commit message format and block pushes that fail linting/tests:</p>
+<p>Use the repo hook set to enforce commit message format and block pushes that fail linting/tests.</p>
+<p>Install the repo-managed hooks:</p>
 <pre><code class="language-bash">git config core.hooksPath scripts/githooks
+</code></pre>
+<p>Optional: enable pre-commit hooks if you use <code>pre-commit</code> locally:</p>
+<pre><code class="language-bash">make precommit-install
 </code></pre>
 <p>Commit message format:</p>
 <pre><code>&lt;emoji&gt; &lt;verb&gt;(&lt;scope&gt;): &lt;message&gt;

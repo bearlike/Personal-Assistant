@@ -286,10 +286,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#features-quick-view" class="md-nav__link">
+  <a href="#documentation-map" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Features (quick view)
+        Documentation map
       
     </span>
   </a>
@@ -297,10 +297,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#subprojects-and-how-they-fit" class="md-nav__link">
+  <a href="#feature-highlights-quick-view" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Subprojects and how they fit
+        Feature highlights (quick view)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#repo-map-short" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Repo map (short)
       
     </span>
   </a>
@@ -319,10 +330,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#installation-local" class="md-nav__link">
+  <a href="#getting-started" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Installation (local)
+        Getting started
       
     </span>
   </a>
@@ -467,10 +478,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#features-quick-view" class="md-nav__link">
+  <a href="#documentation-map" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Features (quick view)
+        Documentation map
       
     </span>
   </a>
@@ -478,10 +489,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#subprojects-and-how-they-fit" class="md-nav__link">
+  <a href="#feature-highlights-quick-view" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Subprojects and how they fit
+        Feature highlights (quick view)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#repo-map-short" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Repo map (short)
       
     </span>
   </a>
@@ -500,10 +522,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#installation-local" class="md-nav__link">
+  <a href="#getting-started" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Installation (local)
+        Getting started
       
     </span>
   </a>
@@ -553,30 +575,34 @@
 
 
 <h1 id="meeseeks-docs">Meeseeks Docs</h1>
-<p>Meeseeks is a personal assistant that breaks a request into small actions, runs the right tools, and replies with a clean summary. This doc gives a quick product view and how the parts fit together. Use the links below for setup and deep dives.</p>
+<p>Meeseeks is an AI task agent assistant that breaks a request into small actions, runs the right tools, and replies with a clean summary. This landing page mirrors the README feature highlights so the overview stays consistent. Update both when core positioning changes.</p>
+<h2 id="documentation-map">Documentation map</h2>
+<p><strong>Overview</strong>
+- <a href="../README.md">README</a> - high-level product overview and feature highlights</p>
+<p><strong>Setup and configuration</strong>
+- <a href="getting-started/">Getting started</a> - environment setup, MCP config, and run commands</p>
+<p><strong>Repository map</strong>
+- <a href="components/">Components</a> - monorepo layout and core packages</p>
+<p><strong>Reference</strong>
+- <a href="reference/">API reference</a> - mkdocstrings reference for core modules</p>
+<h2 id="feature-highlights-quick-view">Feature highlights (quick view)</h2>
 <ul>
-<li><a href="getting-started/">Getting started</a></li>
-<li><a href="components/">Components</a></li>
-<li><a href="reference/">API reference</a></li>
-</ul>
-<h2 id="features-quick-view">Features (quick view)</h2>
-<ul>
-<li>Plan -&gt; act -&gt; observe loop to keep work grounded in tool results.</li>
+<li>Plan → act → observe loop to keep work grounded in tool results.</li>
 <li>Multiple interfaces (chat UI, REST API, Home Assistant, terminal CLI) backed by one core engine.</li>
 <li>Tool registry for local tools plus optional MCP tools.</li>
-<li>Session transcripts with lightweight compaction for long runs.</li>
-<li>Context-aware memory (recent turns + summary) with optional context selection near budget.</li>
+<li>Session transcripts with compaction for long runs and context budget awareness.</li>
+<li>Context snapshots built from recent turns plus summaries of prior activity.</li>
 <li>Step-level reflection after tool execution to validate outcomes.</li>
 <li>Permission gate with approval callbacks plus lightweight hooks around tool execution.</li>
-<li>Optional components (Langfuse, Home Assistant) auto-disable when not configured or when failures occur.</li>
+<li>Optional components (Langfuse, Home Assistant) auto-disable when not configured.</li>
 </ul>
-<h2 id="subprojects-and-how-they-fit">Subprojects and how they fit</h2>
+<h2 id="repo-map-short">Repo map (short)</h2>
 <ul>
 <li><code>packages/meeseeks_core/</code>: orchestration loop, schemas, session storage, compaction, tool registry.</li>
 <li><code>packages/meeseeks_tools/</code>: tool implementations and integrations.</li>
 <li><code>apps/meeseeks_api/</code>: Flask API that exposes the assistant over HTTP.</li>
 <li><code>apps/meeseeks_chat/</code>: Streamlit UI for interactive chat.</li>
-<li><code>apps/meeseeks_cli/</code>: Terminal CLI for interactive sessions.</li>
+<li><code>apps/meeseeks_cli/</code>: terminal CLI for interactive sessions.</li>
 <li><code>meeseeks_ha_conversation/</code>: Home Assistant integration that routes voice requests to the API.</li>
 </ul>
 <p>Prompts are packaged under <code>packages/meeseeks_core/src/meeseeks_core/prompts/</code>.</p>
@@ -599,7 +625,7 @@
   Tools --&gt; MCP
   Core --&gt; SessionStore
 </code></pre>
-<h2 id="installation-local">Installation (local)</h2>
+<h2 id="getting-started">Getting started</h2>
 <p>See <a href="getting-started/">getting-started.md</a> for full setup (env, MCP, configs, and how to run each interface).</p>
 <h2 id="cli-quick-commands">CLI quick commands</h2>
 <ul>
