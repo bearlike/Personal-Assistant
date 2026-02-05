@@ -1,4 +1,5 @@
 """Tests for session store persistence helpers."""
+
 from meeseeks_core.compaction import should_compact, summarize_events
 from meeseeks_core.session_store import SessionStore
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Token budgeting utilities."""
+
 from __future__ import annotations
 
 import json
@@ -17,6 +18,7 @@ from meeseeks_core.types import EventRecord
 @dataclass(frozen=True)
 class TokenBudget:
     """Token accounting snapshot used to decide compaction."""
+
     total_tokens: int
     summary_tokens: int
     event_tokens: int
@@ -129,4 +131,3 @@ def get_token_budget(
         utilization=utilization,
         threshold=threshold,
     )
-

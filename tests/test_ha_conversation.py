@@ -1,4 +1,5 @@
 """Tests for the Home Assistant conversation integration."""
+
 import asyncio
 import sys
 import types
@@ -43,9 +44,7 @@ def _install_homeassistant_stubs():
     homeassistant_components_ha = types.ModuleType(
         "homeassistant.components.homeassistant.exposed_entities"
     )
-    homeassistant_components_ha.async_should_expose = (
-        lambda hass, domain, entity_id: True
-    )
+    homeassistant_components_ha.async_should_expose = lambda hass, domain, entity_id: True
 
     config_entries = types.ModuleType("homeassistant.config_entries")
 
@@ -199,9 +198,9 @@ def _install_homeassistant_stubs():
 
     sys.modules["homeassistant.components"] = components
     sys.modules["homeassistant.components.conversation"] = conversation
-    sys.modules[
-        "homeassistant.components.homeassistant.exposed_entities"
-    ] = homeassistant_components_ha
+    sys.modules["homeassistant.components.homeassistant.exposed_entities"] = (
+        homeassistant_components_ha
+    )
     sys.modules["homeassistant.config_entries"] = config_entries
     sys.modules["homeassistant.data_entry_flow"] = data_entry_flow
     sys.modules["homeassistant.const"] = const
@@ -267,6 +266,7 @@ from meeseeks_ha_conversation.helpers import get_exposed_entities  # noqa: E402
 
 class DummySession:
     """Stub aiohttp session for API client testing."""
+
     def __init__(self, payload):
         """Initialize the session with a payload."""
         self.payload = payload
@@ -280,6 +280,7 @@ class DummySession:
 
 class DummyResponse:
     """Stub response object for aiohttp interactions."""
+
     def __init__(self, payload):
         """Initialize the response with a payload."""
         self._payload = payload
@@ -302,9 +303,7 @@ def test_api_generate_includes_session_id():
     """Include session_id in API request payloads."""
     session = DummySession({"task_result": "ok"})
     client = MeeseeksApiClient(base_url="http://test", timeout=10, session=session)
-    result = asyncio.run(
-        client.async_generate({"prompt": "hello", "session_id": "abc"})
-    )
+    result = asyncio.run(client.async_generate({"prompt": "hello", "session_id": "abc"}))
     assert session.last_request["json"]["session_id"] == "abc"
     assert result["response"] == "ok"
     assert result["context"] == "ok"
@@ -324,6 +323,7 @@ def test_api_generate_requires_prompt():
 
 def test_coordinator_update_success():
     """Update coordinator successfully when heartbeat passes."""
+
     class Client:
         async def async_get_heartbeat(self):
             return True
@@ -335,6 +335,7 @@ def test_coordinator_update_success():
 
 def test_coordinator_update_failure():
     """Raise UpdateFailed when heartbeat errors."""
+
     class Client:
         async def async_get_heartbeat(self):
             raise ApiClientError("bad")
@@ -374,9 +375,7 @@ def test_agent_process_success():
 
     agent.query = fake_query
 
-    ConversationInput = sys.modules[
-        "homeassistant.components.conversation"
-    ].ConversationInput
+    ConversationInput = sys.modules["homeassistant.components.conversation"].ConversationInput
     user_input = ConversationInput("conv1", "hello", "en")
     result = asyncio.run(agent.async_process(user_input))
     assert result.response.speech == "hi"
@@ -396,9 +395,7 @@ def test_agent_process_error():
 
     agent.query = fake_query
 
-    ConversationInput = sys.modules[
-        "homeassistant.components.conversation"
-    ].ConversationInput
+    ConversationInput = sys.modules["homeassistant.components.conversation"].ConversationInput
     user_input = ConversationInput("conv1", "hello", "en")
     result = asyncio.run(agent.async_process(user_input))
     assert result.response.error is not None

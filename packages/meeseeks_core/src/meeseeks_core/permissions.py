@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Permission policies for tool execution."""
+
 from __future__ import annotations
 
 import json
@@ -20,6 +21,7 @@ logging = get_logger(name="core.permissions")
 
 class PermissionDecision(str, Enum):
     """Outcomes for a permission check."""
+
     ALLOW = "allow"
     DENY = "deny"
     ASK = "ask"
@@ -28,6 +30,7 @@ class PermissionDecision(str, Enum):
 @dataclass(frozen=True)
 class PermissionRule:
     """Rule describing a tool/action permission decision."""
+
     tool_id: str = "*"
     action_type: str = "*"
     decision: PermissionDecision = PermissionDecision.ASK
@@ -41,6 +44,7 @@ class PermissionRule:
 
 class PermissionPolicy:
     """Evaluate permission rules for action steps."""
+
     def __init__(
         self,
         rules: list[PermissionRule] | None = None,

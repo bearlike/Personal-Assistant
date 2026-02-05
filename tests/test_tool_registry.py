@@ -1,4 +1,5 @@
 """Tests for tool registry loading behavior."""
+
 import json
 from types import SimpleNamespace
 
@@ -53,9 +54,7 @@ def test_manifest_local_tool(tmp_path, monkeypatch):
     """Load a local tool from a manifest entry."""
     module_path = tmp_path / "dummy_tool.py"
     module_path.write_text(
-        "class DummyTool:\n"
-        "    def run(self, action_step):\n"
-        "        return None\n",
+        "class DummyTool:\n" "    def run(self, action_step):\n" "        return None\n",
         encoding="utf-8",
     )
     manifest_path = tmp_path / "manifest.json"
@@ -101,11 +100,7 @@ def test_manifest_skips_missing_local_class(tmp_path, monkeypatch):
     manifest_path = tmp_path / "manifest.json"
     manifest_path.write_text(
         json.dumps(
-            {
-                "tools": [
-                    {"tool_id": "bad_tool", "name": "Bad Tool", "module": "bad_module"}
-                ]
-            }
+            {"tools": [{"tool_id": "bad_tool", "name": "Bad Tool", "module": "bad_module"}]}
         ),
         encoding="utf-8",
     )
@@ -412,7 +407,8 @@ def test_auto_manifest_marks_failed_server(tmp_path, monkeypatch):
 
     registry = load_registry()
     spec = next(
-        spec for spec in registry.list_specs(include_disabled=True)
+        spec
+        for spec in registry.list_specs(include_disabled=True)
         if spec.tool_id == "mcp_srv_tool_a"
     )
     assert spec.enabled is False

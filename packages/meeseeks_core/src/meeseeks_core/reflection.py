@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Step reflection helpers."""
+
 from __future__ import annotations
 
 import os
@@ -35,9 +36,7 @@ class StepReflector:
     def reflect(self, action_step: ActionStep, result_text: str) -> StepReflection | None:
         """Return a reflection decision for a step."""
         if not (
-            action_step.objective
-            or action_step.expected_output
-            or action_step.execution_checklist
+            action_step.objective or action_step.expected_output or action_step.execution_checklist
         ):
             return None
         if os.getenv("MEESEEKS_STEP_REFLECTION", "1") == "0":

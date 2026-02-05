@@ -1,4 +1,5 @@
 """Tests for orchestration workflows."""
+
 import json
 
 from langchain_core.runnables import RunnableLambda  # noqa: E402
@@ -22,6 +23,7 @@ from meeseeks_core.tool_registry import ToolRegistry, ToolSpec, load_registry  #
 
 class Counter:
     """Simple counter helper for call tracking."""
+
     def __init__(self):
         """Initialize the counter."""
         self.count = 0
@@ -152,6 +154,7 @@ def test_orchestrate_session_schema_replan_and_context(monkeypatch, tmp_path):
     captured: dict[str, str] = {}
 
     registry = ToolRegistry()
+
     class DummyTool:
         def run(self, _step):
             return get_mock_speaker()(content="ok")
@@ -238,9 +241,7 @@ def test_orchestrate_session_schema_replan_and_context(monkeypatch, tmp_path):
         if hasattr(messages, "to_messages"):
             messages = messages.to_messages()
         call_count.bump()
-        system = "\n".join(
-            msg.content for msg in messages if getattr(msg, "content", None)
-        )
+        system = "\n".join(msg.content for msg in messages if getattr(msg, "content", None))
         if call_count.count == 1:
             captured["system"] = system
         else:
@@ -665,8 +666,7 @@ def test_orchestrate_session_synthesizes_response(monkeypatch, tmp_path):
     assert task_queue.task_result == "final reply"
     events = session_store.load_transcript(session_id)
     assert any(
-        event.get("type") == "assistant"
-        and event.get("payload", {}).get("text") == "final reply"
+        event.get("type") == "assistant" and event.get("payload", {}).get("text") == "final reply"
         for event in events
     )
 
@@ -775,6 +775,7 @@ def test_orchestrate_session_compact(tmp_path):
 
 class DummyTool:
     """Stub tool used for permission tests."""
+
     def __init__(self):
         """Initialize the dummy tool."""
         self.called_with = None
@@ -876,6 +877,7 @@ def test_run_action_plan_hooks_modify_input():
 
 def test_run_action_plan_disables_tool_on_error():
     """Disable tool when a runtime error occurs."""
+
     class BoomTool:
         def run(self, action_step):
             raise RuntimeError("boom")
@@ -905,9 +907,7 @@ def test_run_action_plan_disables_tool_on_error():
     )
 
     spec = next(
-        spec
-        for spec in registry.list_specs(include_disabled=True)
-        if spec.tool_id == "boom_tool"
+        spec for spec in registry.list_specs(include_disabled=True) if spec.tool_id == "boom_tool"
     )
     assert spec.enabled is False
     assert "Runtime error" in spec.metadata.get("disabled_reason", "")

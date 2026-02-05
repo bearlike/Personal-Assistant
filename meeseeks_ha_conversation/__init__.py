@@ -3,6 +3,7 @@
 For more details about this integration, please refer to
 https://github.com/bearlike/personal-Assistant/
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal, TypedDict
@@ -64,10 +65,12 @@ def _missing_homeassistant_error() -> RuntimeError:
 
 
 if _HOMEASSISTANT_AVAILABLE:
+
     class _BaseConversationAgent(conversation.AbstractConversationAgent):
         """Base agent when Home Assistant is available."""
 
 else:
+
     class _BaseConversationAgent:  # type: ignore[no-redef]
         """Base agent placeholder when Home Assistant is unavailable."""
 

@@ -1,4 +1,5 @@
 """Tests for the Streamlit chat UI helpers."""
+
 # ruff: noqa: I001
 # mypy: ignore-errors
 import os
@@ -75,6 +76,7 @@ def test_run_action_plan_helper(monkeypatch, tmp_path):
 
 def test_main_flow(monkeypatch, tmp_path):
     """Exercise the main chat flow with stubbed Streamlit runtime."""
+
     class DummyContext:
         def __enter__(self):
             return self
@@ -139,9 +141,7 @@ def test_main_flow(monkeypatch, tmp_path):
                 action_argument="hello",
             )
         ]
-        return ["Using `home_assistant_tool` with `get` to `hello`"], TaskQueue(
-            action_steps=steps
-        )
+        return ["Using `home_assistant_tool` with `get` to `hello`"], TaskQueue(action_steps=steps)
 
     monkeypatch.setattr(chat_master, "generate_action_plan_helper", fake_generate)
     monkeypatch.setattr(chat_master, "run_action_plan_helper", lambda *_: "ok")

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Model configuration helpers for ChatLiteLLM."""
+
 from __future__ import annotations
 
 import json
@@ -17,7 +18,6 @@ class ChatModel(Protocol):
 
     def invoke(self, input_data: object, config: object | None = None, **kwargs: object) -> object:
         """Invoke the model with structured input."""
-
 
 
 def _parse_model_list_env(name: str) -> list[str]:

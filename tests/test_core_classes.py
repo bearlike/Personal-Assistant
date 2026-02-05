@@ -1,4 +1,5 @@
 """Tests for core class behaviors."""
+
 import os
 
 import meeseeks_core.classes as classes
@@ -73,9 +74,7 @@ def test_create_task_queue_and_examples():
     ]
     queue = create_task_queue(action_data=action_data, is_example=False)
     assert queue.action_steps[0].action_argument == "hello"
-    examples = classes.get_task_master_examples(
-        0, available_tools=["home_assistant_tool"]
-    )
+    examples = classes.get_task_master_examples(0, available_tools=["home_assistant_tool"])
     assert "action_steps" in examples
     with pytest.raises(ValueError):
         classes.get_task_master_examples(99, available_tools=["home_assistant_tool"])
@@ -83,14 +82,13 @@ def test_create_task_queue_and_examples():
 
 def test_examples_skip_home_assistant_when_unavailable():
     """Ensure examples omit disabled tools."""
-    examples = classes.get_task_master_examples(
-        0, available_tools=[]
-    )
+    examples = classes.get_task_master_examples(0, available_tools=[])
     assert "home_assistant_tool" not in examples
 
 
 def test_abstract_tool_init_and_run(monkeypatch, tmp_path):
     """Initialize AbstractTool and run placeholder output."""
+
     class DummyChatLiteLLM:
         def __init__(self, **kwargs):
             if "temperature" in kwargs and kwargs["temperature"] is None:

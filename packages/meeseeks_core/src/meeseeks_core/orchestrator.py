@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Session orchestration entrypoint."""
+
 from __future__ import annotations
 
 import os
@@ -92,9 +93,7 @@ class Orchestrator:
             state.summary = summary
             state.done = True
             state.done_reason = "compacted"
-            task_queue = self._build_direct_response(
-                f"Compaction complete. Summary: {summary}"
-            )
+            task_queue = self._build_direct_response(f"Compaction complete. Summary: {summary}")
             return (task_queue, state) if return_state else task_queue
 
         context = self._context_builder.build(
@@ -102,9 +101,8 @@ class Orchestrator:
             user_query=user_query,
             model_name=self._model_name,
         )
-        task_queue = (
-            initial_task_queue
-            or self._planner.generate(user_query, self._model_name, context=context)
+        task_queue = initial_task_queue or self._planner.generate(
+            user_query, self._model_name, context=context
         )
         state.plan = task_queue.action_steps
         self._append_action_plan(session_id, task_queue.action_steps)
@@ -266,9 +264,7 @@ class Orchestrator:
     @staticmethod
     def _build_revised_query(user_query: str, task_queue: TaskQueue) -> str:
         failure_note = (
-            f"Last tool failure: {task_queue.last_error}\n"
-            if task_queue.last_error
-            else ""
+            f"Last tool failure: {task_queue.last_error}\n" if task_queue.last_error else ""
         )
         return (
             f"{user_query}\n\nPrevious tool results:\n{task_queue.task_result or ''}\n"

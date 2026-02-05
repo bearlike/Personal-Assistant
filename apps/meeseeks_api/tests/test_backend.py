@@ -1,4 +1,5 @@
 """Tests for the Meeseeks API backend."""
+
 # mypy: ignore-errors
 import json
 
@@ -7,6 +8,7 @@ from meeseeks_api import backend
 
 class DummyQueue:
     """Minimal task queue stub for API responses."""
+
     def __init__(self, result: str) -> None:
         """Initialize the dummy queue with a single action result."""
         self.task_result = result

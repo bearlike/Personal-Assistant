@@ -1,4 +1,5 @@
 """Tests for optional component helpers."""
+
 from meeseeks_core.components import (
     ComponentStatus,
     format_component_status,
@@ -42,7 +43,4 @@ def test_format_component_status():
             ComponentStatus(name="home_assistant_tool", enabled=True),
         ]
     )
-    assert status_text == (
-        "- langfuse: disabled (disabled)\n"
-        "- home_assistant_tool: enabled"
-    )
+    assert status_text == ("- langfuse: disabled (disabled)\n" "- home_assistant_tool: enabled")

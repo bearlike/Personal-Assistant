@@ -1,4 +1,5 @@
 """Tests for model configuration helpers."""
+
 import sys
 import types
 

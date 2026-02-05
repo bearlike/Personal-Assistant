@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Transcript compaction utilities."""
+
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -26,8 +27,8 @@ def summarize_events(events: Iterable[EventRecord], max_items: int = 20) -> str:
         payload_value: object = event.get("payload", "")
         if isinstance(payload_value, dict):
             payload_data = dict(payload_value)
-            payload_value = payload_data.get("text") or payload_data.get("message") or str(
-                payload_data
+            payload_value = (
+                payload_data.get("text") or payload_data.get("message") or str(payload_data)
             )
         if payload_value:
             snippets.append(f"{event_type}: {payload_value}")

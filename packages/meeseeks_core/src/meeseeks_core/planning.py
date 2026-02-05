@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Prompt construction and planning helpers."""
+
 from __future__ import annotations
 
 import os
@@ -63,9 +64,7 @@ class PromptBuilder:
             if tool_prompts:
                 sections.append("Tool guidance:\n" + "\n\n".join(tool_prompts))
         if component_status:
-            sections.append(
-                "Component status:\n" + format_component_status(component_status)
-            )
+            sections.append("Component status:\n" + format_component_status(component_status))
         return "\n\n".join(sections)
 
     @staticmethod
@@ -112,9 +111,7 @@ class PromptBuilder:
             try:
                 tool_prompt = get_system_prompt(spec.prompt_path)
             except OSError as exc:
-                logging.warning(
-                    "Failed to load tool prompt for {}: {}", spec.tool_id, exc
-                )
+                logging.warning("Failed to load tool prompt for {}: {}", spec.tool_id, exc)
                 continue
             if tool_prompt:
                 prompts.append(tool_prompt)

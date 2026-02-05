@@ -8,6 +8,7 @@ through a chat interface.
 # Please start Meeseeks Chat using the following command:
 # meeseeks-chat
 """
+
 # Standard library modules
 import time
 from importlib import resources
@@ -34,6 +35,7 @@ class ConversationBufferWindowMemory:
         self.buffer.append({"input": inputs, "output": outputs})
         if len(self.buffer) > self.k:
             self.buffer = self.buffer[-self.k :]
+
 
 logging = get_logger(name="Meeseeks-Chat")
 
@@ -89,10 +91,7 @@ def main() -> None:
         page_icon=":speech_balloon:",
     )
     image_resource = (
-        resources.files("meeseeks_chat")
-        .joinpath("static")
-        .joinpath("img")
-        .joinpath("banner.png")
+        resources.files("meeseeks_chat").joinpath("static").joinpath("img").joinpath("banner.png")
     )
     css_resource = (
         resources.files("meeseeks_chat")
@@ -110,8 +109,7 @@ def main() -> None:
     st.markdown(f"<style>{page_bg_img}</style>", unsafe_allow_html=True)
 
     if "conversation_memory" not in st.session_state:
-        st.session_state.conversation_memory = ConversationBufferWindowMemory(
-            k=5)
+        st.session_state.conversation_memory = ConversationBufferWindowMemory(k=5)
     conversation_memory = st.session_state.conversation_memory
     if "session_store" not in st.session_state:
         st.session_state.session_store = SessionStore()
@@ -142,21 +140,18 @@ def main() -> None:
         user_input = user_input.strip()
         with st.chat_message("user", avatar="👨‍💻"):
             st.markdown(user_input)
-            st.session_state.messages.append(
-                {"role": "user", "content": user_input})
+            st.session_state.messages.append({"role": "user", "content": user_input})
 
         with st.chat_message("thought", avatar="🧠"):
             with st.spinner("Creating Action Plan ..."):
                 time.sleep(0.5)
                 # * User query is processed here
-                action_plan_list, task_queue = generate_action_plan_helper(
-                    user_input)
+                action_plan_list, task_queue = generate_action_plan_helper(user_input)
                 action_plan_caption = ""
                 action_plan_caption = "\n* ".join(action_plan_list)
                 if action_plan_list:
                     st.session_state.messages.append(
-                        {"role": "thought",
-                            "content": action_plan_caption}
+                        {"role": "thought", "content": action_plan_caption}
                     )
                     with st.expander("**Action Plan (Click to Expand)**"):
                         st.caption(action_plan_caption)
@@ -166,11 +161,8 @@ def main() -> None:
                 time.sleep(0.5)
                 response = run_action_plan_helper(task_queue)
                 st.markdown(response)
-                conversation_memory.save_context(
-                    {"input": user_input}, {"output": response})
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": response}
-                )
+                conversation_memory.save_context({"input": user_input}, {"output": response})
+                st.session_state.messages.append({"role": "assistant", "content": response})
 
     st.session_state.conversation_memory = conversation_memory
 

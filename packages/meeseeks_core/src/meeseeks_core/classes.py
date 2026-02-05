@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Core data models and tool abstractions for Meeseeks orchestration."""
+
 from __future__ import annotations
 
 import abc
@@ -31,6 +32,7 @@ def set_available_tools(tool_ids: list[str]) -> None:
 
 class ActionStep(BaseModel):
     """Action step with validation metadata."""
+
     title: str | None = Field(
         default=None,
         description="Short header summarizing the task for this step.",
@@ -65,27 +67,26 @@ class ActionStep(BaseModel):
     result: MockSpeaker | None = Field(
         alias="_result",
         default=None,
-        description='Private field to persist the action status and other data.'
+        description="Private field to persist the action status and other data.",
     )
 
 
 class TaskQueue(BaseModel):
     """Queue of action steps and results."""
+
     human_message: str | None = Field(
         alias="_human_message",
         default=None,
-        description='Human message associated with the task queue.'
+        description="Human message associated with the task queue.",
     )
     action_steps: list[ActionStep] = Field(default_factory=list)
     task_result: str | None = Field(
-        alias="_task_result",
-        default=None,
-        description='Store the result for the entire task queue'
+        alias="_task_result", default=None, description="Store the result for the entire task queue"
     )
     last_error: str | None = Field(
         alias="_last_error",
         default=None,
-        description="Short description of the most recent tool failure."
+        description="Short description of the most recent tool failure.",
     )
 
     @validator("action_steps", allow_reuse=True)
@@ -99,7 +100,8 @@ class TaskQueue(BaseModel):
 
             if action.action_consumer not in AVAILABLE_TOOLS:
                 error_msg_list.append(
-                    f"`{action.action_consumer}` is not a valid Assistant consumer.")
+                    f"`{action.action_consumer}` is not a valid Assistant consumer."
+                )
 
             if action.action_type not in ["get", "set"]:
                 error_msg = f"`{action.action_type}` is not a valid action type."
@@ -120,6 +122,7 @@ ActionStep.update_forward_refs(ActionArgument=ActionArgument)
 
 class OrchestrationState(BaseModel):
     """State for the orchestration loop."""
+
     goal: str
     session_id: str | None = None
     plan: list[ActionStep] = Field(default_factory=list)
@@ -144,9 +147,7 @@ class AbstractTool(abc.ABC):
         """Initialize tool configuration."""
         self.model_name = cast(
             str,
-            model_name
-            or os.getenv("TOOL_MODEL")
-            or os.getenv("DEFAULT_MODEL", "gpt-3.5-turbo"),
+            model_name or os.getenv("TOOL_MODEL") or os.getenv("DEFAULT_MODEL", "gpt-3.5-turbo"),
         )
         self.name = name
         self.description = description
@@ -191,10 +192,7 @@ class AbstractTool(abc.ABC):
         logging.info(f"Loading `{filename}` as JSON.")
         filename = os.path.join(self.cache_dir, filename)
         filename = os.path.abspath(filename)
-        loader = JSONLoader(
-            file_path=filename,
-            jq_schema='.',
-            text_content=False)
+        loader = JSONLoader(file_path=filename, jq_schema=".", text_content=False)
         data = loader.load()
         return data
 
@@ -291,7 +289,7 @@ def get_task_master_examples(
                     "action_type": "get",
                     "action_argument": "Get today's weather.",
                 },
-            ]
+            ],
         ]
     else:
         examples = [[], []]

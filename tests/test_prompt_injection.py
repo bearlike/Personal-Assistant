@@ -1,4 +1,5 @@
 """Tests for prompt/tool injection logic."""
+
 from meeseeks_core.common import get_system_prompt, ha_render_system_prompt
 from meeseeks_core.context import ContextSnapshot
 from meeseeks_core.planning import PromptBuilder
@@ -25,7 +26,7 @@ def test_prompt_excludes_home_assistant_when_disabled(monkeypatch):
     registry = load_registry()
     prompt = _build_prompt(registry)
     assert "Additional Devices Information" not in prompt
-    assert "action_consumer=\"home_assistant_tool\"" not in prompt
+    assert 'action_consumer="home_assistant_tool"' not in prompt
 
 
 def test_prompt_includes_home_assistant_when_enabled(monkeypatch):
@@ -38,7 +39,7 @@ def test_prompt_includes_home_assistant_when_enabled(monkeypatch):
     registry = load_registry()
     prompt = _build_prompt(registry)
     assert "Additional Devices Information" in prompt
-    assert "action_consumer=\"home_assistant_tool\"" in prompt
+    assert 'action_consumer="home_assistant_tool"' in prompt
 
 
 def test_prompt_includes_recent_and_selected_events(monkeypatch):

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Helpers for optional components and observability integration."""
+
 from __future__ import annotations
 
 import os

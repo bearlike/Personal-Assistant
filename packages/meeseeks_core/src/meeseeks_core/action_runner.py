@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Execute action plans with permissions, hooks, and reflection."""
+
 from __future__ import annotations
 
 import json
@@ -131,8 +132,7 @@ class ActionPlanRunner:
         if decision == PermissionDecision.DENY:
             mock = get_mock_speaker()
             message = (
-                "Permission denied for "
-                f"{action_step.action_consumer}:{action_step.action_type}."
+                "Permission denied for " f"{action_step.action_consumer}:{action_step.action_type}."
             )
             action_step.result = mock(content=message)
             if not decision_logged:
@@ -170,19 +170,13 @@ class ActionPlanRunner:
     ) -> None:
         logging.error("Error processing action step: {}", exc)
         self._record_failure(action_step, str(exc), task_queue)
-        self._tool_registry.disable(
-            action_step.action_consumer, f"Runtime error: {exc}"
-        )
+        self._tool_registry.disable(action_step.action_consumer, f"Runtime error: {exc}")
         action_step.result = None
         self._emit_tool_result(action_step, None, error=str(exc))
         mock = get_mock_speaker()
-        self._hook_manager.run_post_tool_use(
-            action_step, mock(content=f"Tool error: {exc}")
-        )
+        self._hook_manager.run_post_tool_use(action_step, mock(content=f"Tool error: {exc}"))
 
-    def _record_failure(
-        self, step: ActionStep, reason: str, task_queue: TaskQueue
-    ) -> None:
+    def _record_failure(self, step: ActionStep, reason: str, task_queue: TaskQueue) -> None:
         note = f"{step.action_consumer} ({step.action_type}) failed"
         if reason:
             note = f"{note}: {reason}"
@@ -243,11 +237,7 @@ class ActionPlanRunner:
                     if target_field:
                         action_step.action_argument = {target_field: argument}
                         return None
-                fields = (
-                    ", ".join(expected_fields)
-                    if expected_fields
-                    else "schema-defined fields"
-                )
+                fields = ", ".join(expected_fields) if expected_fields else "schema-defined fields"
                 return f"Expected JSON object with fields: {fields}."
 
         if isinstance(argument, dict):

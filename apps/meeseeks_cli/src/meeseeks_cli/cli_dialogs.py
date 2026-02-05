@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Reusable Textual dialogs for the CLI."""
+
 from __future__ import annotations
 
 import os
@@ -278,10 +279,7 @@ class _MultiSelectDialog(_BaseDialog):
             yield Label(self._title, id="title")
             if self._subtitle:
                 yield Label(self._subtitle, id="subtitle")
-            selections = [
-                (option, option, option in self._preselected)
-                for option in self._options
-            ]
+            selections = [(option, option, option in self._preselected) for option in self._options]
             yield SelectionList(*selections, id="options")
 
     def action_accept(self) -> None:

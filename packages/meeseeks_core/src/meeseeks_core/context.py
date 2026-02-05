@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Context selection and rendering helpers."""
+
 from __future__ import annotations
 
 import os
@@ -43,14 +44,9 @@ def event_payload_text(event: EventRecord) -> str:
     if isinstance(payload, dict):
         if "action_argument" in payload:
             payload = dict(payload)
-            payload["action_argument"] = format_action_argument(
-                payload.get("action_argument")
-            )
+            payload["action_argument"] = format_action_argument(payload.get("action_argument"))
         return str(
-            payload.get("text")
-            or payload.get("message")
-            or payload.get("result")
-            or payload
+            payload.get("text") or payload.get("message") or payload.get("result") or payload
         )
     return str(payload)
 
@@ -83,20 +79,14 @@ class ContextBuilder:
         events = self._session_store.load_transcript(session_id)
         summary = self._session_store.load_summary(session_id)
         context_events = [
-            event
-            for event in events
-            if event.get("type") in {"user", "assistant", "tool_result"}
+            event for event in events if event.get("type") in {"user", "assistant", "tool_result"}
         ]
         recent_limit = int(os.getenv("MEESEEKS_RECENT_EVENT_LIMIT", "8"))
         recent_events = context_events[-recent_limit:] if recent_limit > 0 else []
-        candidate_events = (
-            context_events[:-recent_limit] if recent_limit > 0 else context_events
-        )
+        candidate_events = context_events[:-recent_limit] if recent_limit > 0 else context_events
         budget = get_token_budget(events, summary, model_name)
         selected_events: list[EventRecord] | None = None
-        selection_threshold = float(
-            os.getenv("MEESEEKS_CONTEXT_SELECT_THRESHOLD", "0.8")
-        )
+        selection_threshold = float(os.getenv("MEESEEKS_CONTEXT_SELECT_THRESHOLD", "0.8"))
         if (
             os.getenv("MEESEEKS_CONTEXT_SELECTION", "1") != "0"
             and candidate_events

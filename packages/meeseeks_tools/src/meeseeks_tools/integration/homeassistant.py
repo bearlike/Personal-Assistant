@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Home Assistant integration tools and data models."""
+
 from __future__ import annotations
 
 import os
@@ -33,6 +34,7 @@ SelfT = TypeVar("SelfT", bound="CacheHolder")
 
 class HomeAssistantCache(TypedDict):
     """Cached Home Assistant entity and service metadata."""
+
     entity_ids: list[str]
     sensor_ids: list[str]
     entities: list[dict[str, Any]]
@@ -49,11 +51,13 @@ class CacheHolder(Protocol):
     Attributes:
         cache: Home Assistant cache payload.
     """
+
     cache: HomeAssistantCache
 
 
 class SupportsInvoke(Protocol):
     """Protocol for runnable chains that return HomeAssistantCall."""
+
     def invoke(self, input_data: dict[str, Any]) -> HomeAssistantCall:
         """Invoke the chain with structured input.
 
@@ -66,9 +70,7 @@ class SupportsInvoke(Protocol):
         ...
 
 
-def cache_monitor(
-    func: Callable[Concatenate[SelfT, P], R]
-) -> Callable[Concatenate[SelfT, P], R]:
+def cache_monitor(func: Callable[Concatenate[SelfT, P], R]) -> Callable[Concatenate[SelfT, P], R]:
     """Decorator to monitor and update the cache.
 
     Args:
@@ -77,6 +79,7 @@ def cache_monitor(
     Returns:
         Wrapped function that normalizes cache contents after execution.
     """
+
     def sort_by_entity_id(dict_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Sort a list of entities by the entity_id field.
 
@@ -112,14 +115,10 @@ def cache_monitor(
 
             if "attributes" in entity:
                 self.cache["entities"][idx]["attributes"].pop("icon", None)
-                self.cache["entities"][idx]["attributes"].pop(
-                    "monitor_cert_days_remaining", None)
-                self.cache["entities"][idx]["attributes"].pop(
-                    "monitor_cert_is_valid", None)
-                self.cache["entities"][idx]["attributes"].pop(
-                    "monitor_hostname", None)
-                self.cache["entities"][idx]["attributes"].pop(
-                    "monitor_port", None)
+                self.cache["entities"][idx]["attributes"].pop("monitor_cert_days_remaining", None)
+                self.cache["entities"][idx]["attributes"].pop("monitor_cert_is_valid", None)
+                self.cache["entities"][idx]["attributes"].pop("monitor_hostname", None)
+                self.cache["entities"][idx]["attributes"].pop("monitor_port", None)
 
             if any(entity["entity_id"].startswith(prefix) for prefix in forbidden_prefixes):
                 self.cache["entities"].remove(entity)
@@ -186,8 +185,7 @@ def cache_monitor(
         forbidden_substrings = ["blink_kk_bedroom"]
         self.cache["sensor"] = []
         # Clean entities
-        self.cache = clean_entities(
-            self, forbidden_prefixes, forbidden_substrings)
+        self.cache = clean_entities(self, forbidden_prefixes, forbidden_substrings)
 
         # Clean services
         self.cache["services"] = [
@@ -213,16 +211,16 @@ def cache_monitor(
         )
 
         return result
+
     return wrapper
 
 
 class HomeAssistantCall(BaseModel):
     """Structured Home Assistant service call extracted from the model output."""
+
     cache: CacheHolder | None = Field(alias="_ha_cache", default=None)
     domain: str = Field(
-        description=(
-            "The category of the service to call, such as 'light', 'switch', or 'scene'."
-        )
+        description=("The category of the service to call, such as 'light', 'switch', or 'scene'.")
     )
     service: str = Field(
         description=(
@@ -239,9 +237,7 @@ class HomeAssistantCall(BaseModel):
 
     @validator("entity_id", allow_reuse=True)
     # pylint: disable=E0213,W0613
-    def validate_entity_id(
-        cls, entity_id: str, values: dict[str, Any], **kwargs: Any
-    ) -> str:
+    def validate_entity_id(cls, entity_id: str, values: dict[str, Any], **kwargs: Any) -> str:
         """Validate the entity_id against the cache when available.
 
         Args:
@@ -260,15 +256,12 @@ class HomeAssistantCall(BaseModel):
         # !     is not passed to the validator.
         ha_cache = values.get("ha_cache")
         if ha_cache and entity_id not in ha_cache.cache["entity_ids"]:
-            raise ValueError(
-                f"Entity ID '{entity_id}' is not in the Home Assistant cache.")
+            raise ValueError(f"Entity ID '{entity_id}' is not in the Home Assistant cache.")
         return entity_id
 
     @validator("domain", allow_reuse=True)
     # pylint: disable=E0213,W0613
-    def validate_domain(
-        cls, domain: str, values: dict[str, Any], **kwargs: Any
-    ) -> str:
+    def validate_domain(cls, domain: str, values: dict[str, Any], **kwargs: Any) -> str:
         """Validate the domain against the cache when available.
 
         Args:
@@ -287,12 +280,12 @@ class HomeAssistantCall(BaseModel):
         # !     is not passed to the validator.
         ha_cache = values.get("ha_cache")
         if ha_cache and domain not in ha_cache.cache["allowed_domains"]:
-            raise ValueError(
-                f"Domain '{domain}' is not in the Home Assistant cache.")
+            raise ValueError(f"Domain '{domain}' is not in the Home Assistant cache.")
         return domain
 
     class Config:
         """Pydantic configuration for HomeAssistantCall."""
+
         arbitrary_types_allowed = True
 
 
@@ -303,7 +296,7 @@ class HomeAssistant(AbstractTool):
         """Initialize the Home Assistant tool with environment defaults."""
         super().__init__(
             name="Home Assistant",
-            description="A service to manage and interact with Home Assistant"
+            description="A service to manage and interact with Home Assistant",
         )
         self.base_url = os.getenv("HA_URL", None)
         self._api_token = os.getenv("HA_TOKEN", None)
@@ -313,17 +306,15 @@ class HomeAssistant(AbstractTool):
             "entities": [],
             "services": [],
             "sensors": [],
-            "allowed_domains": [
-                "scene", "switch", "weather", "kodi", "automation"]
+            "allowed_domains": ["scene", "switch", "weather", "kodi", "automation"],
         }
 
         if not self.base_url or not self._api_token:
-            raise ValueError(
-                "HA_URL and HA_TOKEN must be set in the environment.")
+            raise ValueError("HA_URL and HA_TOKEN must be set in the environment.")
 
         self.api_headers: dict[str, str] = {
             "Authorization": f"Bearer {self._api_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
     @cache_monitor
@@ -338,9 +329,7 @@ class HomeAssistant(AbstractTool):
             response = requests.get(url, headers=self.api_headers, timeout=30)
             status_code = getattr(response, "status_code", None)
             if status_code in {401, 403}:
-                logging.error(
-                    "Home Assistant authorization failed with status {}.", status_code
-                )
+                logging.error("Home Assistant authorization failed with status {}.", status_code)
                 raise PermissionError("Home Assistant authorization failed.")
             response.raise_for_status()
             self.cache["services"] = response.json()
@@ -362,9 +351,7 @@ class HomeAssistant(AbstractTool):
             response = requests.get(url, headers=self.api_headers, timeout=30)
             status_code = getattr(response, "status_code", None)
             if status_code in {401, 403}:
-                logging.error(
-                    "Home Assistant authorization failed with status {}.", status_code
-                )
+                logging.error("Home Assistant authorization failed with status {}.", status_code)
                 raise PermissionError("Home Assistant authorization failed.")
             response.raise_for_status()
             self.cache["entities"] = response.json()
@@ -434,21 +421,24 @@ class HomeAssistant(AbstractTool):
             payload.update(data)
 
         try:
-            response = requests.post(
-                url, headers=self.api_headers, json=payload, timeout=30)
+            response = requests.post(url, headers=self.api_headers, json=payload, timeout=30)
             status_code = getattr(response, "status_code", None)
             if status_code in {401, 403}:
-                logging.error(
-                    "Home Assistant authorization failed with status {}.", status_code
-                )
+                logging.error("Home Assistant authorization failed with status {}.", status_code)
                 raise PermissionError("Home Assistant authorization failed.")
             response.raise_for_status()
-            logging.info("Service <{}.{}> called on entity <{}> returned `{}`.",
-                         domain, service, entity_id, response.text)
+            logging.info(
+                "Service <{}.{}> called on entity <{}> returned `{}`.",
+                domain,
+                service,
+                entity_id,
+                response.text,
+            )
             return True, response.json()
         except requests.exceptions.RequestException as e:
             logging.error(
-                "Unable to call service <{}.{}> on entity <{}>: {}", domain, service, entity_id, e)
+                "Unable to call service <{}.{}> on entity <{}>: {}", domain, service, entity_id, e
+            )
             return False, []
 
     @staticmethod
@@ -466,7 +456,8 @@ class HomeAssistant(AbstractTool):
             ChatPromptTemplate configured for set-state tasks.
         """
         example = HomeAssistantCall(
-            domain="scene", service="turn_on", entity_id="scene.lamp_power_on")
+            domain="scene", service="turn_on", entity_id="scene.lamp_power_on"
+        )
         prompt = ChatPromptTemplate(
             messages=[
                 SystemMessage(content=system_prompt),
@@ -480,9 +471,8 @@ class HomeAssistant(AbstractTool):
                     "## Home Assistant Entities and Domain-Services\n```\n{context}```\n"
                 ),
             ],
-            partial_variables={
-                "format_instructions": parser.get_format_instructions()},
-            input_variables=["action_step"]
+            partial_variables={"format_instructions": parser.get_format_instructions()},
+            input_variables=["action_step"],
         )
         return prompt
 
@@ -515,7 +505,7 @@ class HomeAssistant(AbstractTool):
                     "## Home Assistant Sensors\n```\n{context}```\n"
                 ),
             ],
-            input_variables=["action_step"]
+            input_variables=["action_step"],
         )
         return prompt
 
@@ -542,7 +532,7 @@ class HomeAssistant(AbstractTool):
             "Kb/s": " kilobits per second",
             "GHz": "Gigahertz",
             # Formatting
-            "\"": ""
+            '"': "",
         }
 
         # Replace using the dictionary
@@ -551,7 +541,7 @@ class HomeAssistant(AbstractTool):
 
         # Remove extra spaces and new lines, condense all multiple spaces
         #   to a single space
-        answer = re.sub(r'\s+', ' ', answer).strip()
+        answer = re.sub(r"\s+", " ", answer).strip()
 
         return answer
 
@@ -576,15 +566,10 @@ class HomeAssistant(AbstractTool):
         try:
             action_step_curr = str(action_step.action_argument).strip()
             call_service_values = chain.invoke(
-                {
-                    "action_step": action_step_curr,
-                    "context": rag_documents,
-                    "cache": self.cache
-                },
+                {"action_step": action_step_curr, "context": rag_documents, "cache": self.cache},
             )
             logging.debug(
-                "Call Service Values for `{}`: `{}`",
-                action_step_curr, call_service_values
+                "Call Service Values for `{}`: `{}`", action_step_curr, call_service_values
             )
             status_bool, response_json = self.call_service(
                 domain=call_service_values.domain,
@@ -615,11 +600,10 @@ class HomeAssistant(AbstractTool):
         if action_step is None:
             raise ValueError("Action step cannot be None.")
         self.update_cache()
-        rag_documents = self._load_rag_documents([
-            "entities.json", "services.json"
-        ])
+        rag_documents = self._load_rag_documents(["entities.json", "services.json"])
         system_prompt = ha_render_system_prompt(
-            name="homeassistant-set-state", all_entities=self.cache["entity_ids"])
+            name="homeassistant-set-state", all_entities=self.cache["entity_ids"]
+        )
 
         parser = PydanticOutputParser(pydantic_object=HomeAssistantCall)  # type: ignore[type-var]
         prompt = self._create_set_prompt(system_prompt, parser)
@@ -628,11 +612,11 @@ class HomeAssistant(AbstractTool):
         model = self.model
         chain: Any = prompt | model | parser
 
-        logging.info("Invoking `set` action chain using `{}` for `{}`.",
-                     self.model_name, action_step)
+        logging.info(
+            "Invoking `set` action chain using `{}` for `{}`.", self.model_name, action_step
+        )
         # TODO: Interpret the response from call service.
-        return self._invoke_service_and_set_state(
-            chain, rag_documents, action_step)
+        return self._invoke_service_and_set_state(chain, rag_documents, action_step)
 
     def get_state(self, action_step: ActionStep | None = None) -> MockSpeaker:
         """Generate response for a given action step based on sensors.
@@ -659,8 +643,7 @@ class HomeAssistant(AbstractTool):
         model = self.model
         chain: Any = prompt | model
 
-        logging.info("Invoking `get` action chain using `{}`.",
-                     self.model_name)
+        logging.info("Invoking `get` action chain using `{}`.", self.model_name)
         message = chain.invoke(
             {
                 "action_step": str(action_step.action_argument).strip(),
@@ -670,4 +653,3 @@ class HomeAssistant(AbstractTool):
         cleaned_message = self._clean_answer(str(message.content))
         MockSpeaker = get_mock_speaker()
         return MockSpeaker(content=cleaned_message)
-

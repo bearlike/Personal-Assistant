@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Common helpers shared across the assistant runtime."""
+
 from __future__ import annotations
 
 import json
@@ -17,6 +18,7 @@ from loguru import logger as loguru_logger
 
 class MockSpeaker(NamedTuple):
     """Simple mock response container used across tools and tests."""
+
     content: str
 
 
@@ -81,8 +83,7 @@ def get_logger(name: str | None = None):
     return loguru_logger.bind(name=name)
 
 
-def num_tokens_from_string(
-        string: str, encoding_name: str = "cl100k_base") -> int:
+def num_tokens_from_string(string: str, encoding_name: str = "cl100k_base") -> int:
     """Get the number of tokens in a string using a specific model."""
     # TODO: Add support for dynamic model selection
     encoding = tiktoken.get_encoding(encoding_name)
@@ -97,17 +98,13 @@ def get_unique_timestamp() -> int:
     # Convert it to string for uniqueness and consistency
     unique_timestamp = str(current_timestamp)
     # Return the integer version of this string timestamp
-    return int(''.join(str(x) for x in map(int, unique_timestamp)))
+    return int("".join(str(x) for x in map(int, unique_timestamp)))
 
 
 def get_system_prompt(name: str = "action-planner") -> str:
     """Get the system prompt for the task queue."""
     logging = get_logger(name="core.common.get_system_prompt")
-    prompt_resource = (
-        resources.files("meeseeks_core")
-        .joinpath("prompts")
-        .joinpath(f"{name}.txt")
-    )
+    prompt_resource = resources.files("meeseeks_core").joinpath("prompts").joinpath(f"{name}.txt")
     with resources.as_file(prompt_resource) as system_prompt_path:
         with open(system_prompt_path, encoding="utf-8") as system_prompt_file:
             system_prompt = system_prompt_file.read()

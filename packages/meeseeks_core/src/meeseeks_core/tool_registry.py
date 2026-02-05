@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Tool registry and manifest loading for Meeseeks."""
+
 from __future__ import annotations
 
 import importlib
@@ -42,6 +43,7 @@ class ToolRunner(Protocol):
 @dataclass(frozen=True)
 class ToolSpec:
     """Metadata describing a tool available to the assistant."""
+
     tool_id: str
     name: str
     description: str
@@ -54,6 +56,7 @@ class ToolSpec:
 
 class ToolRegistry:
     """Registry of configured tools and their instantiated runners."""
+
     def __init__(self) -> None:
         """Initialize an empty registry."""
         self._tools: dict[str, ToolSpec] = {}
@@ -79,22 +82,14 @@ class ToolRegistry:
         if tool_id in self._instances:
             self._instances.pop(tool_id, None)
         set_available_tools(
-            [
-                current_id
-                for current_id, current_spec in self._tools.items()
-                if current_spec.enabled
-            ]
+            [current_id for current_id, current_spec in self._tools.items() if current_spec.enabled]
         )
 
     def register(self, spec: ToolSpec) -> None:
         """Register a tool specification and update action validation."""
         self._tools[spec.tool_id] = spec
         set_available_tools(
-            [
-                tool_id
-                for tool_id, tool_spec in self._tools.items()
-                if tool_spec.enabled
-            ]
+            [tool_id for tool_id, tool_spec in self._tools.items() if tool_spec.enabled]
         )
 
     def get(self, tool_id: str) -> ToolRunner | None:
@@ -137,6 +132,7 @@ class ToolRegistry:
 
 def _import_factory(module_path: str, class_name: str) -> Callable[[], ToolRunner]:
     """Return a factory that instantiates a tool by import path."""
+
     def _factory() -> ToolRunner:
         module = importlib.import_module(module_path)
         cls = getattr(module, class_name)
@@ -274,9 +270,7 @@ def _ensure_auto_manifest(mcp_config_path: str) -> str | None:
                 continue
             disabled_tool = dict(tool)
             disabled_tool["enabled"] = False
-            disabled_tool["disabled_reason"] = (
-                f"Discovery failed: {failures[server_name]}"
-            )
+            disabled_tool["disabled_reason"] = f"Discovery failed: {failures[server_name]}"
             tools_by_id[tool_id] = disabled_tool
         payload["tools"] = list(tools_by_id.values())
     try:
@@ -342,6 +336,7 @@ def load_registry(manifest_path: str | None = None) -> ToolRegistry:
             if not server_name or not tool_name:
                 logging.warning("Skipping MCP tool with missing server/tool: {}", tool)
                 continue
+
             def _mcp_factory(
                 server_name: str = server_name,
                 tool_name: str = tool_name,

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Task planning and orchestration loop for Meeseeks."""
+
 from __future__ import annotations
 
 import os
@@ -61,9 +62,7 @@ def generate_action_plan(
     tool_registry = tool_registry or load_registry()
     resolved_model = cast(
         str,
-        model_name
-        or os.getenv("ACTION_PLAN_MODEL")
-        or os.getenv("DEFAULT_MODEL", "gpt-3.5-turbo"),
+        model_name or os.getenv("ACTION_PLAN_MODEL") or os.getenv("DEFAULT_MODEL", "gpt-3.5-turbo"),
     )
     context = _build_context_snapshot(
         session_summary,

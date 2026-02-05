@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Session transcript storage and management."""
+
 from __future__ import annotations
 
 import json
@@ -22,6 +23,7 @@ def _utc_now() -> str:
 @dataclass(frozen=True)
 class SessionPaths:
     """Resolved filesystem paths for a session."""
+
     root: str
     session_id: str
 
@@ -43,6 +45,7 @@ class SessionPaths:
 
 class SessionStore:
     """Filesystem-backed storage for session transcripts and summaries."""
+
     def __init__(self, root_dir: str | None = None) -> None:
         """Initialize the store and ensure the root directory exists."""
         if root_dir is None:

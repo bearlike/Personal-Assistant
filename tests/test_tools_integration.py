@@ -1,4 +1,5 @@
 """Integration tests for core tools and adapters."""
+
 import asyncio
 import sys
 import types
@@ -40,6 +41,7 @@ def test_mcp_config_normalizes_legacy_keys(monkeypatch, tmp_path):
 def test_mcp_tool_runner_uses_async(monkeypatch):
     """Use async invocation path in MCP tool runner."""
     runner = MCPToolRunner(server_name="srv", tool_name="tool")
+
     async def _fake_invoke(_):
         return "ok"
 
@@ -420,6 +422,7 @@ def test_homeassistant_update_entity_ids(monkeypatch):
 
 def test_homeassistant_prompt_builders():
     """Build prompts for set/get operations."""
+
     class DummyParser:
         def get_format_instructions(self):
             return "format"
