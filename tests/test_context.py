@@ -28,6 +28,12 @@ def test_render_event_lines_skips_empty_payloads():
     assert "user" not in rendered
 
 
+def test_select_context_events_empty_list(tmp_path):
+    """Return empty list when there are no events to select."""
+    builder = ContextBuilder(SessionStore(root_dir=str(tmp_path)))
+    assert builder._select_context_events([], "query", "model") == []
+
+
 def test_select_context_events_keep_ids(monkeypatch, tmp_path):
     """Return only events selected by the model."""
     selection = types.SimpleNamespace(keep_ids=[2], drop_ids=[])

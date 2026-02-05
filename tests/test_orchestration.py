@@ -78,6 +78,28 @@ def test_orchestrate_session_completes(monkeypatch, tmp_path):
     assert run_calls.count == 1
 
 
+def test_orchestrator_creates_session_when_missing(monkeypatch, tmp_path):
+    """Create a new session when no session_id is provided."""
+    session_store = SessionStore(root_dir=str(tmp_path))
+    registry = ToolRegistry()
+
+    monkeypatch.setattr(Planner, "generate", lambda *_a, **_k: TaskQueue(action_steps=[]))
+    monkeypatch.setattr(
+        Orchestrator, "_run_action_plan", lambda *_a, **_k: TaskQueue(action_steps=[])
+    )
+    monkeypatch.setattr(Orchestrator, "_should_synthesize_response", lambda *_a, **_k: False)
+
+    orchestrator = Orchestrator(
+        session_store=session_store,
+        tool_registry=registry,
+        permission_policy=PermissionPolicy(),
+        approval_callback=lambda *_a, **_k: True,
+        hook_manager=HookManager(),
+    )
+    orchestrator.run("hello", max_iters=1, session_id=None)
+    assert session_store.list_sessions()
+
+
 def test_generate_action_plan_omits_disabled_tools(monkeypatch):
     """Ensure prompt does not advertise disabled tools."""
     monkeypatch.setenv("MESEEKS_HOME_ASSISTANT_ENABLED", "0")
@@ -498,6 +520,24 @@ def test_response_synthesis_helpers(monkeypatch):
         context=None,
     )
     assert result == "synthesized"
+
+
+def test_serialize_action_step_includes_optional_fields():
+    """Include optional metadata fields in serialized action payloads."""
+    step = ActionStep(
+        action_consumer="home_assistant_tool",
+        action_type="set",
+        action_argument="turn on",
+        title="Turn on lights",
+        objective="Illuminate the room",
+        execution_checklist=["Use HA", "Target lights"],
+        expected_output="Lights on",
+    )
+    payload = Orchestrator._serialize_action_step(step)
+    assert payload["title"] == "Turn on lights"
+    assert payload["objective"] == "Illuminate the room"
+    assert payload["execution_checklist"] == ["Use HA", "Target lights"]
+    assert payload["expected_output"] == "Lights on"
 
 
 def test_orchestrate_session_updates_summary_on_memory_keyword(monkeypatch, tmp_path):

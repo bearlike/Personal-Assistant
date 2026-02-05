@@ -44,11 +44,32 @@ def test_load_context_overrides_from_file(tmp_path, monkeypatch):
     assert overrides["gpt-y"] == 9000
 
 
+def test_load_context_overrides_from_toml(tmp_path, monkeypatch):
+    """Load context overrides from a TOML file path."""
+    config_path = tmp_path / "contexts.toml"
+    config_path.write_text('gpt-z = 7777\n', encoding="utf-8")
+    monkeypatch.setenv("MESEEKS_MODEL_CONTEXT_WINDOWS", str(config_path))
+    overrides = token_budget_module._load_context_overrides()
+    assert overrides["gpt-z"] == 7777
+
+
+def test_get_context_window_uses_override(monkeypatch):
+    """Use context window override when present."""
+    monkeypatch.setenv("MESEEKS_MODEL_CONTEXT_WINDOWS", '{"gpt-override": 1234}')
+    assert get_context_window("gpt-override") == 1234
+
+
 def test_event_to_text_fallback():
     """Fallback to JSON string when payload lacks text fields."""
     event = {"type": "tool_result", "payload": {"foo": "bar"}}
     text = token_budget_module._event_to_text(event)
     assert '"foo"' in text
+
+
+def test_event_to_text_non_dict_payload():
+    """Fallback to payload string when payload is not a dict."""
+    event = {"type": "user", "payload": "raw text"}
+    assert token_budget_module._event_to_text(event) == "raw text"
 
 
 def test_estimate_event_tokens_empty():

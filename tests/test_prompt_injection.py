@@ -1,15 +1,16 @@
 """Tests for prompt/tool injection logic."""
 
+from meeseeks_core import planning as planning_module
 from meeseeks_core.common import get_system_prompt, ha_render_system_prompt
 from meeseeks_core.context import ContextSnapshot
 from meeseeks_core.planning import PromptBuilder
 from meeseeks_core.token_budget import get_token_budget
-from meeseeks_core.tool_registry import load_registry
+from meeseeks_core.tool_registry import ToolRegistry, ToolSpec, load_registry
 
 
-def _build_prompt(registry, *, recent_events=None, selected_events=None):
+def _build_prompt(registry, *, recent_events=None, selected_events=None, summary=None):
     context = ContextSnapshot(
-        summary=None,
+        summary=summary,
         recent_events=recent_events or [],
         selected_events=selected_events,
         events=[],
@@ -54,6 +55,37 @@ def test_prompt_includes_recent_and_selected_events(monkeypatch):
     )
     assert "Recent conversation" in prompt
     assert "Relevant earlier context" in prompt
+
+
+def test_prompt_includes_summary(monkeypatch):
+    """Include summary lines when present in context."""
+    monkeypatch.delenv("MESEEKS_TOOL_MANIFEST", raising=False)
+    monkeypatch.delenv("MESEEKS_MCP_CONFIG", raising=False)
+    registry = load_registry()
+    prompt = _build_prompt(registry, summary="Remember this")
+    assert "Session summary" in prompt
+    assert "Remember this" in prompt
+
+
+def test_prompt_skips_missing_tool_prompt(monkeypatch):
+    """Skip tool prompt guidance when the prompt file fails to load."""
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="dummy",
+            name="Dummy Tool",
+            description="Test",
+            factory=lambda: object(),
+            prompt_path="missing.txt",
+        )
+    )
+
+    def _raise_prompt(*_args, **_kwargs):
+        raise OSError("boom")
+
+    monkeypatch.setattr(planning_module, "get_system_prompt", _raise_prompt)
+    prompt = _build_prompt(registry)
+    assert "Tool guidance" not in prompt
 
 
 def test_prompt_includes_mcp_schema(monkeypatch, tmp_path):

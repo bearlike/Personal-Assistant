@@ -4,7 +4,12 @@ import sys
 import types
 
 from meeseeks_core import llm as llm_module
-from meeseeks_core.llm import allows_temperature, build_chat_model, resolve_reasoning_effort
+from meeseeks_core.llm import (
+    allows_temperature,
+    build_chat_model,
+    model_supports_reasoning_effort,
+    resolve_reasoning_effort,
+)
 
 
 def test_resolve_reasoning_effort_defaults(monkeypatch):
@@ -72,6 +77,12 @@ def test_parse_model_list_env(monkeypatch):
         "foo",
         "bar",
     ]
+
+
+def test_parse_model_list_env_empty(monkeypatch):
+    """Return empty list for blank env values."""
+    monkeypatch.setenv("MESEEKS_REASONING_EFFORT_MODELS", "   ")
+    assert llm_module._parse_model_list_env("MESEEKS_REASONING_EFFORT_MODELS") == []
     monkeypatch.setenv("MESEEKS_REASONING_EFFORT_MODELS", "foo, Bar")
     assert llm_module._parse_model_list_env("MESEEKS_REASONING_EFFORT_MODELS") == [
         "foo",
@@ -93,7 +104,17 @@ def test_model_supports_reasoning_effort_allowlist(monkeypatch):
     assert llm_module.model_supports_reasoning_effort("other") is False
 
 
+def test_model_supports_reasoning_effort_without_name():
+    """Return False when no model name is provided."""
+    assert model_supports_reasoning_effort(None) is False
+
+
 def test_resolve_reasoning_effort_env_override(monkeypatch):
     """Use explicit env override for reasoning effort."""
     monkeypatch.setenv("MESEEKS_REASONING_EFFORT", "LOW")
     assert resolve_reasoning_effort("gpt-5") == "low"
+
+
+def test_allows_temperature_without_model_name():
+    """Allow temperature when model name is missing."""
+    assert allows_temperature(None, None) is True
