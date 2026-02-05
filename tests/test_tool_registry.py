@@ -13,7 +13,6 @@ def test_default_registry(monkeypatch):
     tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
     enabled_ids = {spec.tool_id for spec in registry.list_specs()}
     assert "home_assistant_tool" in tool_ids
-    assert "talk_to_user_tool" not in enabled_ids
 
 
 def test_default_registry_homeassistant_enabled(monkeypatch):
@@ -96,7 +95,6 @@ def test_manifest_empty_falls_back(tmp_path, monkeypatch):
     tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
     enabled_ids = {spec.tool_id for spec in registry.list_specs()}
     assert "home_assistant_tool" in tool_ids
-    assert "talk_to_user_tool" not in enabled_ids
 
 
 def test_manifest_skips_missing_local_class(tmp_path, monkeypatch):

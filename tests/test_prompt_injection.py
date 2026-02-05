@@ -1,18 +1,20 @@
 """Tests for prompt/tool injection logic."""
-from meeseeks_core import task_master
 from meeseeks_core.common import get_system_prompt, ha_render_system_prompt
+from meeseeks_core.context import ContextSnapshot
+from meeseeks_core.planning import PromptBuilder
+from meeseeks_core.token_budget import get_token_budget
 from meeseeks_core.tool_registry import load_registry
 
 
-def _build_prompt(registry):
-    return task_master._augment_system_prompt(  # pylint: disable=protected-access
-        get_system_prompt(),
-        registry,
-        session_summary=None,
-        recent_events=None,
-        selected_events=None,
-        component_status=None,
+def _build_prompt(registry, *, recent_events=None, selected_events=None):
+    context = ContextSnapshot(
+        summary=None,
+        recent_events=recent_events or [],
+        selected_events=selected_events,
+        events=[],
+        budget=get_token_budget([], None, None),
     )
+    return PromptBuilder(registry).build(get_system_prompt(), context, component_status=None)
 
 
 def test_prompt_excludes_home_assistant_when_disabled(monkeypatch):
@@ -44,13 +46,10 @@ def test_prompt_includes_recent_and_selected_events(monkeypatch):
     monkeypatch.delenv("MESEEKS_TOOL_MANIFEST", raising=False)
     monkeypatch.delenv("MESEEKS_MCP_CONFIG", raising=False)
     registry = load_registry()
-    prompt = task_master._augment_system_prompt(  # pylint: disable=protected-access
-        get_system_prompt(),
+    prompt = _build_prompt(
         registry,
-        session_summary=None,
         recent_events=[{"type": "user", "payload": {"text": "Hi"}}],
         selected_events=[{"type": "tool_result", "payload": {"result": "ok"}}],
-        component_status=None,
     )
     assert "Recent conversation" in prompt
     assert "Relevant earlier context" in prompt

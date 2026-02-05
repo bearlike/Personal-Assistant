@@ -2,17 +2,22 @@
 import json
 
 from langchain_core.runnables import RunnableLambda  # noqa: E402
-from meeseeks_core import task_master  # noqa: E402
+from meeseeks_core import planning, task_master  # noqa: E402
+from meeseeks_core.action_runner import ActionPlanRunner  # noqa: E402
 from meeseeks_core.classes import ActionStep, TaskQueue, set_available_tools  # noqa: E402
 from meeseeks_core.common import get_mock_speaker  # noqa: E402
+from meeseeks_core.context import ContextBuilder  # noqa: E402
 from meeseeks_core.hooks import HookManager  # noqa: E402
+from meeseeks_core.orchestrator import Orchestrator  # noqa: E402
 from meeseeks_core.permissions import (  # noqa: E402
     PermissionDecision,
     PermissionPolicy,
     PermissionRule,
 )
+from meeseeks_core.planning import Planner, ResponseSynthesizer  # noqa: E402
+from meeseeks_core.reflection import StepReflector  # noqa: E402
 from meeseeks_core.session_store import SessionStore  # noqa: E402
-from meeseeks_core.tool_registry import ToolRegistry, ToolSpec  # noqa: E402
+from meeseeks_core.tool_registry import ToolRegistry, ToolSpec, load_registry  # noqa: E402
 
 
 class Counter:
@@ -44,20 +49,20 @@ def test_orchestrate_session_completes(monkeypatch, tmp_path):
     session_store = SessionStore(root_dir=str(tmp_path))
     session_id = session_store.create_session()
 
-    def fake_generate(*args, **kwargs):
+    def fake_generate(*_args, **_kwargs):
         generate_calls.bump()
         return make_task_queue("say hi")
 
-    def fake_run(task_queue, **kwargs):
+    def fake_run(_self, task_queue):
         run_calls.bump()
         MockSpeaker = get_mock_speaker()
         task_queue.action_steps[0].result = MockSpeaker(content="done")
         task_queue.task_result = "done"
         return task_queue
 
-    monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
-    monkeypatch.setattr(task_master, "run_action_plan", fake_run)
-    monkeypatch.setattr(task_master, "_synthesize_response", lambda **_kw: "done")
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(ActionPlanRunner, "run", fake_run)
+    monkeypatch.setattr(ResponseSynthesizer, "synthesize", lambda *_a, **_k: "done")
 
     task_queue = task_master.orchestrate_session(
         "hello",
@@ -74,7 +79,7 @@ def test_orchestrate_session_completes(monkeypatch, tmp_path):
 def test_generate_action_plan_omits_disabled_tools(monkeypatch):
     """Ensure prompt does not advertise disabled tools."""
     monkeypatch.setenv("MESEEKS_HOME_ASSISTANT_ENABLED", "0")
-    registry = task_master.load_registry()
+    registry = load_registry()
 
     def _fake_model(messages):
         combined = "\n".join(
@@ -85,7 +90,7 @@ def test_generate_action_plan_omits_disabled_tools(monkeypatch):
         return json.dumps(payload)
 
     monkeypatch.setattr(
-        task_master,
+        planning,
         "build_chat_model",
         lambda **_kwargs: RunnableLambda(_fake_model),
     )
@@ -105,13 +110,13 @@ def test_orchestrate_session_replans_on_failure(monkeypatch, tmp_path):
     session_store = SessionStore(root_dir=str(tmp_path))
     session_id = session_store.create_session()
 
-    def fake_generate(*args, **kwargs):
+    def fake_generate(_self, user_query, *_args, **_kwargs):
         generate_calls.bump()
         if generate_calls.count == 2:
-            captured["query"] = kwargs.get("user_query")
+            captured["query"] = user_query
         return make_task_queue("say hi")
 
-    def fake_run(task_queue, **kwargs):
+    def fake_run(_self, task_queue):
         run_calls.bump()
         if run_calls.count == 1:
             task_queue.action_steps[0].result = None
@@ -123,9 +128,9 @@ def test_orchestrate_session_replans_on_failure(monkeypatch, tmp_path):
             task_queue.task_result = "ok"
         return task_queue
 
-    monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
-    monkeypatch.setattr(task_master, "run_action_plan", fake_run)
-    monkeypatch.setattr(task_master, "_synthesize_response", lambda **_kw: "ok")
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(ActionPlanRunner, "run", fake_run)
+    monkeypatch.setattr(ResponseSynthesizer, "synthesize", lambda *_a, **_k: "ok")
 
     task_queue = task_master.orchestrate_session(
         "hello",
@@ -280,11 +285,11 @@ def test_orchestrate_session_schema_replan_and_context(monkeypatch, tmp_path):
         return json.dumps(payload)
 
     monkeypatch.setattr(
-        task_master,
+        planning,
         "build_chat_model",
         lambda **_kwargs: RunnableLambda(fake_model),
     )
-    monkeypatch.setattr(task_master, "_should_synthesize_response", lambda *_a, **_k: False)
+    monkeypatch.setattr(Orchestrator, "_should_synthesize_response", lambda *_a, **_k: False)
     monkeypatch.setenv("MEESEEKS_CONTEXT_SELECTION", "0")
 
     policy = PermissionPolicy(
@@ -437,19 +442,20 @@ def test_orchestrate_session_passes_summary(monkeypatch, tmp_path):
     session_id = session_store.create_session()
     session_store.save_summary(session_id, "previous summary")
 
-    def fake_generate(*args, **kwargs):
-        captured["summary"] = kwargs.get("session_summary")
+    def fake_generate(_self, _query, *_args, **kwargs):
+        context = kwargs.get("context")
+        captured["summary"] = context.summary if context else None
         return make_task_queue("say hi")
 
-    def fake_run(task_queue, **kwargs):
+    def fake_run(_self, task_queue):
         MockSpeaker = get_mock_speaker()
         task_queue.action_steps[0].result = MockSpeaker(content="ok")
         task_queue.task_result = "ok"
         return task_queue
 
-    monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
-    monkeypatch.setattr(task_master, "run_action_plan", fake_run)
-    monkeypatch.setattr(task_master, "_synthesize_response", lambda **_kw: "ok")
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(ActionPlanRunner, "run", fake_run)
+    monkeypatch.setattr(ResponseSynthesizer, "synthesize", lambda *_a, **_k: "ok")
 
     task_master.orchestrate_session(
         "hello",
@@ -473,25 +479,22 @@ def test_response_synthesis_helpers(monkeypatch):
             )
         ]
     )
-    assert task_master._collect_tool_outputs(queue) == []
-    assert task_master._should_synthesize_response(TaskQueue(action_steps=[])) is True
+    assert Orchestrator._collect_tool_outputs(queue) == []
+    assert Orchestrator._should_synthesize_response(TaskQueue(action_steps=[])) is True
 
     def _fake_model(_inputs):
         return get_mock_speaker()(content="synthesized")
 
     monkeypatch.setattr(
-        task_master,
+        planning,
         "build_chat_model",
         lambda **_kwargs: RunnableLambda(_fake_model),
     )
-    result = task_master._synthesize_response(
+    result = ResponseSynthesizer(None).synthesize(
         user_query="hi",
         tool_outputs=["output"],
         model_name=None,
-        session_summary=None,
-        recent_events=None,
-        selected_events=None,
-        tool_registry=None,
+        context=None,
     )
     assert result == "synthesized"
 
@@ -504,15 +507,15 @@ def test_orchestrate_session_updates_summary_on_memory_keyword(monkeypatch, tmp_
     def fake_generate(*_args, **_kwargs):
         return make_task_queue("ok")
 
-    def fake_run(task_queue, **_kwargs):
+    def fake_run(_self, task_queue):
         MockSpeaker = get_mock_speaker()
         task_queue.action_steps[0].result = MockSpeaker(content="ok")
         task_queue.task_result = "ok"
         return task_queue
 
-    monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
-    monkeypatch.setattr(task_master, "run_action_plan", fake_run)
-    monkeypatch.setattr(task_master, "_synthesize_response", lambda **_kw: "ok")
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(ActionPlanRunner, "run", fake_run)
+    monkeypatch.setattr(ResponseSynthesizer, "synthesize", lambda *_a, **_k: "ok")
 
     task_master.orchestrate_session(
         "Remember these numbers 12345",
@@ -535,19 +538,20 @@ def test_orchestrate_session_passes_recent_events(monkeypatch, tmp_path):
         {"type": "user", "payload": {"text": "Earlier message"}},
     )
 
-    def fake_generate(*_args, **kwargs):
-        captured["recent_events"] = kwargs.get("recent_events")
+    def fake_generate(_self, _query, *_args, **kwargs):
+        context = kwargs.get("context")
+        captured["recent_events"] = context.recent_events if context else None
         return make_task_queue("ok")
 
-    def fake_run(task_queue, **_kwargs):
+    def fake_run(_self, task_queue):
         MockSpeaker = get_mock_speaker()
         task_queue.action_steps[0].result = MockSpeaker(content="ok")
         task_queue.task_result = "ok"
         return task_queue
 
-    monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
-    monkeypatch.setattr(task_master, "run_action_plan", fake_run)
-    monkeypatch.setattr(task_master, "_synthesize_response", lambda **_kw: "ok")
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(ActionPlanRunner, "run", fake_run)
+    monkeypatch.setattr(ResponseSynthesizer, "synthesize", lambda *_a, **_k: "ok")
 
     task_master.orchestrate_session(
         "hello",
@@ -593,8 +597,8 @@ def test_orchestrate_session_records_mcp_tool_result(monkeypatch, tmp_path):
         )
         return TaskQueue(action_steps=[step])
 
-    monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
-    monkeypatch.setattr(task_master, "_should_synthesize_response", lambda *_a, **_k: False)
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(Orchestrator, "_should_synthesize_response", lambda *_a, **_k: False)
 
     task_master.orchestrate_session(
         "search",
@@ -647,8 +651,8 @@ def test_orchestrate_session_synthesizes_response(monkeypatch, tmp_path):
         )
         return TaskQueue(action_steps=[step])
 
-    monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
-    monkeypatch.setattr(task_master, "_synthesize_response", lambda **_kw: "final reply")
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(ResponseSynthesizer, "synthesize", lambda *_a, **_k: "final reply")
 
     task_queue = task_master.orchestrate_session(
         "hello",
@@ -681,15 +685,16 @@ def test_orchestrate_session_context_selection(monkeypatch, tmp_path):
         {"type": "tool_result", "payload": {"result": "Old tool result"}},
     )
 
-    def fake_select(events, user_query, model_name):
+    def fake_select(_self, events, user_query, model_name):
         captured["selected"] = events[:1]
         return events[:1]
 
-    def fake_generate(*_args, **kwargs):
-        captured["selected_events"] = kwargs.get("selected_events")
+    def fake_generate(_self, _query, *_args, **kwargs):
+        context = kwargs.get("context")
+        captured["selected_events"] = context.selected_events if context else None
         return make_task_queue("ok")
 
-    def fake_run(task_queue, **_kwargs):
+    def fake_run(_self, task_queue):
         MockSpeaker = get_mock_speaker()
         task_queue.action_steps[0].result = MockSpeaker(content="ok")
         task_queue.task_result = "ok"
@@ -697,10 +702,10 @@ def test_orchestrate_session_context_selection(monkeypatch, tmp_path):
 
     monkeypatch.setenv("MEESEEKS_CONTEXT_SELECT_THRESHOLD", "0")
     monkeypatch.setenv("MEESEEKS_RECENT_EVENT_LIMIT", "1")
-    monkeypatch.setattr(task_master, "_select_context_events", fake_select)
-    monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
-    monkeypatch.setattr(task_master, "run_action_plan", fake_run)
-    monkeypatch.setattr(task_master, "_synthesize_response", lambda **_kw: "ok")
+    monkeypatch.setattr(ContextBuilder, "_select_context_events", fake_select)
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(ActionPlanRunner, "run", fake_run)
+    monkeypatch.setattr(ResponseSynthesizer, "synthesize", lambda *_a, **_k: "ok")
 
     task_master.orchestrate_session(
         "hello",
@@ -719,18 +724,18 @@ def test_orchestrate_session_max_iters(monkeypatch, tmp_path):
     session_store = SessionStore(root_dir=str(tmp_path))
     session_id = session_store.create_session()
 
-    def fake_generate(*args, **kwargs):
+    def fake_generate(*_args, **_kwargs):
         generate_calls.bump()
         return make_task_queue("say hi")
 
-    def fake_run(task_queue, **kwargs):
+    def fake_run(_self, task_queue):
         run_calls.bump()
         task_queue.action_steps[0].result = None
         task_queue.task_result = "failed"
         return task_queue
 
-    monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
-    monkeypatch.setattr(task_master, "run_action_plan", fake_run)
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(ActionPlanRunner, "run", fake_run)
 
     task_queue, state = task_master.orchestrate_session(
         "hello",
@@ -927,8 +932,8 @@ def test_run_action_plan_reflection_blocks_progress(monkeypatch):
         revised_argument = "updated"
 
     monkeypatch.setattr(
-        task_master,
-        "_reflect_on_step",
+        StepReflector,
+        "reflect",
         lambda *_args, **_kwargs: DummyReflection(),
     )
 
@@ -945,6 +950,7 @@ def test_run_action_plan_reflection_blocks_progress(monkeypatch):
         task_queue,
         tool_registry=registry,
         approval_callback=lambda _: True,
+        model_name="gpt-3.5-turbo",
     )
     assert task_queue.action_steps[0].result is None
 
@@ -955,18 +961,18 @@ def test_orchestrate_session_auto_compact(monkeypatch, tmp_path):
     session_id = session_store.create_session()
     monkeypatch.setenv("MESEEKS_AUTO_COMPACT_THRESHOLD", "0")
 
-    def fake_generate(*args, **kwargs):
+    def fake_generate(*_args, **_kwargs):
         return make_task_queue("say hi")
 
-    def fake_run(task_queue, **kwargs):
+    def fake_run(_self, task_queue):
         MockSpeaker = get_mock_speaker()
         task_queue.action_steps[0].result = MockSpeaker(content="done")
         task_queue.task_result = "done"
         return task_queue
 
-    monkeypatch.setattr(task_master, "generate_action_plan", fake_generate)
-    monkeypatch.setattr(task_master, "run_action_plan", fake_run)
-    monkeypatch.setattr(task_master, "_synthesize_response", lambda **_kw: "done")
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(ActionPlanRunner, "run", fake_run)
+    monkeypatch.setattr(ResponseSynthesizer, "synthesize", lambda *_a, **_k: "done")
 
     task_master.orchestrate_session(
         "hello",
