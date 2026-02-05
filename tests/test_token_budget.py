@@ -47,7 +47,7 @@ def test_load_context_overrides_from_file(tmp_path, monkeypatch):
 def test_load_context_overrides_from_toml(tmp_path, monkeypatch):
     """Load context overrides from a TOML file path."""
     config_path = tmp_path / "contexts.toml"
-    config_path.write_text('gpt-z = 7777\n', encoding="utf-8")
+    config_path.write_text("gpt-z = 7777\n", encoding="utf-8")
     monkeypatch.setenv("MESEEKS_MODEL_CONTEXT_WINDOWS", str(config_path))
     overrides = token_budget_module._load_context_overrides()
     assert overrides["gpt-z"] == 7777
