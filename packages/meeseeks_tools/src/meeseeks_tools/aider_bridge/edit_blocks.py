@@ -107,9 +107,7 @@ def apply_search_replace_blocks(
         content, valid_fnames=valid_fnames, fence=DEFAULT_FENCE
     )
     if shell_blocks:
-        raise EditBlockApplyError(
-            "Shell command blocks are not supported by this tool."
-        )
+        raise EditBlockApplyError("Shell command blocks are not supported by this tool.")
 
     root_path = Path(root).resolve()
     file_cache: dict[Path, str] = {}
@@ -124,9 +122,7 @@ def apply_search_replace_blocks(
             exists = target_path.exists()
             file_exists[target_path] = exists
         if target_path not in file_cache:
-            file_cache[target_path] = (
-                target_path.read_text(encoding="utf-8") if exists else ""
-            )
+            file_cache[target_path] = target_path.read_text(encoding="utf-8") if exists else ""
 
         new_content = _compute_replacement(
             content=file_cache[target_path],
@@ -141,9 +137,7 @@ def apply_search_replace_blocks(
             hint = ""
             if suggestion:
                 hint = f"\nDid you mean to match:\n{suggestion}"
-            raise EditBlockApplyError(
-                f"SEARCH block failed to match in {edit.path}.{hint}"
-            )
+            raise EditBlockApplyError(f"SEARCH block failed to match in {edit.path}.{hint}")
 
         file_cache[target_path] = new_content
         created_flag = not exists and not edit.search.strip()
