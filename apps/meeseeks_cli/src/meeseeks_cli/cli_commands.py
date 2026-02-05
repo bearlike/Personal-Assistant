@@ -211,14 +211,16 @@ def _cmd_mcp(context: CommandContext, args: list[str]) -> bool:
     if args and args[0].lower() == "init":
         return _cmd_mcp_init(context, args[1:])
     selection_mode = not args or args[0].lower() in {"select", "filter"}
-    mcp_specs = [
-        spec
-        for spec in context.tool_registry.list_specs(include_disabled=True)
-        if spec.kind == "mcp"
-    ]
+    all_specs = context.tool_registry.list_specs(include_disabled=True)
+    mcp_specs = [spec for spec in all_specs if spec.kind == "mcp"]
     if selection_mode and mcp_specs:
         mcp_specs = _maybe_select_mcp_specs(context, mcp_specs) or mcp_specs
-    _render_mcp(context.console, context.tool_registry, mcp_specs=mcp_specs)
+    _render_mcp(
+        context.console,
+        context.tool_registry,
+        mcp_specs=mcp_specs,
+        all_specs=all_specs,
+    )
     return True
 
 
@@ -473,6 +475,7 @@ def _render_mcp(
     console: Console,
     tool_registry: ToolRegistry,
     mcp_specs: list[ToolSpec] | None = None,
+    all_specs: list[ToolSpec] | None = None,
 ) -> None:
     config_path = os.getenv("MESEEKS_MCP_CONFIG")
     if config_path and os.path.exists(config_path):
@@ -502,12 +505,37 @@ def _render_mcp(
     specs = mcp_specs
     if specs is None:
         specs = [
-            spec
-            for spec in tool_registry.list_specs(include_disabled=True)
-            if spec.kind == "mcp"
+            spec for spec in tool_registry.list_specs(include_disabled=True) if spec.kind == "mcp"
         ]
     if not specs:
         console.print("No MCP tools configured.")
+    if all_specs is None:
+        all_specs = tool_registry.list_specs(include_disabled=True)
+    local_specs = [spec for spec in all_specs if spec.kind != "mcp"]
+    if local_specs:
+        local_lines: list[Text] = []
+        for spec in local_specs:
+            line = Text()
+            line.append(spec.tool_id, style="cyan")
+            if spec.description:
+                line.append(" — ", style="dim")
+                line.append(spec.description)
+            if not spec.enabled:
+                disabled_reason = spec.metadata.get("disabled_reason")
+                line.append(" — ", style="dim")
+                line.append("disabled", style="yellow")
+                if disabled_reason:
+                    line.append(" • ", style="dim")
+                    line.append(str(disabled_reason), style="dim")
+            local_lines.append(line)
+        console.print(
+            Panel(
+                Group(*local_lines),
+                title="Built-in Tools",
+                border_style="dim",
+            )
+        )
+    if not specs:
         return
     tool_lines: list[Text] = []
     for spec in specs:

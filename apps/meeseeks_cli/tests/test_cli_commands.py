@@ -243,6 +243,7 @@ def test_command_mcp_shows_servers_without_tools(monkeypatch, tmp_path):
     output = context.console.export_text()
     assert "srv" in output
     assert "No MCP tools configured." in output
+    assert "Built-in Tools" in output
 
 
 def test_command_mcp_selects_single_tool(monkeypatch, tmp_path):
@@ -310,6 +311,7 @@ def test_command_mcp_lists_disabled_tools(tmp_path):
     output = context.console.export_text()
     assert "mcp_tool_disabled" in output
     assert "disabled" in output
+    assert "Built-in Tools" in output
 
 
 def test_render_mcp_invalid_json(monkeypatch, tmp_path):
