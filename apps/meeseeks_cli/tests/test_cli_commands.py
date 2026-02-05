@@ -285,6 +285,33 @@ def test_command_mcp_selects_single_tool(monkeypatch, tmp_path):
     assert "mcp_tool_one" not in output
 
 
+def test_command_mcp_lists_disabled_tools(tmp_path):
+    """Include disabled MCP tools in the output."""
+    context = _make_context(tmp_path)
+    registry = get_registry()
+
+    context.tool_registry.register(
+        ToolSpec(
+            tool_id="mcp_tool_disabled",
+            name="Tool Disabled",
+            description="Tool Disabled",
+            factory=lambda: None,
+            kind="mcp",
+            enabled=False,
+            metadata={
+                "server": "srv",
+                "tool": "tool_disabled",
+                "disabled_reason": "Discovery failed",
+            },
+        )
+    )
+
+    registry.execute("/mcp", context, [])
+    output = context.console.export_text()
+    assert "mcp_tool_disabled" in output
+    assert "disabled" in output
+
+
 def test_render_mcp_invalid_json(monkeypatch, tmp_path):
     """Handle invalid MCP config JSON gracefully."""
     context = _make_context(tmp_path)

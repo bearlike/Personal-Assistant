@@ -211,7 +211,11 @@ def _cmd_mcp(context: CommandContext, args: list[str]) -> bool:
     if args and args[0].lower() == "init":
         return _cmd_mcp_init(context, args[1:])
     selection_mode = not args or args[0].lower() in {"select", "filter"}
-    mcp_specs = [spec for spec in context.tool_registry.list_specs() if spec.kind == "mcp"]
+    mcp_specs = [
+        spec
+        for spec in context.tool_registry.list_specs(include_disabled=True)
+        if spec.kind == "mcp"
+    ]
     if selection_mode and mcp_specs:
         mcp_specs = _maybe_select_mcp_specs(context, mcp_specs) or mcp_specs
     _render_mcp(context.console, context.tool_registry, mcp_specs=mcp_specs)
@@ -287,7 +291,11 @@ def _maybe_select_mcp_specs(
     )
     if selected == refresh_label:
         _refresh_mcp_registry(context)
-        return [spec for spec in context.tool_registry.list_specs() if spec.kind == "mcp"]
+        return [
+            spec
+            for spec in context.tool_registry.list_specs(include_disabled=True)
+            if spec.kind == "mcp"
+        ]
     if selected is None or selected == all_label:
         return None
     return [spec for spec in mcp_specs if spec.tool_id == selected]
@@ -493,7 +501,11 @@ def _render_mcp(
             console.print(f"Failed to read MCP config: {exc}")
     specs = mcp_specs
     if specs is None:
-        specs = [spec for spec in tool_registry.list_specs() if spec.kind == "mcp"]
+        specs = [
+            spec
+            for spec in tool_registry.list_specs(include_disabled=True)
+            if spec.kind == "mcp"
+        ]
     if not specs:
         console.print("No MCP tools configured.")
         return
@@ -511,6 +523,13 @@ def _render_mcp(
             if server_name:
                 line.append(" • ", style="dim")
             line.append(f"tool:{tool_name}")
+        if not spec.enabled:
+            disabled_reason = spec.metadata.get("disabled_reason")
+            line.append(" — ", style="dim")
+            line.append("disabled", style="yellow")
+            if disabled_reason:
+                line.append(" • ", style="dim")
+                line.append(str(disabled_reason), style="dim")
         tool_lines.append(line)
     console.print(
         Panel(
