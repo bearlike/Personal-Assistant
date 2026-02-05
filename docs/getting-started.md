@@ -28,9 +28,16 @@ uv sync --all-extras --all-groups
 ```
 
 ## Git hooks (recommended)
-To enforce the commit message format and block pushes that fail linting/tests:
+Use the repo hook set to enforce commit message format and block pushes that fail linting/tests.
+
+Install the repo-managed hooks:
 ```bash
 git config core.hooksPath scripts/githooks
+```
+
+Optional: enable pre-commit hooks if you use `pre-commit` locally:
+```bash
+make precommit-install
 ```
 
 Commit message format:
