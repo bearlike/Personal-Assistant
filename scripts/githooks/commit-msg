@@ -31,15 +31,18 @@ rest="${message#* }"
 
 if [[ -z "${emoji}" || "${emoji}" == "${message}" ]]; then
   echo "Commit message must start with an emoji, then a space." >&2
+  echo "See .github/git-commit-instructions.md" >&2
   exit 1
 fi
 
 if [[ "${emoji}" =~ ^[[:ascii:]]+$ ]]; then
   echo "Commit message must start with a non-ASCII emoji." >&2
+  echo "See .github/git-commit-instructions.md" >&2
   exit 1
 fi
 
 if ! [[ "${rest}" =~ ^[a-z]+\([a-z0-9_-]+\):\ .+ ]]; then
   echo "Commit message must match: <emoji> <verb>(<scope>): <message>" >&2
+  echo "See .github/git-commit-instructions.md" >&2
   exit 1
 fi
