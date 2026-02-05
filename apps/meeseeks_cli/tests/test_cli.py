@@ -255,6 +255,103 @@ def test_run_query_renders_tool_output_and_response(monkeypatch, tmp_path):
     assert "final response" in output
 
 
+def test_run_query_renders_diff_tool_output(monkeypatch, tmp_path):
+    """Render diff payloads in verbose mode."""
+    store = SessionStore(root_dir=str(tmp_path))
+    session_id = store.create_session()
+    state = CliState(session_id=session_id, show_plan=False)
+    tool_registry = ToolRegistry()
+    tool_registry.register(
+        ToolSpec(
+            tool_id="diff_tool",
+            name="Diff Tool",
+            description="Tool",
+            factory=lambda: None,
+        )
+    )
+    console = Console(record=True)
+
+    def fake_orchestrate(*_args, **_kwargs):
+        step = ActionStep(
+            action_consumer="diff_tool",
+            action_type="set",
+            action_argument="payload",
+        )
+        step.result = get_mock_speaker()(
+            content={"kind": "diff", "text": "--- a/file.txt\n+++ b/file.txt\n"}
+        )
+        task_queue = TaskQueue(action_steps=[step])
+        task_queue.task_result = "final response"
+        return task_queue
+
+    monkeypatch.setattr("meeseeks_cli.cli_master.orchestrate_session", fake_orchestrate)
+
+    _run_query(
+        console,
+        store,
+        state,
+        tool_registry,
+        "hi",
+        types.SimpleNamespace(max_iters=1, verbose=1),
+        prompt_func=lambda _: "y",
+    )
+
+    output = console.export_text()
+    assert "--- a/file.txt" in output
+    assert "final response" in output
+
+
+def test_run_query_renders_shell_tool_output(monkeypatch, tmp_path):
+    """Render shell payloads in verbose mode."""
+    store = SessionStore(root_dir=str(tmp_path))
+    session_id = store.create_session()
+    state = CliState(session_id=session_id, show_plan=False)
+    tool_registry = ToolRegistry()
+    tool_registry.register(
+        ToolSpec(
+            tool_id="shell_tool",
+            name="Shell Tool",
+            description="Tool",
+            factory=lambda: None,
+        )
+    )
+    console = Console(record=True)
+
+    def fake_orchestrate(*_args, **_kwargs):
+        step = ActionStep(
+            action_consumer="shell_tool",
+            action_type="get",
+            action_argument="payload",
+        )
+        step.result = get_mock_speaker()(
+            content={
+                "kind": "shell",
+                "command": "pytest -q",
+                "exit_code": 1,
+                "stdout": "test output",
+            }
+        )
+        task_queue = TaskQueue(action_steps=[step])
+        task_queue.task_result = "final response"
+        return task_queue
+
+    monkeypatch.setattr("meeseeks_cli.cli_master.orchestrate_session", fake_orchestrate)
+
+    _run_query(
+        console,
+        store,
+        state,
+        tool_registry,
+        "hi",
+        types.SimpleNamespace(max_iters=1, verbose=1),
+        prompt_func=lambda _: "y",
+    )
+
+    output = console.export_text()
+    assert "$ pytest -q" in output
+    assert "exit_code: 1" in output
+
+
 def test_run_query_hides_output_when_not_verbose(monkeypatch, tmp_path):
     """Hide tool output in non-verbose mode."""
     store = SessionStore(root_dir=str(tmp_path))

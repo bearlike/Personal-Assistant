@@ -14,7 +14,7 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
 from rich import box
 from rich.columns import Columns
-from rich.console import Console, Group
+from rich.console import Console, Group, RenderableType
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.rule import Rule
@@ -636,9 +636,19 @@ def _render_results_with_registry(
     console.print(Columns(panels, expand=True))
 
 
-def _format_tool_output(result: object, content_style: str | None) -> Text | Syntax:
+def _format_tool_output(result: object, content_style: str | None) -> RenderableType:
     style = content_style or ""
-    if isinstance(result, dict | list):
+    if isinstance(result, dict):
+        renderable = _render_tool_payload(result, style)
+        if renderable is not None:
+            return renderable
+        return Syntax(
+            json.dumps(result, indent=2, ensure_ascii=True),
+            "json",
+            theme="ansi_dark",
+            word_wrap=True,
+        )
+    if isinstance(result, list):
         return Syntax(
             json.dumps(result, indent=2, ensure_ascii=True),
             "json",
@@ -661,6 +671,39 @@ def _format_tool_output(result: object, content_style: str | None) -> Text | Syn
                 )
         return Text(result, style=style)
     return Text(str(result), style=style)
+
+
+def _render_tool_payload(payload: dict[str, object], style: str) -> RenderableType | None:
+    kind_raw = payload.get("kind")
+    kind = kind_raw if isinstance(kind_raw, str) else str(kind_raw or "")
+    kind = kind.strip().lower()
+    if kind == "diff":
+        text = payload.get("text")
+        if not isinstance(text, str) or not text.strip():
+            return Text("(empty diff)", style="dim")
+        return Syntax(text, "diff", theme="ansi_dark", word_wrap=True)
+    if kind == "shell":
+        command = payload.get("command")
+        exit_code = payload.get("exit_code")
+        stdout = payload.get("stdout")
+        stderr = payload.get("stderr")
+        header_lines: list[str] = []
+        if isinstance(command, str) and command:
+            header_lines.append(f"$ {command}")
+        if exit_code is not None:
+            header_lines.append(f"exit_code: {exit_code}")
+        header = Text("\n".join(header_lines) or "Shell command", style=style or "bold")
+        sections: list[RenderableType] = [header]
+        if isinstance(stdout, str) and stdout:
+            sections.append(Text("\nstdout:\n", style="dim"))
+            sections.append(Text(stdout, style=style))
+        if isinstance(stderr, str) and stderr:
+            sections.append(Text("\nstderr:\n", style="dim"))
+            sections.append(Text(stderr, style=style))
+        if len(sections) == 1:
+            return header
+        return Group(*sections)
+    return None
 
 
 def _build_cli_hook_manager(
