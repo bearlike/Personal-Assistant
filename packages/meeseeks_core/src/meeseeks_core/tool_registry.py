@@ -159,6 +159,18 @@ def _default_registry() -> ToolRegistry:
             metadata={"disabled_reason": ha_status.reason} if not ha_status.enabled else {},
         )
     )
+    registry.register(
+        ToolSpec(
+            tool_id="aider_edit_block_tool",
+            name="Aider Edit Blocks",
+            description="Apply Aider-style SEARCH/REPLACE blocks to files.",
+            factory=_import_factory(
+                "meeseeks_tools.integration.aider_edit_blocks",
+                "AiderEditBlockTool",
+            ),
+            prompt_path="tools/aider-edit-blocks",
+        )
+    )
     return registry
 
 
@@ -189,6 +201,16 @@ def _built_in_manifest_entries() -> list[dict[str, object]]:
             "kind": "local",
             "enabled": ha_status.enabled,
             "prompt": "tools/home-assistant",
+        },
+        {
+            "tool_id": "aider_edit_block_tool",
+            "name": "Aider Edit Blocks",
+            "description": "Apply Aider-style SEARCH/REPLACE blocks to files.",
+            "module": "meeseeks_tools.integration.aider_edit_blocks",
+            "class": "AiderEditBlockTool",
+            "kind": "local",
+            "enabled": True,
+            "prompt": "tools/aider-edit-blocks",
         },
     ]
     if not ha_status.enabled and ha_status.reason:
