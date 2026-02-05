@@ -1,4 +1,5 @@
 """Tests for CLI command handlers."""
+
 # ruff: noqa: I001
 import json
 
@@ -15,6 +16,7 @@ from meeseeks_cli.cli_context import CliState, CommandContext  # noqa: E402
 
 class DummyQueue:
     """Minimal task queue stub for compact command results."""
+
     def __init__(self, result: str):
         """Initialize the dummy queue with a result."""
         self.task_result = result
@@ -281,6 +283,7 @@ def test_command_mcp_selects_single_tool(monkeypatch, tmp_path):
     output = context.console.export_text()
     assert "mcp_tool_two" in output
     assert "mcp_tool_one" not in output
+
 
 def test_render_mcp_invalid_json(monkeypatch, tmp_path):
     """Handle invalid MCP config JSON gracefully."""

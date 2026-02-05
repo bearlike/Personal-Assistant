@@ -1,4 +1,5 @@
 """Tests for CLI helpers and workflows."""
+
 # ruff: noqa: I001
 import json
 import os
@@ -32,6 +33,7 @@ from meeseeks_cli.cli_master import (
 
 class DummyStep:
     """Minimal action step stub for CLI formatting."""
+
     def __init__(self, tool: str, action: str, argument: str) -> None:
         """Initialize the dummy step."""
         self.action_consumer = tool

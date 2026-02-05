@@ -27,6 +27,20 @@ uv sync
 uv sync --all-extras --all-groups
 ```
 
+## Git hooks (recommended)
+To enforce the commit message format and block pushes that fail linting/tests:
+```bash
+git config core.hooksPath scripts/githooks
+```
+
+Commit message format:
+```
+<emoji> <verb>(<scope>): <message>
+```
+
+Pre-push runs:
+- `scripts/ci/check.sh` (ruff format/check, mypy, pytest)
+
 ## Environment setup
 1. Copy `.env.example` to `.env`.
 2. Set at least:

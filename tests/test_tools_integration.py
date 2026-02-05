@@ -1,11 +1,12 @@
 """Integration tests for core tools and adapters."""
+
 import asyncio
 import sys
 import types
 
 import pytest
 from meeseeks_core.common import get_mock_speaker
-from meeseeks_tools.integration.homeassistant import HomeAssistant
+from meeseeks_tools.integration.homeassistant import HomeAssistant, cache_monitor
 from meeseeks_tools.integration.mcp import (
     MCPToolRunner,
     _load_mcp_config,
@@ -40,6 +41,7 @@ def test_mcp_config_normalizes_legacy_keys(monkeypatch, tmp_path):
 def test_mcp_tool_runner_uses_async(monkeypatch):
     """Use async invocation path in MCP tool runner."""
     runner = MCPToolRunner(server_name="srv", tool_name="tool")
+
     async def _fake_invoke(_):
         return "ok"
 
@@ -420,6 +422,7 @@ def test_homeassistant_update_entity_ids(monkeypatch):
 
 def test_homeassistant_prompt_builders():
     """Build prompts for set/get operations."""
+
     class DummyParser:
         def get_format_instructions(self):
             return "format"
@@ -542,3 +545,48 @@ def test_homeassistant_get_state(monkeypatch):
     step = types.SimpleNamespace(action_argument="status")
     result = ha.get_state(step)
     assert result.content == "answer"
+
+
+def test_cache_monitor_cleans_entities():
+    """Clean entity and service cache data through the decorator."""
+
+    class DummyCacheHolder:
+        def __init__(self):
+            self.cache = {
+                "entities": [
+                    {
+                        "entity_id": "light.kitchen",
+                        "attributes": {"icon": "light"},
+                        "state": "on",
+                        "context": {},
+                        "last_changed": "x",
+                        "last_reported": "x",
+                        "last_updated": "x",
+                    },
+                    {
+                        "entity_id": "sensor.temp",
+                        "attributes": {"icon": "sensor"},
+                        "state": "5",
+                    },
+                    {
+                        "entity_id": "scene.morning",
+                        "attributes": {},
+                        "state": "on",
+                    },
+                ],
+                "services": [{"domain": "light"}, {"domain": "switch"}],
+                "allowed_domains": ["light"],
+                "entity_ids": ["light.kitchen", "sensor.temp", "scene.morning"],
+                "sensor_ids": ["sensor.temp"],
+                "sensors": [],
+            }
+
+        @cache_monitor
+        def refresh(self):
+            return "ok"
+
+    holder = DummyCacheHolder()
+    assert holder.refresh() == "ok"
+    assert all(service["domain"] == "light" for service in holder.cache["services"])
+    assert any(entity["entity_id"].startswith("light.") for entity in holder.cache["entities"])
+    assert any(sensor["entity_id"].startswith("sensor.") for sensor in holder.cache["sensors"])

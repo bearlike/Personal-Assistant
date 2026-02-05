@@ -1,15 +1,23 @@
 #!/usr/bin/env python3
 """Model configuration helpers for ChatLiteLLM."""
+
 from __future__ import annotations
 
 import json
 import os
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, Protocol, cast
 
 from meeseeks_core.common import get_logger
 
 logging = get_logger(name="core.llm")
+
+
+class ChatModel(Protocol):
+    """Protocol for LangChain-compatible chat models."""
+
+    def invoke(self, input_data: object, config: object | None = None, **kwargs: object) -> object:
+        """Invoke the model with structured input."""
 
 
 def _parse_model_list_env(name: str) -> list[str]:
@@ -86,7 +94,7 @@ def build_chat_model(
     temperature: float,
     *,
     openai_api_base: str | None = None,
-) -> Any:
+) -> ChatModel:
     """Build a ChatLiteLLM model with reasoning-effort compatibility."""
     try:
         from langchain_litellm import ChatLiteLLM
@@ -119,12 +127,13 @@ def build_chat_model(
     if model_kwargs:
         kwargs["model_kwargs"] = model_kwargs
 
-    return ChatLiteLLM(**kwargs)
+    return cast(ChatModel, ChatLiteLLM(**kwargs))
 
 
 __all__ = [
     "allows_temperature",
     "build_chat_model",
+    "ChatModel",
     "model_supports_reasoning_effort",
     "resolve_reasoning_effort",
 ]

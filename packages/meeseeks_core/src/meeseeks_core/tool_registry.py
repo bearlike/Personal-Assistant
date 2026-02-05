@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Tool registry and manifest loading for Meeseeks."""
+
 from __future__ import annotations
 
 import importlib
@@ -8,11 +9,12 @@ import os
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Protocol
 
 from meeseeks_core.classes import ActionStep, set_available_tools
 from meeseeks_core.common import MockSpeaker, get_logger
 from meeseeks_core.components import resolve_home_assistant_status
+from meeseeks_core.types import JsonValue
 
 logging = get_logger(name="core.tool_registry")
 
@@ -40,18 +42,8 @@ class ToolRunner(Protocol):
 
 @dataclass(frozen=True)
 class ToolSpec:
-    """Metadata describing a tool available to the assistant.
+    """Metadata describing a tool available to the assistant."""
 
-    Attributes:
-        tool_id: Unique identifier for the tool.
-        name: Human-friendly tool name.
-        description: Short description of the tool behavior.
-        factory: Callable that instantiates a tool runner.
-        enabled: Whether the tool is enabled for execution.
-        kind: Tool type, such as "local" or "mcp".
-        prompt_path: Optional prompt fragment path without extension.
-        metadata: Additional tool metadata for adapters.
-    """
     tool_id: str
     name: str
     description: str
@@ -59,23 +51,19 @@ class ToolSpec:
     enabled: bool = True
     kind: str = "local"
     prompt_path: str | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, JsonValue] = field(default_factory=dict)
 
 
 class ToolRegistry:
     """Registry of configured tools and their instantiated runners."""
+
     def __init__(self) -> None:
         """Initialize an empty registry."""
         self._tools: dict[str, ToolSpec] = {}
         self._instances: dict[str, ToolRunner] = {}
 
     def disable(self, tool_id: str, reason: str) -> None:
-        """Disable a tool and store a reason for later reporting.
-
-        Args:
-            tool_id: Tool identifier to disable.
-            reason: Human-readable reason for disabling.
-        """
+        """Disable a tool and store a reason for later reporting."""
         spec = self._tools.get(tool_id)
         if spec is None:
             return
@@ -94,37 +82,18 @@ class ToolRegistry:
         if tool_id in self._instances:
             self._instances.pop(tool_id, None)
         set_available_tools(
-            [
-                current_id
-                for current_id, current_spec in self._tools.items()
-                if current_spec.enabled
-            ]
+            [current_id for current_id, current_spec in self._tools.items() if current_spec.enabled]
         )
 
     def register(self, spec: ToolSpec) -> None:
-        """Register a tool specification and update action validation.
-
-        Args:
-            spec: Tool specification to register.
-        """
+        """Register a tool specification and update action validation."""
         self._tools[spec.tool_id] = spec
         set_available_tools(
-            [
-                tool_id
-                for tool_id, tool_spec in self._tools.items()
-                if tool_spec.enabled
-            ]
+            [tool_id for tool_id, tool_spec in self._tools.items() if tool_spec.enabled]
         )
 
     def get(self, tool_id: str) -> ToolRunner | None:
-        """Return an enabled tool runner, instantiating it if needed.
-
-        Args:
-            tool_id: Tool identifier to look up.
-
-        Returns:
-            ToolRunner instance if enabled; otherwise None.
-        """
+        """Return an enabled tool runner, instantiating it if needed."""
         spec = self._tools.get(tool_id)
         if spec is None or not spec.enabled:
             return None
@@ -143,25 +112,14 @@ class ToolRegistry:
         return self._tools.get(tool_id)
 
     def list_specs(self, include_disabled: bool = False) -> list[ToolSpec]:
-        """List tool specifications, optionally including disabled tools.
-
-        Args:
-            include_disabled: Whether to include disabled tools.
-
-        Returns:
-            List of tool specifications.
-        """
+        """List tool specifications, optionally including disabled tools."""
         specs = list(self._tools.values())
         if include_disabled:
             return specs
         return [spec for spec in specs if spec.enabled]
 
     def tool_catalog(self) -> list[dict[str, str]]:
-        """Return a serialized catalog of registered tool metadata.
-
-        Returns:
-            List of dictionaries containing tool IDs, names, and descriptions.
-        """
+        """Return a serialized catalog of registered tool metadata."""
         return [
             {
                 "tool_id": spec.tool_id,
@@ -173,15 +131,8 @@ class ToolRegistry:
 
 
 def _import_factory(module_path: str, class_name: str) -> Callable[[], ToolRunner]:
-    """Return a factory that instantiates a tool by import path.
+    """Return a factory that instantiates a tool by import path."""
 
-    Args:
-        module_path: Python module path containing the tool class.
-        class_name: Name of the tool class to instantiate.
-
-    Returns:
-        Callable that returns a new ToolRunner instance.
-    """
     def _factory() -> ToolRunner:
         module = importlib.import_module(module_path)
         cls = getattr(module, class_name)
@@ -191,11 +142,7 @@ def _import_factory(module_path: str, class_name: str) -> Callable[[], ToolRunne
 
 
 def _default_registry() -> ToolRegistry:
-    """Create the built-in registry for local tools.
-
-    Returns:
-        ToolRegistry populated with built-in local tools.
-    """
+    """Create the built-in registry for local tools."""
     registry = ToolRegistry()
     ha_status = resolve_home_assistant_status()
     registry.register(
@@ -275,7 +222,7 @@ def _build_manifest_payload(
 
 def _ensure_auto_manifest(mcp_config_path: str) -> str | None:
     manifest_path = _default_manifest_cache_path()
-    existing_manifest: dict[str, Any] | None = None
+    existing_manifest: dict[str, JsonValue] | None = None
     if os.path.exists(manifest_path):
         try:
             with open(manifest_path, encoding="utf-8") as handle:
@@ -299,7 +246,7 @@ def _ensure_auto_manifest(mcp_config_path: str) -> str | None:
         payload_tools = payload.get("tools", [])
         if not isinstance(payload_tools, list):
             payload_tools = []
-        tools_by_id: dict[str, dict[str, Any]] = {}
+        tools_by_id: dict[str, dict[str, JsonValue]] = {}
         for tool in payload_tools:
             if not isinstance(tool, dict):
                 continue
@@ -323,9 +270,7 @@ def _ensure_auto_manifest(mcp_config_path: str) -> str | None:
                 continue
             disabled_tool = dict(tool)
             disabled_tool["enabled"] = False
-            disabled_tool["disabled_reason"] = (
-                f"Discovery failed: {failures[server_name]}"
-            )
+            disabled_tool["disabled_reason"] = f"Discovery failed: {failures[server_name]}"
             tools_by_id[tool_id] = disabled_tool
         payload["tools"] = list(tools_by_id.values())
     try:
@@ -339,24 +284,7 @@ def _ensure_auto_manifest(mcp_config_path: str) -> str | None:
 
 
 def load_registry(manifest_path: str | None = None) -> ToolRegistry:
-    """Load tool registry from a JSON manifest if available.
-
-    Manifest format:
-    {
-      "tools": [
-        {"tool_id": "...", "name": "...", "description": "...", "module": "...",
-         "class": "...", "enabled": true, "kind": "local"},
-        {"tool_id": "mcp_weather", "name": "Weather", "description": "...",
-         "kind": "mcp", "server": "weather", "tool": "get_weather"}
-      ]
-    }
-
-    Args:
-        manifest_path: Optional path to a tool manifest JSON file.
-
-    Returns:
-        ToolRegistry populated from the manifest or defaults.
-    """
+    """Load tool registry from a JSON manifest if available."""
     if manifest_path is None:
         manifest_path = os.getenv("MESEEKS_TOOL_MANIFEST")
 
@@ -408,6 +336,7 @@ def load_registry(manifest_path: str | None = None) -> ToolRegistry:
             if not server_name or not tool_name:
                 logging.warning("Skipping MCP tool with missing server/tool: {}", tool)
                 continue
+
             def _mcp_factory(
                 server_name: str = server_name,
                 tool_name: str = tool_name,

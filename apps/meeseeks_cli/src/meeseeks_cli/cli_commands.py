@@ -24,6 +24,7 @@ from meeseeks_cli.cli_dialogs import DialogFactory
 @dataclass(frozen=True)
 class Command:
     """CLI command registration metadata."""
+
     name: str
     help: str
     handler: Callable[[CommandContext, list[str]], bool]
@@ -31,6 +32,7 @@ class Command:
 
 class CommandRegistry:
     """Registry for CLI commands and their handlers."""
+
     def __init__(self) -> None:
         """Initialize an empty command registry."""
         self._commands: dict[str, Command] = {}
@@ -45,6 +47,7 @@ class CommandRegistry:
         Returns:
             Decorator that registers a command handler.
         """
+
         def decorator(func: Callable[[CommandContext, list[str]], bool]) -> Callable:
             self._commands[name] = Command(name=name, help=help_text, handler=func)
             return func
@@ -191,9 +194,7 @@ def _cmd_fork(context: CommandContext, args: list[str]) -> bool:
 @REGISTRY.command("/plan", "Toggle plan display: /plan on|off")
 def _cmd_plan(context: CommandContext, args: list[str]) -> bool:
     if not args:
-        context.console.print(
-            f"Plan display is {'on' if context.state.show_plan else 'off'}."
-        )
+        context.console.print(f"Plan display is {'on' if context.state.show_plan else 'off'}.")
         return True
     value = args[0].lower()
     if value in {"on", "true", "yes"}:
@@ -286,11 +287,7 @@ def _maybe_select_mcp_specs(
     )
     if selected == refresh_label:
         _refresh_mcp_registry(context)
-        return [
-            spec
-            for spec in context.tool_registry.list_specs()
-            if spec.kind == "mcp"
-        ]
+        return [spec for spec in context.tool_registry.list_specs() if spec.kind == "mcp"]
     if selected is None or selected == all_label:
         return None
     return [spec for spec in mcp_specs if spec.tool_id == selected]
@@ -333,10 +330,10 @@ def _cmd_automatic(context: CommandContext, args: list[str]) -> bool:
     value = "on"
     if args:
         value = args[0].lower()
-        force = (
-            any(arg in {"--yes", "--force"} for arg in args[1:])
-            or value in {"--yes", "--force"}
-        )
+        force = any(arg in {"--yes", "--force"} for arg in args[1:]) or value in {
+            "--yes",
+            "--force",
+        }
     if value in {"off", "disable", "no"}:
         context.state.auto_approve_all = False
         context.console.print("Automatic approvals disabled.")

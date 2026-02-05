@@ -1,4 +1,5 @@
 """Tests for common helpers."""
+
 import meeseeks_core.common as common
 
 

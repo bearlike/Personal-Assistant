@@ -148,6 +148,7 @@ def _resolve_display_model(model_name: str | None) -> str:
 @dataclass(frozen=True)
 class HeaderContext:
     """Structured data needed to render the CLI header."""
+
     title: str
     version: str
     status_label: str
@@ -182,6 +183,7 @@ def _short_model(model: str, max_len: int = 28) -> str:
 
 def _short_url(base_url: str, max_len: int = 36) -> str:
     return _truncate_middle(base_url, max_len)
+
 
 def _format_model(model: str, max_len: int) -> Text:
     shortened = _short_model(model, max_len)
@@ -365,18 +367,10 @@ def run_cli(args: argparse.Namespace) -> int:
     model_name = _resolve_display_model(state.model_name)
     langfuse_status = resolve_langfuse_status()
     all_specs = tool_registry.list_specs(include_disabled=True)
-    builtin_enabled = sum(
-        1 for spec in all_specs if spec.kind == "local" and spec.enabled
-    )
-    builtin_disabled = sum(
-        1 for spec in all_specs if spec.kind == "local" and not spec.enabled
-    )
-    external_enabled = sum(
-        1 for spec in all_specs if spec.kind == "mcp" and spec.enabled
-    )
-    external_disabled = sum(
-        1 for spec in all_specs if spec.kind == "mcp" and not spec.enabled
-    )
+    builtin_enabled = sum(1 for spec in all_specs if spec.kind == "local" and spec.enabled)
+    builtin_disabled = sum(1 for spec in all_specs if spec.kind == "local" and not spec.enabled)
+    external_enabled = sum(1 for spec in all_specs if spec.kind == "mcp" and spec.enabled)
+    external_disabled = sum(1 for spec in all_specs if spec.kind == "mcp" and not spec.enabled)
     try:
         config = _load_mcp_config()
         configured_servers = set(config.get("servers", {}).keys())

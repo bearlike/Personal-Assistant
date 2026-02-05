@@ -1,4 +1,5 @@
 """Streamlit entrypoint for the packaged chat UI."""
+
 from __future__ import annotations
 
 import os

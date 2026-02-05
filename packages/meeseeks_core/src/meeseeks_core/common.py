@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Common helpers shared across the assistant runtime."""
+
 from __future__ import annotations
 
 import json
@@ -8,7 +9,7 @@ import os
 import sys
 import time
 from importlib import resources
-from typing import Any, NamedTuple
+from typing import NamedTuple
 
 import tiktoken
 from jinja2 import Environment, PackageLoader
@@ -16,20 +17,13 @@ from loguru import logger as loguru_logger
 
 
 class MockSpeaker(NamedTuple):
-    """Simple mock response container used across tools and tests.
+    """Simple mock response container used across tools and tests."""
 
-    Attributes:
-        content: Text content returned by a tool.
-    """
     content: str
 
 
 def get_mock_speaker() -> type[MockSpeaker]:
-    """Return a mock speaker for testing.
-
-    Returns:
-        MockSpeaker class for constructing responses.
-    """
+    """Return a mock speaker for testing."""
     return MockSpeaker
 
 
@@ -82,31 +76,15 @@ def _configure_logging() -> None:
 
 
 def get_logger(name: str | None = None):
-    """Get the logger for the module.
-
-    Args:
-        name: Name of the logger, defaults to __name__.
-
-    Returns:
-        Logger configured with colored output.
-    """
+    """Get the logger for the module."""
     _configure_logging()
     if not name:
         name = __name__
     return loguru_logger.bind(name=name)
 
 
-def num_tokens_from_string(
-        string: str, encoding_name: str = "cl100k_base") -> int:
-    """Get the number of tokens in a string using a specific model.
-
-    Args:
-        string: Text to tokenize.
-        encoding_name: Encoding name used for tokenization.
-
-    Returns:
-        Number of tokens for the string.
-    """
+def num_tokens_from_string(string: str, encoding_name: str = "cl100k_base") -> int:
+    """Get the number of tokens in a string using a specific model."""
     # TODO: Add support for dynamic model selection
     encoding = tiktoken.get_encoding(encoding_name)
     num_tokens = len(encoding.encode(string))
@@ -114,37 +92,19 @@ def num_tokens_from_string(
 
 
 def get_unique_timestamp() -> int:
-    """Get a unique timestamp for the task queue.
-
-    Returns:
-        Integer timestamp suitable for unique IDs.
-    """
+    """Get a unique timestamp for the task queue."""
     # Get the number of seconds since epoch (Jan 1, 1970) as a float
     current_timestamp = int(time.time())
     # Convert it to string for uniqueness and consistency
     unique_timestamp = str(current_timestamp)
     # Return the integer version of this string timestamp
-    return int(''.join(str(x) for x in map(int, unique_timestamp)))
+    return int("".join(str(x) for x in map(int, unique_timestamp)))
 
 
 def get_system_prompt(name: str = "action-planner") -> str:
-    """Get the system prompt for the task queue.
-
-    Args:
-        name: Prompt file name without extension.
-
-    Returns:
-        System prompt string.
-
-    Raises:
-        OSError: If the prompt file cannot be read.
-    """
+    """Get the system prompt for the task queue."""
     logging = get_logger(name="core.common.get_system_prompt")
-    prompt_resource = (
-        resources.files("meeseeks_core")
-        .joinpath("prompts")
-        .joinpath(f"{name}.txt")
-    )
+    prompt_resource = resources.files("meeseeks_core").joinpath("prompts").joinpath(f"{name}.txt")
     with resources.as_file(prompt_resource) as system_prompt_path:
         with open(system_prompt_path, encoding="utf-8") as system_prompt_file:
             system_prompt = system_prompt_file.read()
@@ -153,33 +113,18 @@ def get_system_prompt(name: str = "action-planner") -> str:
     return system_prompt.strip()
 
 
-def format_action_argument(argument: Any) -> str:
-    """Format an action argument for logs and prompts.
-
-    Args:
-        argument: Action argument payload.
-
-    Returns:
-        String representation suitable for display.
-    """
+def format_action_argument(argument: object) -> str:
+    """Format an action argument for logs and prompts."""
     if isinstance(argument, dict):
         return json.dumps(argument, ensure_ascii=True)
     return str(argument)
 
 
 def ha_render_system_prompt(
-    all_entities: Any | None = None,
+    all_entities: object | None = None,
     name: str = "homeassistant-set-state",
 ) -> str:
-    """Render the Home Assistant Jinja2 system prompt.
-
-    Args:
-        all_entities: Optional entity list for template substitution.
-        name: Template file name without extension.
-
-    Returns:
-        Rendered system prompt string.
-    """
+    """Render the Home Assistant Jinja2 system prompt."""
     if all_entities is not None:
         all_entities = str(all_entities).strip()
     logging = get_logger(name="core.common.render_system_prompt")

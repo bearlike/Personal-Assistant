@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """MCP tool runner for integrating MCP servers into Meeseeks."""
+
 from __future__ import annotations
 
 import asyncio
@@ -19,22 +20,14 @@ def _log_discovery_failure(server_name: str, exc: Exception) -> None:
     exceptions = getattr(exc, "exceptions", None)
     if isinstance(exceptions, tuple):
         for idx, sub in enumerate(exceptions, start=1):
-            logging.warning(
-                "MCP discovery sub-exception {} for {}: {}", idx, server_name, sub
-            )
-            logging.opt(exception=sub).debug(
-                "MCP discovery sub-exception traceback"
-            )
+            logging.warning("MCP discovery sub-exception {} for {}: {}", idx, server_name, sub)
+            logging.opt(exception=sub).debug("MCP discovery sub-exception traceback")
     else:
         logging.opt(exception=exc).debug("MCP discovery traceback")
 
 
-def _log_runtime_failure(
-    server_name: str, tool_name: str, exc: Exception
-) -> None:
-    logging.warning(
-        "MCP runtime error for {}.{}: {}", server_name, tool_name, exc
-    )
+def _log_runtime_failure(server_name: str, tool_name: str, exc: Exception) -> None:
+    logging.warning("MCP runtime error for {}.{}: {}", server_name, tool_name, exc)
     exceptions = getattr(exc, "exceptions", None)
     if isinstance(exceptions, tuple):
         for idx, sub in enumerate(exceptions, start=1):
@@ -45,9 +38,7 @@ def _log_runtime_failure(
                 tool_name,
                 sub,
             )
-            logging.opt(exception=sub).debug(
-                "MCP runtime sub-exception traceback"
-            )
+            logging.opt(exception=sub).debug("MCP runtime sub-exception traceback")
     else:
         logging.opt(exception=exc).debug("MCP runtime traceback")
 
@@ -166,9 +157,7 @@ async def _discover_mcp_tool_details_with_failures_async(
     try:
         from langchain_mcp_adapters.client import MultiServerMCPClient
     except Exception as exc:  # pragma: no cover - runtime dependency
-        raise RuntimeError(
-            "langchain-mcp-adapters is required for MCP tools."
-        ) from exc
+        raise RuntimeError("langchain-mcp-adapters is required for MCP tools.") from exc
 
     servers = config.get("servers", {})
     discovered: dict[str, list[dict[str, Any]]] = {}
@@ -219,9 +208,7 @@ def discover_mcp_tool_details_with_failures(
     config: dict[str, Any],
 ) -> tuple[dict[str, list[dict[str, Any]]], dict[str, Exception]]:
     """Discover MCP tool names, schemas, and per-server failures."""
-    return _run_async(
-        _discover_mcp_tool_details_with_failures_async(_normalize_mcp_config(config))
-    )
+    return _run_async(_discover_mcp_tool_details_with_failures_async(_normalize_mcp_config(config)))
 
 
 def tool_auto_approved(
@@ -281,16 +268,12 @@ class MCPToolRunner:
         try:
             from langchain_mcp_adapters.client import MultiServerMCPClient
         except Exception as exc:  # pragma: no cover - runtime dependency
-            raise RuntimeError(
-                "langchain-mcp-adapters is required for MCP tools."
-            ) from exc
+            raise RuntimeError("langchain-mcp-adapters is required for MCP tools.") from exc
 
         config = _load_mcp_config()
         servers = config.get("servers", {})
         if not servers or self.server_name not in servers:
-            raise ValueError(
-                f"MCP server '{self.server_name}' not found in config."
-            )
+            raise ValueError(f"MCP server '{self.server_name}' not found in config.")
 
         client = MultiServerMCPClient({self.server_name: servers[self.server_name]})
         tools = await client.get_tools(server_name=self.server_name)
@@ -301,9 +284,7 @@ class MCPToolRunner:
                 f"Tool '{self.tool_name}' not found on MCP server '{self.server_name}'."
             )
         try:
-            result = await tool.ainvoke(
-                _prepare_mcp_input(tool, input_payload)
-            )
+            result = await tool.ainvoke(_prepare_mcp_input(tool, input_payload))
             return str(result)
         except Exception as exc:
             _log_runtime_failure(self.server_name, self.tool_name, exc)

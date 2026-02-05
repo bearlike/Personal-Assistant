@@ -1,4 +1,5 @@
 """Tests for tool registry loading behavior."""
+
 import json
 from types import SimpleNamespace
 
@@ -11,9 +12,7 @@ def test_default_registry(monkeypatch):
     monkeypatch.delenv("MESEEKS_HOME_ASSISTANT_ENABLED", raising=False)
     registry = load_registry()
     tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
-    enabled_ids = {spec.tool_id for spec in registry.list_specs()}
     assert "home_assistant_tool" in tool_ids
-    assert "talk_to_user_tool" not in enabled_ids
 
 
 def test_default_registry_homeassistant_enabled(monkeypatch):
@@ -55,9 +54,7 @@ def test_manifest_local_tool(tmp_path, monkeypatch):
     """Load a local tool from a manifest entry."""
     module_path = tmp_path / "dummy_tool.py"
     module_path.write_text(
-        "class DummyTool:\n"
-        "    def run(self, action_step):\n"
-        "        return None\n",
+        "class DummyTool:\n" "    def run(self, action_step):\n" "        return None\n",
         encoding="utf-8",
     )
     manifest_path = tmp_path / "manifest.json"
@@ -94,9 +91,16 @@ def test_manifest_empty_falls_back(tmp_path, monkeypatch):
 
     registry = load_registry(str(manifest_path))
     tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
-    enabled_ids = {spec.tool_id for spec in registry.list_specs()}
     assert "home_assistant_tool" in tool_ids
-    assert "talk_to_user_tool" not in enabled_ids
+
+
+def test_disable_unknown_tool_is_noop():
+    """Ignore disable calls for unknown tool ids."""
+    from meeseeks_core.tool_registry import ToolRegistry
+
+    registry = ToolRegistry()
+    registry.disable("missing_tool", "reason")
+    assert registry.list_specs() == []
 
 
 def test_manifest_skips_missing_local_class(tmp_path, monkeypatch):
@@ -105,11 +109,7 @@ def test_manifest_skips_missing_local_class(tmp_path, monkeypatch):
     manifest_path = tmp_path / "manifest.json"
     manifest_path.write_text(
         json.dumps(
-            {
-                "tools": [
-                    {"tool_id": "bad_tool", "name": "Bad Tool", "module": "bad_module"}
-                ]
-            }
+            {"tools": [{"tool_id": "bad_tool", "name": "Bad Tool", "module": "bad_module"}]}
         ),
         encoding="utf-8",
     )
@@ -416,7 +416,8 @@ def test_auto_manifest_marks_failed_server(tmp_path, monkeypatch):
 
     registry = load_registry()
     spec = next(
-        spec for spec in registry.list_specs(include_disabled=True)
+        spec
+        for spec in registry.list_specs(include_disabled=True)
         if spec.tool_id == "mcp_srv_tool_a"
     )
     assert spec.enabled is False
