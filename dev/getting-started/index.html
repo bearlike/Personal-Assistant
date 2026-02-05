@@ -376,6 +376,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#git-hooks-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Git hooks (recommended)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#environment-setup" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -591,6 +602,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#git-hooks-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Git hooks (recommended)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#environment-setup" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -700,6 +722,15 @@
 <h3 id="developer-installation-all-components-devtestdocs">Developer installation (all components + dev/test/docs)</h3>
 <pre><code class="language-bash">uv sync --all-extras --all-groups
 </code></pre>
+<h2 id="git-hooks-recommended">Git hooks (recommended)</h2>
+<p>To enforce the commit message format and block pushes that fail linting/tests:</p>
+<pre><code class="language-bash">git config core.hooksPath scripts/githooks
+</code></pre>
+<p>Commit message format:</p>
+<pre><code>&lt;emoji&gt; &lt;verb&gt;(&lt;scope&gt;): &lt;message&gt;
+</code></pre>
+<p>Pre-push runs:
+- <code>scripts/ci/check.sh</code> (ruff format/check, mypy, pytest)</p>
 <h2 id="environment-setup">Environment setup</h2>
 <ol>
 <li>Copy <code>.env.example</code> to <code>.env</code>.</li>
