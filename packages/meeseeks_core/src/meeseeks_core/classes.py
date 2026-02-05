@@ -6,7 +6,7 @@ import abc
 import json
 import os
 from collections.abc import Sequence
-from typing import Any, cast
+from typing import cast
 
 from dotenv import load_dotenv
 from langchain_community.document_loaders import JSONLoader
@@ -16,7 +16,7 @@ from pydantic.v1 import BaseModel, Field, validator
 from meeseeks_core.common import MockSpeaker, get_logger, get_mock_speaker, get_unique_timestamp
 from meeseeks_core.components import build_langfuse_handler
 from meeseeks_core.llm import build_chat_model
-from meeseeks_core.types import ActionStepPayload
+from meeseeks_core.types import ActionArgument, ActionStepPayload
 
 load_dotenv()
 logging = get_logger(name="core.classes")
@@ -24,28 +24,13 @@ AVAILABLE_TOOLS: list[str] = ["home_assistant_tool"]
 
 
 def set_available_tools(tool_ids: list[str]) -> None:
-    """Update the global tool list for ActionStep validation.
-
-    Args:
-        tool_ids: List of tool identifiers to allow.
-    """
+    """Update available tool IDs for validation."""
     global AVAILABLE_TOOLS
     AVAILABLE_TOOLS = tool_ids
 
 
 class ActionStep(BaseModel):
-    """Defines an action step within a task queue with validation.
-
-    Attributes:
-        title: Short task header for the step.
-        objective: Brief objective describing the intent of the step.
-        execution_checklist: Small checklist of execution hints.
-        expected_output: Optional description of the expected outcome.
-        action_consumer: Tool identifier that should execute the action.
-        action_type: Action category, typically "get" or "set".
-        action_argument: Natural language argument for the tool.
-        result: Optional tool result payload.
-    """
+    """Action step with validation metadata."""
     title: str | None = Field(
         default=None,
         description="Short header summarizing the task for this step.",
@@ -71,7 +56,7 @@ class ActionStep(BaseModel):
     action_type: str = Field(
         description="Specify either 'get' or 'set' to indicate the action type."
     )
-    action_argument: str | dict[str, Any] = Field(
+    action_argument: ActionArgument = Field(
         description=(
             "Provide details for the action. If 'task', specify the task to perform. "
             "If 'talk', include the message to speak to the user."
@@ -85,13 +70,7 @@ class ActionStep(BaseModel):
 
 
 class TaskQueue(BaseModel):
-    """Manages a queue of actions to be performed, tracking their results.
-
-    Attributes:
-        human_message: Original user message for the task queue.
-        action_steps: Ordered list of action steps to execute.
-        task_result: Aggregated result of the task queue.
-    """
+    """Queue of action steps and results."""
     human_message: str | None = Field(
         alias="_human_message",
         default=None,
@@ -112,56 +91,32 @@ class TaskQueue(BaseModel):
     @validator("action_steps", allow_reuse=True)
     # pylint: disable=E0213,W0613
     def validate_actions(cls, field: list[ActionStep]) -> list[ActionStep]:
-        """Normalize and validate action steps within a task queue.
-
-        Args:
-            field: Action steps to normalize and validate.
-
-        Returns:
-            Normalized list of action steps.
-        """
+        """Normalize and validate action steps."""
         for action in field:
-            # Normalize once and store it
             action.action_consumer = action.action_consumer.lower()
             action.action_type = action.action_type.lower()
             error_msg_list = []
 
-            # Check if action_consumer is valid
             if action.action_consumer not in AVAILABLE_TOOLS:
                 error_msg_list.append(
                     f"`{action.action_consumer}` is not a valid Assistant consumer.")
 
-            # Check if action_type is valid
             if action.action_type not in ["get", "set"]:
                 error_msg = f"`{action.action_type}` is not a valid action type."
                 error_msg_list.append(error_msg)
 
-            # Check for None argument
             if action.action_argument is None:
                 error_msg_list.append("Action argument cannot be None.")
 
-            # Handle errors if any
             if error_msg_list:
-                error_msg = "\n".join(error_msg_list)
                 for msg in error_msg_list:
-                    logging.error(msg)  # Log
+                    logging.error(msg)
 
         return field
 
 
 class OrchestrationState(BaseModel):
-    """Track state for the orchestration loop.
-
-    Attributes:
-        goal: User goal for the session.
-        session_id: Unique session identifier.
-        plan: Current action plan.
-        tool_results: Result strings from executed tools.
-        open_questions: Outstanding questions for the user.
-        done: Whether orchestration is finished.
-        done_reason: Reason for completion.
-        summary: Optional session summary string.
-    """
+    """State for the orchestration loop."""
     goal: str
     session_id: str | None = None
     plan: list[ActionStep] = Field(default_factory=list)
@@ -173,7 +128,7 @@ class OrchestrationState(BaseModel):
 
 
 class AbstractTool(abc.ABC):
-    """Abstract base class for tools, providing common features and methods."""
+    """Base tool with shared initialization helpers."""
 
     def __init__(
         self,
@@ -183,18 +138,7 @@ class AbstractTool(abc.ABC):
         temperature: float = 0.3,
         use_llm: bool = True,
     ) -> None:
-        """Initialize the tool with optional model configuration.
-
-        Args:
-            name: Tool display name.
-            description: Short description of tool behavior.
-            model_name: Optional model override for the tool.
-            temperature: Sampling temperature for the model.
-            use_llm: Whether to initialize an LLM client for the tool.
-
-        Raises:
-            ValueError: If CACHE_DIR is not configured.
-        """
+        """Initialize tool configuration."""
         self.model_name = cast(
             str,
             model_name
@@ -230,15 +174,7 @@ class AbstractTool(abc.ABC):
         logging.debug("{} cache directory is {}.", self._id, self.cache_dir)
 
     def _save_json(self, data: object, filename: str) -> None:
-        """Save a dictionary to a JSON file.
-
-        Args:
-            data: Serializable payload to store.
-            filename: Output filename under the cache directory.
-
-        Raises:
-            OSError: If the file cannot be written.
-        """
+        """Persist JSON data under the cache directory."""
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
         filename = os.path.join(self.cache_dir, filename)
@@ -247,17 +183,7 @@ class AbstractTool(abc.ABC):
         logging.info(f"Data saved to {filename}.")
 
     def _load_rag_json(self, filename: str) -> list[Document]:
-        """Load a dictionary from a JSON file.
-
-        Args:
-            filename: JSON filename under the cache directory.
-
-        Returns:
-            List of loaded Documents.
-
-        Raises:
-            OSError: If the file cannot be read.
-        """
+        """Load JSON content as documents."""
         logging.debug("RAG directory is {}.", self.cache_dir)
         logging.info(f"Loading `{filename}` as JSON.")
         filename = os.path.join(self.cache_dir, filename)
@@ -270,14 +196,7 @@ class AbstractTool(abc.ABC):
         return data
 
     def _load_rag_documents(self, filenames: list[str]) -> list[Document]:
-        """Load and concatenate multiple JSON files into RAG documents.
-
-        Args:
-            filenames: List of JSON files to load.
-
-        Returns:
-            Combined list of Documents for RAG ingestion.
-        """
+        """Load and concatenate multiple JSON files."""
         rag_documents: list[Document] = []
         for rag_file in filenames:
             data = self._load_rag_json(rag_file)
@@ -285,41 +204,17 @@ class AbstractTool(abc.ABC):
         return rag_documents
 
     def set_state(self, action_step: ActionStep | None = None) -> MockSpeaker:
-        """Perform a state-changing action.
-
-        Args:
-            action_step: Action step containing the action arguments.
-
-        Returns:
-            MockSpeaker response for the action.
-        """
+        """Perform a state-changing action."""
         MockSpeaker = get_mock_speaker()
         return MockSpeaker(content="Not implemented yet.")
 
     def get_state(self, action_step: ActionStep | None = None) -> MockSpeaker:
-        """Perform a read-only action.
-
-        Args:
-            action_step: Action step containing the query arguments.
-
-        Returns:
-            MockSpeaker response for the action.
-        """
+        """Perform a read-only action."""
         MockSpeaker = get_mock_speaker()
         return MockSpeaker(content="Not implemented yet.")
 
     def run(self, action_step: ActionStep) -> MockSpeaker:
-        """Execute the action based on the action type.
-
-        Args:
-            action_step: ActionStep object with action details.
-
-        Returns:
-            MockSpeaker response for the action.
-
-        Raises:
-            ValueError: If the action type is unsupported.
-        """
+        """Execute the action based on the action type."""
         if action_step.action_type == "set":
             return self.set_state(action_step)
         if action_step.action_type == "get":
@@ -331,18 +226,7 @@ def create_task_queue(
     action_data: list[ActionStepPayload] | None = None,
     is_example: bool = True,
 ) -> TaskQueue:
-    """Create a TaskQueue object from serialized action data.
-
-    Args:
-        action_data: List of action step payloads.
-        is_example: Whether to drop the human_message field.
-
-    Returns:
-        TaskQueue populated with the action steps.
-
-    Raises:
-        ValueError: If action_data is None.
-    """
+    """Create a TaskQueue from serialized action data."""
     if action_data is None:
         raise ValueError("Action data cannot be None.")
 
@@ -359,18 +243,7 @@ def get_task_master_examples(
     example_id: int = 0,
     available_tools: Sequence[str] | None = None,
 ) -> str:
-    """Get serialized example task queue data.
-
-    Args:
-        example_id: Index of the example to return.
-        available_tools: Optional tool IDs to shape the examples.
-
-    Returns:
-        JSON-serialized task queue string.
-
-    Raises:
-        ValueError: If example_id is out of range.
-    """
+    """Return serialized example task queue data."""
     if available_tools is None:
         available_tools = AVAILABLE_TOOLS
     include_home_assistant = "home_assistant_tool" in available_tools

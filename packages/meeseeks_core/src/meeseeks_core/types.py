@@ -2,16 +2,21 @@
 """Shared type definitions for core components."""
 from __future__ import annotations
 
-from typing import Any, TypedDict
+from typing import TypedDict
 
 from typing_extensions import NotRequired
+
+
+JsonPrimitive = str | int | float | bool | None
+JsonValue = JsonPrimitive | list["JsonValue"] | dict[str, "JsonValue"]
+ActionArgument = str | dict[str, JsonValue]
 
 
 class ActionStepPayload(TypedDict):
     """Serialized action step data sent to/from orchestration."""
     action_consumer: str
     action_type: str
-    action_argument: str | dict[str, Any]
+    action_argument: ActionArgument
     title: NotRequired[str]
     objective: NotRequired[str]
     execution_checklist: NotRequired[list[str]]
@@ -35,7 +40,7 @@ class ToolResultPayload(TypedDict):
     """Payload describing the outcome of a tool invocation."""
     action_consumer: str
     action_type: str
-    action_argument: str | dict[str, Any]
+    action_argument: ActionArgument
     result: str | None
     error: NotRequired[str]
 
@@ -64,7 +69,7 @@ EventPayload = (
     | UserPayload
     | AssistantPayload
     | CompletionPayload
-    | dict[str, Any]
+    | dict[str, JsonValue]
 )
 
 
@@ -82,11 +87,13 @@ class EventRecord(Event):
 __all__ = [
     "ActionPlanPayload",
     "ActionStepPayload",
+    "ActionArgument",
     "AssistantPayload",
     "CompletionPayload",
     "Event",
     "EventPayload",
     "EventRecord",
+    "JsonValue",
     "PermissionPayload",
     "ToolResultPayload",
     "UserPayload",

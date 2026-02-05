@@ -5,9 +5,10 @@ from __future__ import annotations
 import os
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from meeseeks_core.common import get_logger
+from meeseeks_core.types import JsonValue
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from langfuse.callback import CallbackHandler as LangfuseCallbackHandler
@@ -22,7 +23,7 @@ class ComponentStatus:
     name: str
     enabled: bool
     reason: str | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, JsonValue] = field(default_factory=dict)
 
 
 def _env_falsey(value: str | None) -> bool:

@@ -16,17 +16,7 @@ from meeseeks_core.types import EventRecord
 
 @dataclass(frozen=True)
 class TokenBudget:
-    """Token accounting snapshot used to decide compaction.
-
-    Attributes:
-        total_tokens: Total tokens across events and summary.
-        summary_tokens: Tokens attributed to the summary.
-        event_tokens: Tokens attributed to raw events.
-        context_window: Estimated model context window size.
-        remaining_tokens: Remaining tokens before hitting the context window.
-        utilization: Fraction of the context window currently used.
-        threshold: Utilization threshold that triggers compaction.
-    """
+    """Token accounting snapshot used to decide compaction."""
     total_tokens: int
     summary_tokens: int
     event_tokens: int
@@ -42,14 +32,7 @@ class TokenBudget:
 
 
 def _parse_context_from_model(model_name: str) -> int | None:
-    """Parse a model context window size from a model name string.
-
-    Args:
-        model_name: Model identifier to parse.
-
-    Returns:
-        Parsed context window size or None when unavailable.
-    """
+    """Parse a model context window size from a model name string."""
     matches = re.findall(r"(\d+(?:\.\d+)?)([km])", model_name.lower())
     if not matches:
         return None
@@ -65,11 +48,7 @@ def _parse_context_from_model(model_name: str) -> int | None:
 
 
 def _load_context_overrides() -> dict[str, int]:
-    """Load context window overrides from an env var or JSON/TOML file.
-
-    Returns:
-        Mapping of model names to context window sizes.
-    """
+    """Load context window overrides from an env var or JSON/TOML file."""
     env_value = os.getenv("MESEEKS_MODEL_CONTEXT_WINDOWS")
     if not env_value:
         return {}
@@ -85,14 +64,7 @@ def _load_context_overrides() -> dict[str, int]:
 
 
 def get_context_window(model_name: str | None) -> int:
-    """Resolve the context window for a model name or default.
-
-    Args:
-        model_name: Optional model name to look up.
-
-    Returns:
-        Context window size in tokens.
-    """
+    """Resolve the context window for a model name or default."""
     default_window = int(os.getenv("MESEEKS_DEFAULT_CONTEXT_WINDOW", "128000"))
     if not model_name:
         return default_window
@@ -106,14 +78,7 @@ def get_context_window(model_name: str | None) -> int:
 
 
 def _event_to_text(event: EventRecord) -> str:
-    """Extract a representative text string from an event payload.
-
-    Args:
-        event: Event record to extract text from.
-
-    Returns:
-        String representation of the event payload.
-    """
+    """Extract a representative text string from an event payload."""
     payload = event.get("payload", "")
     if isinstance(payload, dict):
         payload_data = dict(payload)
@@ -125,14 +90,7 @@ def _event_to_text(event: EventRecord) -> str:
 
 
 def estimate_event_tokens(events: Iterable[EventRecord]) -> int:
-    """Estimate total tokens for a sequence of events.
-
-    Args:
-        events: Events to analyze.
-
-    Returns:
-        Estimated token count.
-    """
+    """Estimate total tokens for a sequence of events."""
     texts = [_event_to_text(event) for event in events]
     joined = "\n".join(text for text in texts if text)
     if not joined:
@@ -141,14 +99,7 @@ def estimate_event_tokens(events: Iterable[EventRecord]) -> int:
 
 
 def estimate_summary_tokens(summary: str | None) -> int:
-    """Estimate token usage for the stored summary.
-
-    Args:
-        summary: Summary text or None.
-
-    Returns:
-        Estimated token count.
-    """
+    """Estimate token usage for the stored summary."""
     if not summary:
         return 0
     return num_tokens_from_string(summary)
@@ -160,17 +111,7 @@ def get_token_budget(
     model_name: str | None,
     threshold: float | None = None,
 ) -> TokenBudget:
-    """Calculate token utilization and remaining context budget.
-
-    Args:
-        events: Events to estimate.
-        summary: Optional summary text.
-        model_name: Optional model name to resolve context window size.
-        threshold: Optional utilization threshold override.
-
-    Returns:
-        TokenBudget describing current utilization.
-    """
+    """Calculate token utilization and remaining context budget."""
     event_tokens = estimate_event_tokens(events)
     summary_tokens = estimate_summary_tokens(summary)
     total_tokens = event_tokens + summary_tokens
