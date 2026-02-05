@@ -6,7 +6,7 @@ import types
 
 import pytest
 from meeseeks_core.common import get_mock_speaker
-from meeseeks_tools.integration.homeassistant import HomeAssistant
+from meeseeks_tools.integration.homeassistant import HomeAssistant, cache_monitor
 from meeseeks_tools.integration.mcp import (
     MCPToolRunner,
     _load_mcp_config,
@@ -545,3 +545,48 @@ def test_homeassistant_get_state(monkeypatch):
     step = types.SimpleNamespace(action_argument="status")
     result = ha.get_state(step)
     assert result.content == "answer"
+
+
+def test_cache_monitor_cleans_entities():
+    """Clean entity and service cache data through the decorator."""
+
+    class DummyCacheHolder:
+        def __init__(self):
+            self.cache = {
+                "entities": [
+                    {
+                        "entity_id": "light.kitchen",
+                        "attributes": {"icon": "light"},
+                        "state": "on",
+                        "context": {},
+                        "last_changed": "x",
+                        "last_reported": "x",
+                        "last_updated": "x",
+                    },
+                    {
+                        "entity_id": "sensor.temp",
+                        "attributes": {"icon": "sensor"},
+                        "state": "5",
+                    },
+                    {
+                        "entity_id": "scene.morning",
+                        "attributes": {},
+                        "state": "on",
+                    },
+                ],
+                "services": [{"domain": "light"}, {"domain": "switch"}],
+                "allowed_domains": ["light"],
+                "entity_ids": ["light.kitchen", "sensor.temp", "scene.morning"],
+                "sensor_ids": ["sensor.temp"],
+                "sensors": [],
+            }
+
+        @cache_monitor
+        def refresh(self):
+            return "ok"
+
+    holder = DummyCacheHolder()
+    assert holder.refresh() == "ok"
+    assert all(service["domain"] == "light" for service in holder.cache["services"])
+    assert any(entity["entity_id"].startswith("light.") for entity in holder.cache["entities"])
+    assert any(sensor["entity_id"].startswith("sensor.") for sensor in holder.cache["sensors"])

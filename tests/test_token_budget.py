@@ -1,9 +1,7 @@
 """Tests for token budget calculations."""
 
-from meeseeks_core.token_budget import (
-    get_context_window,
-    get_token_budget,
-)
+from meeseeks_core import token_budget as token_budget_module
+from meeseeks_core.token_budget import get_context_window, get_token_budget
 
 
 def test_get_context_window_from_model_name():
@@ -22,3 +20,37 @@ def test_token_budget_flags_compact_threshold():
     )
     assert budget.needs_compact is True
     assert budget.context_window == 16000
+
+
+def test_parse_context_from_model_name():
+    """Parse context windows from model name suffixes."""
+    assert token_budget_module._parse_context_from_model("gpt-4-128k") == 128000
+    assert token_budget_module._parse_context_from_model("gpt-4-2m") == 2_000_000
+
+
+def test_load_context_overrides_env_json(monkeypatch):
+    """Load context overrides from JSON environment values."""
+    monkeypatch.setenv("MESEEKS_MODEL_CONTEXT_WINDOWS", '{"gpt-x": 8000}')
+    overrides = token_budget_module._load_context_overrides()
+    assert overrides["gpt-x"] == 8000
+
+
+def test_load_context_overrides_from_file(tmp_path, monkeypatch):
+    """Load context overrides from a JSON file path."""
+    config_path = tmp_path / "contexts.json"
+    config_path.write_text('{"gpt-y": 9000}', encoding="utf-8")
+    monkeypatch.setenv("MESEEKS_MODEL_CONTEXT_WINDOWS", str(config_path))
+    overrides = token_budget_module._load_context_overrides()
+    assert overrides["gpt-y"] == 9000
+
+
+def test_event_to_text_fallback():
+    """Fallback to JSON string when payload lacks text fields."""
+    event = {"type": "tool_result", "payload": {"foo": "bar"}}
+    text = token_budget_module._event_to_text(event)
+    assert '"foo"' in text
+
+
+def test_estimate_event_tokens_empty():
+    """Return zero tokens for empty events."""
+    assert token_budget_module.estimate_event_tokens([]) == 0

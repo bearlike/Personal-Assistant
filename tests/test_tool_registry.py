@@ -94,6 +94,15 @@ def test_manifest_empty_falls_back(tmp_path, monkeypatch):
     assert "home_assistant_tool" in tool_ids
 
 
+def test_disable_unknown_tool_is_noop():
+    """Ignore disable calls for unknown tool ids."""
+    from meeseeks_core.tool_registry import ToolRegistry
+
+    registry = ToolRegistry()
+    registry.disable("missing_tool", "reason")
+    assert registry.list_specs() == []
+
+
 def test_manifest_skips_missing_local_class(tmp_path, monkeypatch):
     """Skip local tools that omit module/class metadata."""
     monkeypatch.delenv("MESEEKS_HOME_ASSISTANT_ENABLED", raising=False)

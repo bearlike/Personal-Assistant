@@ -45,6 +45,19 @@ def test_action_step_invalid_entries():
     assert queue.action_steps[0].action_type == "get"
 
 
+def test_action_step_validation_logs_for_invalid_entries():
+    """Trigger validation warnings for invalid action data."""
+    set_available_tools(["home_assistant_tool"])
+    step = ActionStep.construct(
+        action_consumer="bad_tool",
+        action_type="bad",
+        action_argument=None,
+    )
+    queue = TaskQueue(action_steps=[step])
+    assert queue.action_steps[0].action_consumer == "bad_tool"
+    assert queue.action_steps[0].action_type == "bad"
+
+
 def test_save_json(tmp_path, monkeypatch):
     """Write JSON payloads using the tool helper."""
     from meeseeks_core.classes import AbstractTool
@@ -80,10 +93,23 @@ def test_create_task_queue_and_examples():
         classes.get_task_master_examples(99, available_tools=["home_assistant_tool"])
 
 
+def test_create_task_queue_requires_data():
+    """Raise when action data is missing."""
+    with pytest.raises(ValueError):
+        create_task_queue(action_data=None)
+
+
 def test_examples_skip_home_assistant_when_unavailable():
     """Ensure examples omit disabled tools."""
     examples = classes.get_task_master_examples(0, available_tools=[])
     assert "home_assistant_tool" not in examples
+
+
+def test_examples_use_available_tools_by_default():
+    """Use global available tools when not provided."""
+    set_available_tools(["home_assistant_tool"])
+    examples = classes.get_task_master_examples(0, available_tools=None)
+    assert "home_assistant_tool" in examples
 
 
 def test_abstract_tool_init_and_run(monkeypatch, tmp_path):
@@ -115,3 +141,66 @@ def test_abstract_tool_init_and_run(monkeypatch, tmp_path):
     )
     result = tool.run(step)
     assert result.content == "Not implemented yet."
+
+
+def test_abstract_tool_cache_dir_missing(monkeypatch):
+    """Raise when CACHE_DIR is unset."""
+
+    class DummyTool(classes.AbstractTool):
+        def __init__(self):
+            super().__init__(name="Dummy", description="Test tool", use_llm=False)
+
+    monkeypatch.delenv("CACHE_DIR", raising=False)
+    with pytest.raises(ValueError):
+        DummyTool()
+
+
+def test_abstract_tool_rag_helpers(monkeypatch, tmp_path):
+    """Load RAG documents from JSON files."""
+
+    class DummyTool(classes.AbstractTool):
+        def __init__(self):
+            super().__init__(name="Dummy", description="Test tool", use_llm=False)
+
+    class DummyLoader:
+        def __init__(self, file_path, **_kwargs):
+            self.file_path = file_path
+
+        def load(self):
+            return [{"path": self.file_path}]
+
+    monkeypatch.setattr(classes, "JSONLoader", DummyLoader)
+    cache_root = tmp_path / "cache-root"
+    monkeypatch.setenv("CACHE_DIR", str(cache_root))
+    tool = DummyTool()
+    tool._save_json([{"foo": "bar"}], "rag.json")
+    docs = tool._load_rag_json("rag.json")
+    assert docs
+    docs = tool._load_rag_documents(["rag.json"])
+    assert docs
+
+
+def test_abstract_tool_run_variants(monkeypatch, tmp_path):
+    """Execute get/set paths and invalid action types."""
+
+    class DummyTool(classes.AbstractTool):
+        def __init__(self):
+            super().__init__(name="Dummy", description="Test tool", use_llm=False)
+
+    cache_root = tmp_path / "cache-root"
+    monkeypatch.setenv("CACHE_DIR", str(cache_root))
+    tool = DummyTool()
+    set_available_tools(["home_assistant_tool"])
+    step = ActionStep(
+        action_consumer="home_assistant_tool",
+        action_type="get",
+        action_argument="hello",
+    )
+    assert tool.run(step).content == "Not implemented yet."
+    step = ActionStep(
+        action_consumer="home_assistant_tool",
+        action_type="bad",
+        action_argument="hello",
+    )
+    with pytest.raises(ValueError):
+        tool.run(step)
