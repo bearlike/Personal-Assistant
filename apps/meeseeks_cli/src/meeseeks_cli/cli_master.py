@@ -611,7 +611,7 @@ def _render_results_with_registry(
         is_latest = highlight_latest and index == last_index
         content_style = None if is_latest else "dim"
         border_style = "magenta" if is_latest else "dim magenta"
-        renderable: Text | Syntax
+        renderable: RenderableType
         if result is None:
             renderable = Text("(no result)", style="dim")
         elif not verbose:
