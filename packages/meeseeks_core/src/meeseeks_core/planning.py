@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Iterable
+from collections.abc import Iterable
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.output_parsers import PydanticOutputParser
@@ -28,6 +28,7 @@ class PromptBuilder:
     """Build system prompts with contextual sections."""
 
     def __init__(self, tool_registry: ToolRegistry | None) -> None:
+        """Initialize prompt builder dependencies."""
         self._tool_registry = tool_registry
 
     def build(
@@ -36,6 +37,7 @@ class PromptBuilder:
         context: ContextSnapshot | None,
         component_status: Iterable[ComponentStatus] | None = None,
     ) -> str:
+        """Build an augmented system prompt string."""
         sections = [base_prompt]
         if context and context.summary:
             sections.append(f"Session summary:\n{context.summary}")
@@ -123,6 +125,7 @@ class Planner:
     """Generate action plans via LLM."""
 
     def __init__(self, tool_registry: ToolRegistry | None) -> None:
+        """Initialize the planner."""
         self._tool_registry = tool_registry
         self._prompt_builder = PromptBuilder(tool_registry)
 
@@ -132,6 +135,7 @@ class Planner:
         model_name: str,
         context: ContextSnapshot | None = None,
     ) -> TaskQueue:
+        """Generate a task queue from the user query."""
         if self._tool_registry is None:
             raise ValueError("Tool registry is required for planning.")
         user_id = "meeseeks-task-master"
@@ -213,6 +217,7 @@ class ResponseSynthesizer:
     """Synthesize a response from tool outputs."""
 
     def __init__(self, tool_registry: ToolRegistry | None) -> None:
+        """Initialize the response synthesizer."""
         self._prompt_builder = PromptBuilder(tool_registry)
 
     def synthesize(
@@ -222,6 +227,7 @@ class ResponseSynthesizer:
         model_name: str | None,
         context: ContextSnapshot | None,
     ) -> str:
+        """Synthesize a response from tool outputs."""
         model_name = model_name or os.getenv("DEFAULT_MODEL", "gpt-3.5-turbo")
         system_prompt = self._prompt_builder.build(
             get_system_prompt("response-synthesizer"),

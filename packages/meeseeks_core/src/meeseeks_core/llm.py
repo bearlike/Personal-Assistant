@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import Iterable
-from typing import Protocol
+from typing import Any, Protocol, cast
 
 from meeseeks_core.common import get_logger
 
@@ -15,9 +15,7 @@ logging = get_logger(name="core.llm")
 class ChatModel(Protocol):
     """Protocol for LangChain-compatible chat models."""
 
-    def invoke(
-        self, input_data: dict[str, object], config: dict[str, object] | None = None
-    ) -> object:
+    def invoke(self, input_data: object, config: object | None = None, **kwargs: object) -> object:
         """Invoke the model with structured input."""
 
 
@@ -115,11 +113,11 @@ def build_chat_model(
     else:
         temperature_value = temperature
 
-    model_kwargs: dict[str, object] = {}
+    model_kwargs: dict[str, Any] = {}
     if reasoning_effort is not None:
         model_kwargs["reasoning_effort"] = reasoning_effort
 
-    kwargs: dict[str, object] = {
+    kwargs: dict[str, Any] = {
         "model": _resolve_litellm_model(model_name, openai_api_base),
     }
     if openai_api_base:
@@ -129,7 +127,7 @@ def build_chat_model(
     if model_kwargs:
         kwargs["model_kwargs"] = model_kwargs
 
-    return ChatLiteLLM(**kwargs)
+    return cast(ChatModel, ChatLiteLLM(**kwargs))
 
 
 __all__ = [

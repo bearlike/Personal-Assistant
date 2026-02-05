@@ -29,9 +29,11 @@ class StepReflector:
     """Reflect on tool results when objectives are provided."""
 
     def __init__(self, model_name: str | None) -> None:
+        """Initialize the step reflector."""
         self._model_name = model_name
 
     def reflect(self, action_step: ActionStep, result_text: str) -> StepReflection | None:
+        """Return a reflection decision for a step."""
         if not (
             action_step.objective
             or action_step.expected_output

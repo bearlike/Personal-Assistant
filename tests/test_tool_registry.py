@@ -11,7 +11,6 @@ def test_default_registry(monkeypatch):
     monkeypatch.delenv("MESEEKS_HOME_ASSISTANT_ENABLED", raising=False)
     registry = load_registry()
     tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
-    enabled_ids = {spec.tool_id for spec in registry.list_specs()}
     assert "home_assistant_tool" in tool_ids
 
 
@@ -93,7 +92,6 @@ def test_manifest_empty_falls_back(tmp_path, monkeypatch):
 
     registry = load_registry(str(manifest_path))
     tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
-    enabled_ids = {spec.tool_id for spec in registry.list_specs()}
     assert "home_assistant_tool" in tool_ids
 
 

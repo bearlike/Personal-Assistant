@@ -8,12 +8,12 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 from fnmatch import fnmatch
-from meeseeks_core.types import JsonValue
 
 import tomllib
 
 from meeseeks_core.classes import ActionStep
 from meeseeks_core.common import get_logger
+from meeseeks_core.types import JsonValue
 
 logging = get_logger(name="core.permissions")
 

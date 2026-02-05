@@ -40,15 +40,12 @@ def _build_context_snapshot(
     selected_events: list[EventRecord] | None,
     model_name: str | None,
 ) -> ContextSnapshot:
-    summary = session_summary
-    recent = recent_events or []
-    budget = get_token_budget([], summary, model_name)
     return ContextSnapshot(
-        summary=summary,
-        recent_events=recent,
+        summary=session_summary,
+        recent_events=recent_events or [],
         selected_events=selected_events,
         events=[],
-        budget=budget,
+        budget=get_token_budget([], session_summary, model_name),
     )
 
 
@@ -60,8 +57,8 @@ def generate_action_plan(
     recent_events: list[EventRecord] | None = None,
     selected_events: list[EventRecord] | None = None,
 ) -> TaskQueue:
-    if tool_registry is None:
-        tool_registry = load_registry()
+    """Generate an action plan for a user query."""
+    tool_registry = tool_registry or load_registry()
     resolved_model = cast(
         str,
         model_name
@@ -74,8 +71,7 @@ def generate_action_plan(
         selected_events,
         resolved_model,
     )
-    planner = Planner(tool_registry)
-    return planner.generate(user_query, resolved_model, context=context)
+    return Planner(tool_registry).generate(user_query, resolved_model, context=context)
 
 
 def run_action_plan(
@@ -87,22 +83,18 @@ def run_action_plan(
     hook_manager: HookManager | None = None,
     model_name: str | None = None,
 ) -> TaskQueue:
-    if tool_registry is None:
-        tool_registry = load_registry()
-    if permission_policy is None:
-        permission_policy = load_permission_policy()
-    if approval_callback is None:
-        approval_callback = approval_callback_from_env()
-    if hook_manager is None:
-        hook_manager = default_hook_manager()
-    reflector = StepReflector(model_name)
+    """Execute a task queue with permissions and hooks."""
+    tool_registry = tool_registry or load_registry()
+    permission_policy = permission_policy or load_permission_policy()
+    approval_callback = approval_callback or approval_callback_from_env()
+    hook_manager = hook_manager or default_hook_manager()
     runner = ActionPlanRunner(
         tool_registry=tool_registry,
         permission_policy=permission_policy,
         approval_callback=approval_callback,
         hook_manager=hook_manager,
         event_logger=event_logger,
-        reflector=reflector,
+        reflector=StepReflector(model_name),
     )
     return runner.run(task_queue)
 
@@ -120,15 +112,15 @@ def orchestrate_session(
     approval_callback: Callable[[ActionStep], bool] | None = None,
     hook_manager: HookManager | None = None,
 ) -> TaskQueue | tuple[TaskQueue, OrchestrationState]:
-    orchestrator = Orchestrator(
+    """Run the plan-act-observe orchestration loop."""
+    return Orchestrator(
         model_name=model_name,
         session_store=session_store,
         tool_registry=tool_registry,
         permission_policy=permission_policy,
         approval_callback=approval_callback,
         hook_manager=hook_manager,
-    )
-    return orchestrator.run(
+    ).run(
         user_query,
         max_iters=max_iters,
         initial_task_queue=initial_task_queue,

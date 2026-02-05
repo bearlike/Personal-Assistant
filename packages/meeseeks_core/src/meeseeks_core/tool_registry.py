@@ -250,7 +250,7 @@ def _ensure_auto_manifest(mcp_config_path: str) -> str | None:
         payload_tools = payload.get("tools", [])
         if not isinstance(payload_tools, list):
             payload_tools = []
-    tools_by_id: dict[str, dict[str, JsonValue]] = {}
+        tools_by_id: dict[str, dict[str, JsonValue]] = {}
         for tool in payload_tools:
             if not isinstance(tool, dict):
                 continue

@@ -6,10 +6,8 @@ from typing import TypedDict
 
 from typing_extensions import NotRequired
 
-
-JsonPrimitive = str | int | float | bool | None
-JsonValue = JsonPrimitive | list["JsonValue"] | dict[str, "JsonValue"]
-ActionArgument = str | dict[str, JsonValue]
+JsonValue = str | int | float | bool | None | list[object] | dict[str, object]
+ActionArgument = str | dict[str, object]
 
 
 class ActionStepPayload(TypedDict):
@@ -82,19 +80,3 @@ class Event(TypedDict):
 class EventRecord(Event):
     """Event payload with a persisted timestamp."""
     ts: str
-
-
-__all__ = [
-    "ActionPlanPayload",
-    "ActionStepPayload",
-    "ActionArgument",
-    "AssistantPayload",
-    "CompletionPayload",
-    "Event",
-    "EventPayload",
-    "EventRecord",
-    "JsonValue",
-    "PermissionPayload",
-    "ToolResultPayload",
-    "UserPayload",
-]

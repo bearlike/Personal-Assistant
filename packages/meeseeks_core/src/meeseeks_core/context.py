@@ -39,7 +39,6 @@ class ContextSnapshot:
 
 def event_payload_text(event: EventRecord) -> str:
     """Return a readable payload string for an event."""
-
     payload = event.get("payload", "")
     if isinstance(payload, dict):
         if "action_argument" in payload:
@@ -58,7 +57,6 @@ def event_payload_text(event: EventRecord) -> str:
 
 def render_event_lines(events: list[EventRecord]) -> str:
     """Render events into bullet lines for prompts."""
-
     lines: list[str] = []
     for event in events:
         text = event_payload_text(event)
@@ -72,6 +70,7 @@ class ContextBuilder:
     """Build short-term and selected context for a session."""
 
     def __init__(self, session_store: SessionStore) -> None:
+        """Initialize the context builder."""
         self._session_store = session_store
 
     def build(
@@ -80,6 +79,7 @@ class ContextBuilder:
         user_query: str,
         model_name: str | None,
     ) -> ContextSnapshot:
+        """Build a context snapshot for planning and synthesis."""
         events = self._session_store.load_transcript(session_id)
         summary = self._session_store.load_summary(session_id)
         context_events = [

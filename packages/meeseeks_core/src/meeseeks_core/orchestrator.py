@@ -9,7 +9,7 @@ from meeseeks_core.action_runner import ActionPlanRunner
 from meeseeks_core.classes import ActionStep, OrchestrationState, TaskQueue
 from meeseeks_core.common import get_logger
 from meeseeks_core.compaction import should_compact, summarize_events
-from meeseeks_core.context import ContextBuilder, ContextSnapshot
+from meeseeks_core.context import ContextBuilder
 from meeseeks_core.hooks import HookManager, default_hook_manager
 from meeseeks_core.permissions import (
     PermissionPolicy,
@@ -39,6 +39,7 @@ class Orchestrator:
         approval_callback: Callable[[ActionStep], bool] | None = None,
         hook_manager: HookManager | None = None,
     ) -> None:
+        """Initialize orchestration dependencies."""
         self._model_name = (
             model_name
             or os.getenv("ACTION_PLAN_MODEL")
@@ -62,6 +63,7 @@ class Orchestrator:
         return_state: bool = False,
         session_id: str | None = None,
     ) -> TaskQueue | tuple[TaskQueue, OrchestrationState]:
+        """Run a plan-act-observe loop for a session."""
         if session_id is None:
             session_id = self._session_store.create_session()
 

@@ -2,9 +2,9 @@
 """Execute action plans with permissions, hooks, and reflection."""
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from dataclasses import dataclass
-import json
 
 from meeseeks_core.classes import ActionStep, TaskQueue
 from meeseeks_core.common import get_logger, get_mock_speaker
@@ -15,10 +15,9 @@ from meeseeks_core.permissions import (
     approval_callback_from_env,
     load_permission_policy,
 )
+from meeseeks_core.reflection import StepReflection, StepReflector
 from meeseeks_core.tool_registry import ToolRegistry, ToolSpec, load_registry
 from meeseeks_core.types import Event, ToolResultPayload
-
-from meeseeks_core.reflection import StepReflection, StepReflector
 
 logging = get_logger(name="core.action_runner")
 
@@ -45,6 +44,7 @@ class ActionPlanRunner:
         reflector: StepReflector | None = None,
         event_logger: EventLogger | None = None,
     ) -> None:
+        """Initialize the action plan runner."""
         self._tool_registry = tool_registry or load_registry()
         self._permission_policy = permission_policy or load_permission_policy()
         self._approval_callback = approval_callback or approval_callback_from_env()
@@ -53,12 +53,11 @@ class ActionPlanRunner:
         self._event_logger = event_logger
 
     def run(self, task_queue: TaskQueue) -> TaskQueue:
-        results: list[str] = []
+        """Run all steps in the task queue."""
         task_queue.last_error = None
         for idx, action_step in enumerate(task_queue.action_steps):
             logging.debug("Processing ActionStep: {}", action_step)
             if not self._ensure_permission(action_step):
-                results.append(action_step.result.content)
                 continue
 
             action_step = self._hook_manager.run_pre_tool_use(action_step)
@@ -101,10 +100,13 @@ class ActionPlanRunner:
                 task_queue.action_steps[idx] = action_step
                 break
 
-            results.append(outcome.content)
             self._emit_tool_result(action_step, outcome.content)
 
-        task_queue.task_result = " ".join(results).strip()
+        task_queue.task_result = " ".join(
+            str(getattr(step.result, "content", step.result))
+            for step in task_queue.action_steps
+            if step.result is not None
+        ).strip()
         return task_queue
 
     def _ensure_permission(self, action_step: ActionStep) -> bool:

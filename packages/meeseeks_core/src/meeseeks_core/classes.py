@@ -115,6 +115,9 @@ class TaskQueue(BaseModel):
         return field
 
 
+ActionStep.update_forward_refs(ActionArgument=ActionArgument)
+
+
 class OrchestrationState(BaseModel):
     """State for the orchestration loop."""
     goal: str
