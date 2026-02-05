@@ -1,30 +1,16 @@
 # Meeseeks Docs
 
-Meeseeks is a personal assistant that breaks a request into small actions, runs the right tools, and replies with a clean summary. This doc gives a quick product view and how the parts fit together. Use the links below for setup and deep dives.
+Meeseeks is an AI task agent assistant that breaks a request into steps, runs tools, and replies with a synthesized answer. This page serves as a navigation hub and stays aligned with the root README, which is the canonical overview.
 
+## Start here
+- [README overview](../README.md)
 - [Getting started](getting-started.md)
-- [Components](components.md)
-- [API reference](reference.md)
 
-## Features (quick view)
-- Plan -> act -> observe loop to keep work grounded in tool results.
-- Multiple interfaces (chat UI, REST API, Home Assistant, terminal CLI) backed by one core engine.
-- Tool registry for local tools plus optional MCP tools.
-- Session transcripts with lightweight compaction for long runs.
-- Context-aware memory (recent turns + summary) with optional context selection near budget.
-- Step-level reflection after tool execution to validate outcomes.
-- Permission gate with approval callbacks plus lightweight hooks around tool execution.
-- Optional components (Langfuse, Home Assistant) auto-disable when not configured or when failures occur.
+## Guides
+- [Components](components.md) - monorepo map and how parts fit together
 
-## Subprojects and how they fit
-- `packages/meeseeks_core/`: orchestration loop, schemas, session storage, compaction, tool registry.
-- `packages/meeseeks_tools/`: tool implementations and integrations.
-- `apps/meeseeks_api/`: Flask API that exposes the assistant over HTTP.
-- `apps/meeseeks_chat/`: Streamlit UI for interactive chat.
-- `apps/meeseeks_cli/`: Terminal CLI for interactive sessions.
-- `meeseeks_ha_conversation/`: Home Assistant integration that routes voice requests to the API.
-
-Prompts are packaged under `packages/meeseeks_core/src/meeseeks_core/prompts/`.
+## Reference
+- [API reference](reference.md) - mkdocstrings reference for core modules
 
 ## Architecture in a glance
 - The UI or API sends a user request into the core orchestrator.

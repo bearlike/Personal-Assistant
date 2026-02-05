@@ -20,7 +20,7 @@ https://github.com/user-attachments/assets/78754e8f-828a-4c54-9e97-29cbeacbc3bc
 
 # Intro
 
-Meeseeks is an AI assistant running on an Agent orchestration loop. It breaks your requests down into atomic steps, executes the necessary tools, and then synthesizes the results for you. This core loop is smart enough to replan if a tool fails, maintaining short-term state in memory while saving long-term sessions to disk.
+Meeseeks is an AI task agent assistant built on a plan-act-observe orchestration loop. It breaks a request into steps, runs tools, and synthesizes a final reply. It keeps a session transcript, compacts long histories, and stores summaries for continuity across longer conversations.
 
 <details>
 <summary><i>Legends (Expand to View) </i></summary>
@@ -31,12 +31,13 @@ Meeseeks is an AI assistant running on an Agent orchestration loop. It breaks yo
 
 </details>
 
-# Features
+# Feature highlights
 
 <table align="center">
     <tr>
         <th>Answer questions and interpret sensor information</th>
         <th>Control devices and entities</th>
+        <th>Web chat interface</th>
     </tr>
     <tr>
         <td align="center"><img src="docs/screenshot_ha_assist_1.png" alt="Screenshot" height="512px"></td>
@@ -45,27 +46,43 @@ Meeseeks is an AI assistant running on an Agent orchestration loop. It breaks yo
     </tr>
 </table>
 
-- (✅) **Observability:** Includes optional LangFuse integration for tracking; it stays off if unconfigured.
-- (✅) **Model Gateway:** Uses LiteLLM for an OpenAI-compatible setup, letting you pick any provider easily.
-- (✅) **Natural Interaction:** Just talk naturally to control your integrations and tools.
-- (✅) **API Access:** Offers a simple REST API so third-party tools can connect to Meeseeks.
-- (✅) **Complex Task Handling:** Breaks big queries into steps, executes them, and summarizes the results for you.
-- (✅) **Home Assistant:** Connects with Home Assistant's Conversation Integration for voice control via HA Assist.
-- (✅) **Web Chat:** Features a Streamlit interface showing action plans, input types, and LLM responses.
-- (✅) **CLI Power:** Runs interactive terminal sessions with full visibility into plans and tool results.
-- (✅) **CLI Controls:** See MCP tools clearly and switch models using a wizard right in the terminal.
-- (✅) **Smart Execution:** Follows a plan-act-observe loop and automatically replans if a tool fails.
-- (✅) **Memory:** Keeps session transcripts and compacts them to handle long chats efficiently.
-- (✅) **Tool Management:** Auto-discovers MCP tools in the registry and supports manual manifest overrides.
-- (✅) **Safety:** Uses permission gates and hooks to secure tool execution.
-- (✅) **Synthesized Replies:** Processes tool outputs first to give you a clean, final answer.
+## Core workflow
+- (✅) **Plan → act → observe loop:** Builds a short action plan, executes tools, and replans when needed.
+- (✅) **Step-level reflection:** Validates tool outcomes and adjusts step arguments when required.
+- (✅) **Synthesized replies:** Produces a final answer after tool results are collected and summarized.
 
-## Extras
+## Memory and context management
+- (✅) **Session transcripts:** Writes tool activity and responses to disk for continuity.
+- (✅) **Context compaction:** Summarizes long sessions and auto-compacts near the context budget.
+- (✅) **Token awareness:** Tracks context window usage and exposes budgets in the CLI.
+- (✅) **Selective recall:** Builds context from recent turns plus a summary of prior events.
 
-Optional feature that users can choose to install to further optimize their experience.
+## Model and provider support
+- (✅) **Model gateway:** Uses LiteLLM for OpenAI-compatible access across multiple providers.
+- (✅) **Model routing:** Supports provider-qualified model names and a configurable API base URL.
+- (✅) **Reasoning compatibility:** Applies reasoning-effort controls where supported by the model.
+
+## Tooling and integrations
+- (✅) **Tool registry:** Discovers local tools and optional MCP tools with manual manifest overrides.
+- (✅) **Home Assistant:** Ships a Conversation integration for voice control and entity actions.
+- (✅) **REST API:** Exposes the assistant over HTTP for third-party integration.
+- (✅) **Web chat UI:** Streamlit interface with plans, tool input types, and responses.
+- (✅) **Terminal CLI:** Fast interactive shell with plan visibility and tool result cards.
+
+## Safety and observability
+- (✅) **Permission gate:** Uses approval callbacks and hooks to control tool execution.
+- (✅) **Operational visibility:** Optional Langfuse tracing is available and stays off if unconfigured.
+
+## Optional add-ons
+Optional features that can be installed when needed.
 
 - (📅) **`Quality`** Use [CRITIC reflection framework](https://arxiv.org/pdf/2305.11738) to reflect on a response to a task/query using external tools via [`[^]`](https://llamahub.ai/l/agent/llama-index-agent-introspective).
 - (🚧) **`Privacy`** Integrate with [microsoft/presidio](https://github.com/microsoft/presidio) for customizable PII de-identification.
+
+## Interface notes
+- **CLI layout adapts to terminal width.** Headers and tool result cards adjust to small and wide shells.
+- **Interactive CLI controls.** Use a model picker, MCP browser, session summary, and token budget commands.
+- **Unified experience.** Web, API, Home Assistant, and CLI interfaces share the same core engine to reduce duplicated maintenance.
 
 ## Monorepo layout
 
@@ -123,21 +140,25 @@ Developer install (all components + dev/test/docs):
 uv sync --all-extras --all-groups
 ```
 
+## Development principles
+
+- Keep the core engine centralized. Interfaces should remain thin to avoid duplicated maintenance.
+- Organize logic into clear modules, classes, and functions. Favor readable, well-scoped blocks.
+- Prefer small, composable changes that keep behavior consistent across interfaces.
+
 ---
 
 # Contributing 👏
 
-We welcome contributions from the community to help improve Meeseeks. Whether you want to fix a bug, add a new feature, or integrate a new tool, your contributions are highly appreciated.
-
-To contribute to Meeseeks, please follow these steps:
+We welcome contributions from the community to improve Meeseeks. Use the steps below.
 
 1. Fork the repository and clone it to your local machine.
 2. Create a new branch for your contribution.
-3. Make your changes, commit your changes and push them to your forked repository.
-4. Open a pull request to the main repository, describing your changes and the problem they solve.
+3. Make your changes, commit them, and push to your fork.
+4. Open a pull request describing the change and the problem it solves.
 
 ## Bug Reports and Feature Requests 🐞
 
-If you encounter any bugs or have ideas for new features, please open an issue on our [issue tracker](https://github.com/bearlike/Assistant/issues). We appreciate detailed bug reports that include steps to reproduce the issue and any relevant error messages.
+If you encounter bugs or have ideas for features, open an issue on the [issue tracker](https://github.com/bearlike/Assistant/issues). Include reproduction steps and error messages when possible.
 
-Thank you for considering contributing to Meeseeks! Let's build cool stuff!
+Thank you for contributing.
