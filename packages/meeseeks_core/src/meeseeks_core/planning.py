@@ -6,7 +6,7 @@ from __future__ import annotations
 import os
 from collections.abc import Iterable
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
 
@@ -23,6 +23,8 @@ from meeseeks_core.llm import build_chat_model
 from meeseeks_core.tool_registry import ToolRegistry
 
 logging = get_logger(name="core.planning")
+EXAMPLE_TAG_OPEN = '<example desc="Illustrative only; not part of the live conversation">'
+EXAMPLE_TAG_CLOSE = "</example>"
 
 
 class PromptBuilder:
@@ -126,6 +128,26 @@ class Planner:
         self._tool_registry = tool_registry
         self._prompt_builder = PromptBuilder(tool_registry)
 
+    @staticmethod
+    def _build_example_messages(available_tool_ids: list[str]) -> list[BaseMessage]:
+        def wrap(text: str) -> str:
+            return f"{EXAMPLE_TAG_OPEN}{text}{EXAMPLE_TAG_CLOSE}"
+
+        return [
+            HumanMessage(content=wrap("Turn on strip lights and heater.")),
+            AIMessage(
+                content=wrap(
+                    get_task_master_examples(example_id=0, available_tools=available_tool_ids)
+                )
+            ),
+            HumanMessage(content=wrap("What is the weather today?")),
+            AIMessage(
+                content=wrap(
+                    get_task_master_examples(example_id=1, available_tools=available_tool_ids)
+                )
+            ),
+        ]
+
     def generate(
         self,
         user_query: str,
@@ -157,21 +179,11 @@ class Planner:
             context,
             component_status=component_status,
         )
+        example_messages = self._build_example_messages(available_tool_ids)
         prompt = ChatPromptTemplate(
             messages=[
                 SystemMessage(content=system_prompt),
-                HumanMessage(content="Turn on strip lights and heater."),
-                AIMessage(
-                    content=get_task_master_examples(
-                        example_id=0, available_tools=available_tool_ids
-                    )
-                ),
-                HumanMessage(content="What is the weather today?"),
-                AIMessage(
-                    content=get_task_master_examples(
-                        example_id=1, available_tools=available_tool_ids
-                    )
-                ),
+                *example_messages,
                 HumanMessagePromptTemplate.from_template(
                     "## Format Instructions\n{format_instructions}\n"
                     "## Generate a task queue for the user query\n{user_query}"

@@ -89,3 +89,16 @@ def test_ha_render_system_prompt_includes_entities():
     """Render the HA prompt with provided entity list."""
     prompt = ha_render_system_prompt(all_entities=["scene.lamp_power_on"])
     assert "scene.lamp_power_on" in prompt
+
+
+def test_action_planner_prompt_identity():
+    """Ensure the planner prompt includes agent identity and boundaries."""
+    prompt = get_system_prompt()
+    assert "Meeseeks, a task-completing agent" in prompt
+    assert "Examples in the prompt are illustrative only" in prompt
+
+
+def test_response_synthesizer_prompt_identity():
+    """Ensure the response prompt includes agent identity."""
+    prompt = get_system_prompt("response-synthesizer")
+    assert "Meeseeks, a task-completing agent" in prompt
