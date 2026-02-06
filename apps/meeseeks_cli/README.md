@@ -7,6 +7,8 @@ A terminal frontend for Meeseeks. It runs the same orchestration loop as the API
 - Shows action plans and tool results per request.
 - Session transcripts and compaction from the core engine.
 - Tag and fork sessions for experiments.
+- Built-in local tools for file reads/edits, directory listing, and shell commands (approval-gated).
+- Rich inline approval prompt with padded, dotted borders (clears after input).
 
 ## Run
 ```bash

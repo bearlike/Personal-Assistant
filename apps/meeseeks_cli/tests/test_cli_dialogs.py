@@ -102,3 +102,31 @@ def test_confirm_aider_uses_dummy_io(monkeypatch):
 
     result = cli_dialogs._confirm_aider("Approve?", default=False, subject="ok")
     assert result is True
+
+
+def test_confirm_rich_panel_accepts_yes():
+    """Return yes when prompt input is affirmative."""
+    console = Console(record=True)
+    result = cli_dialogs._confirm_rich_panel(
+        console,
+        lambda _prompt: "y",
+        "Approve tool use?",
+        subject="tool:action",
+        default=False,
+        allow_always=False,
+    )
+    assert result == "yes"
+
+
+def test_confirm_rich_panel_allows_always():
+    """Return always when prompt input selects auto-approve."""
+    console = Console(record=True)
+    result = cli_dialogs._confirm_rich_panel(
+        console,
+        lambda _prompt: "a",
+        "Approve tool use?",
+        subject="tool:action",
+        default=False,
+        allow_always=True,
+    )
+    assert result == "always"

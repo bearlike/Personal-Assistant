@@ -99,7 +99,7 @@ from meeseeks_cli.aider_ui import (
 )
 from meeseeks_cli.cli_commands import get_registry
 from meeseeks_cli.cli_context import CliState, CommandContext
-from meeseeks_cli.cli_dialogs import DialogFactory, _confirm_aider
+from meeseeks_cli.cli_dialogs import DialogFactory, _confirm_aider, _confirm_rich_panel
 
 logging = get_logger(name="meeseeks.cli")
 
@@ -912,17 +912,47 @@ def _build_approval_callback(
             f"{action_step.action_consumer}:{action_step.action_type} "
             f"({format_action_argument(action_step.action_argument)})"
         )
-        if approval_style == "aider":
-            decision = _confirm_aider(
+        if approval_style in {"aider", "inline", "rich"}:
+            rich_decision = _confirm_rich_panel(
+                console,
+                prompt_func,
                 "Approve tool use?",
-                default=False,
                 subject=subject,
-                prompt_func=prompt_func,
+                default=False,
+                allow_always=bool(is_mcp),
             )
-            if decision is not None:
-                return decision
+            if rich_decision == "always":
+                if is_mcp and server_name and tool_name:
+                    try:
+                        config = _load_mcp_config()
+                        config = mark_tool_auto_approved(config, server_name, tool_name)
+                        save_mcp_config(config)
+                    except Exception as exc:
+                        console.print(f"Failed to persist auto-approve: {exc}")
+                return True
+            if rich_decision == "yes":
+                if is_mcp and server_name and tool_name:
+                    try:
+                        config = _load_mcp_config()
+                        config = mark_tool_auto_approved(config, server_name, tool_name)
+                        save_mcp_config(config)
+                    except Exception as exc:
+                        console.print(f"Failed to persist auto-approve: {exc}")
+                return True
+            if rich_decision == "no":
+                return False
 
-        if approval_style in {"inline", "textual"} and dialogs.can_use_textual():
+            if approval_style == "aider":
+                decision = _confirm_aider(
+                    "Approve tool use?",
+                    default=False,
+                    subject=subject,
+                    prompt_func=prompt_func,
+                )
+                if decision is not None:
+                    return decision
+
+        if approval_style == "textual" and dialogs.can_use_textual():
             choice = dialogs.select_one(
                 "Approve tool use",
                 ["Yes", "No", "Yes, always"],

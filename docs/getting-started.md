@@ -50,12 +50,16 @@ Pre-push runs:
 
 ## Configuration setup
 1. If configs are missing, run `/config init`, `/mcp init`, or `/init` from the CLI to scaffold examples.
-2. Update `configs/app.json` with your runtime settings:
+2. Use only JSON configs under `configs/`:
+   - `configs/app.json` (runtime + LLM + integrations)
+   - `configs/mcp.json` (MCP servers)
+   - `configs/*.example.json` are templates for new installs
+3. Update `configs/app.json` with your runtime settings:
    - `llm.api_key` and `llm.api_base` (required)
    - `llm.default_model` and/or `llm.action_plan_model`
    - Optional: `llm.tool_model` for tool execution (falls back to `action_plan_model`, then `default_model`)
    - `runtime.session_dir` (optional, for transcript storage)
-2. If you use an OpenAI-compatible base URL and your model name has no provider
+4. If you use an OpenAI-compatible base URL and your model name has no provider
    prefix, Meeseeks will call `openai/<model>` automatically.
 
 ## MCP setup (auto-discovery)
@@ -66,6 +70,10 @@ MCP tools are auto-discovered from `configs/mcp.json`.
 ## Optional components
 - Langfuse: set `langfuse.enabled` + keys in `configs/app.json`.
 - Home Assistant: set `home_assistant.enabled` + credentials in `configs/app.json`.
+
+## CLI approval UI
+- Default approval prompts render as a Rich panel with padded, dotted borders.
+- Use `/automatic` or `--auto-approve` to bypass prompts when appropriate.
 
 ## Run interfaces (local)
 - CLI: `uv run meeseeks`
