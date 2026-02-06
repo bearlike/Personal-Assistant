@@ -234,7 +234,8 @@ def _confirm_aider(
 
     original_input = builtins.input
 
-    def _fake_input(prompt: str) -> str:
+    def _fake_input(*args: object, **_kwargs: object) -> str:
+        prompt = str(args[0]) if args else ""
         return prompt_func(prompt)
 
     try:
