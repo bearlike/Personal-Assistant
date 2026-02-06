@@ -8,10 +8,13 @@ from typing import Any
 from rich.console import RenderableType
 from rich.markdown import Markdown
 
+NoInsetMarkdown: type[Markdown] | None = None
 try:
-    from meeseeks_tools.vendor.aider.mdstream import NoInsetMarkdown
+    from meeseeks_tools.vendor.aider.mdstream import NoInsetMarkdown as _NoInsetMarkdown
 except Exception:  # pragma: no cover - optional dependency
-    NoInsetMarkdown = None  # type: ignore[assignment]
+    _NoInsetMarkdown = None
+else:
+    NoInsetMarkdown = _NoInsetMarkdown
 
 
 def render_markdown(text: str, *, style: str | None = None) -> RenderableType:

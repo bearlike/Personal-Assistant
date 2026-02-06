@@ -341,20 +341,64 @@ class APIConfig(BaseModel):
     master_token: str = Field("msk-strong-password", example="msk-strong-password")
 
 
+def _runtime_config_default() -> RuntimeConfig:
+    return RuntimeConfig.parse_obj({})
+
+
+def _llm_config_default() -> LLMConfig:
+    return LLMConfig.parse_obj({})
+
+
+def _context_config_default() -> ContextConfig:
+    return ContextConfig.parse_obj({})
+
+
+def _token_budget_config_default() -> TokenBudgetConfig:
+    return TokenBudgetConfig.parse_obj({})
+
+
+def _reflection_config_default() -> ReflectionConfig:
+    return ReflectionConfig.parse_obj({})
+
+
+def _langfuse_config_default() -> LangfuseConfig:
+    return LangfuseConfig.parse_obj({})
+
+
+def _home_assistant_config_default() -> HomeAssistantConfig:
+    return HomeAssistantConfig.parse_obj({})
+
+
+def _permissions_config_default() -> PermissionsConfig:
+    return PermissionsConfig.parse_obj({})
+
+
+def _cli_config_default() -> CLIConfig:
+    return CLIConfig.parse_obj({})
+
+
+def _chat_config_default() -> ChatConfig:
+    return ChatConfig.parse_obj({})
+
+
+def _api_config_default() -> APIConfig:
+    return APIConfig.parse_obj({})
+
+
 class AppConfig(BaseModel):
     """Typed configuration for the Meeseeks runtime."""
 
-    runtime: RuntimeConfig = Field(default_factory=RuntimeConfig)
-    llm: LLMConfig = Field(default_factory=LLMConfig)
-    context: ContextConfig = Field(default_factory=ContextConfig)
-    token_budget: TokenBudgetConfig = Field(default_factory=TokenBudgetConfig)
-    reflection: ReflectionConfig = Field(default_factory=ReflectionConfig)
-    langfuse: LangfuseConfig = Field(default_factory=LangfuseConfig)
-    home_assistant: HomeAssistantConfig = Field(default_factory=HomeAssistantConfig)
-    permissions: PermissionsConfig = Field(default_factory=PermissionsConfig)
-    cli: CLIConfig = Field(default_factory=CLIConfig)
-    chat: ChatConfig = Field(default_factory=ChatConfig)
-    api: APIConfig = Field(default_factory=APIConfig)
+    runtime: RuntimeConfig = Field(default_factory=_runtime_config_default)
+    llm: LLMConfig = Field(default_factory=_llm_config_default)
+    context: ContextConfig = Field(default_factory=_context_config_default)
+    token_budget: TokenBudgetConfig = Field(default_factory=_token_budget_config_default)
+    reflection: ReflectionConfig = Field(default_factory=_reflection_config_default)
+    langfuse: LangfuseConfig = Field(default_factory=_langfuse_config_default)
+    home_assistant: HomeAssistantConfig = Field(default_factory=_home_assistant_config_default)
+    permissions: PermissionsConfig = Field(default_factory=_permissions_config_default)
+    cli: CLIConfig = Field(default_factory=_cli_config_default)
+    chat: ChatConfig = Field(default_factory=_chat_config_default)
+    api: APIConfig = Field(default_factory=_api_config_default)
 
     class Config:
         """Pydantic configuration settings."""

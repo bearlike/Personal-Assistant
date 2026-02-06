@@ -33,10 +33,9 @@ from rich.markdown import Markdown
 from rich.style import Style as RichStyle
 from rich.text import Text
 
-from .mdstream import MarkdownStream
-
 from .dump import dump  # noqa: F401
 from .editor import pipe_editor
+from .mdstream import MarkdownStream
 from .utils import is_image_file
 
 # Constants
@@ -73,14 +72,15 @@ def restore_multiline(func):
 
 class CommandCompletionException(Exception):
     """Raised when a command should use the normal autocompleter instead of
-    command-specific completion."""
+    command-specific completion.
+    """
 
     pass
 
 
 @dataclass
 class ConfirmGroup:
-    preference: str = None
+    preference: str | None = None
     show_group: bool = True
 
     def __init__(self, items=None):
@@ -131,7 +131,7 @@ class AutoCompleter(Completer):
 
         for fname in self.all_fnames:
             try:
-                with open(fname, "r", encoding=self.encoding) as f:
+                with open(fname, encoding=self.encoding) as f:
                     content = f.read()
             except (FileNotFoundError, UnicodeDecodeError, IsADirectoryError):
                 continue
@@ -455,7 +455,7 @@ class InputOutput:
             return self.read_image(filename)
 
         try:
-            with open(str(filename), "r", encoding=self.encoding) as f:
+            with open(str(filename), encoding=self.encoding) as f:
                 return f.read()
         except FileNotFoundError:
             if not silent:
@@ -476,8 +476,7 @@ class InputOutput:
             return
 
     def write_text(self, filename, content, max_retries=5, initial_delay=0.1):
-        """
-        Writes content to a file, retrying with progressive backoff if the file is locked.
+        """Writes content to a file, retrying with progressive backoff if the file is locked.
 
         :param filename: Path to the file to write.
         :param content: Content to write to the file.
@@ -576,27 +575,27 @@ class InputOutput:
 
         @kb.add(Keys.ControlZ, filter=Condition(lambda: hasattr(signal, "SIGTSTP")))
         def _(event):
-            "Suspend to background with ctrl-z"
+            """Suspend to background with ctrl-z"""
             suspend_to_bg(event)
 
         @kb.add("c-space")
         def _(event):
-            "Ignore Ctrl when pressing space bar"
+            """Ignore Ctrl when pressing space bar"""
             event.current_buffer.insert_text(" ")
 
         @kb.add("c-up")
         def _(event):
-            "Navigate backward through history"
+            """Navigate backward through history"""
             event.current_buffer.history_backward()
 
         @kb.add("c-down")
         def _(event):
-            "Navigate forward through history"
+            """Navigate forward through history"""
             event.current_buffer.history_forward()
 
         @kb.add("c-x", "c-e")
         def _(event):
-            "Edit current input in external editor (like Bash)"
+            """Edit current input in external editor (like Bash)"""
             buffer = event.current_buffer
             current_text = buffer.text
 
@@ -611,7 +610,7 @@ class InputOutput:
 
         @kb.add("enter", eager=True, filter=~is_searching)
         def _(event):
-            "Handle Enter key press"
+            """Handle Enter key press"""
             if self.multiline_mode and not (
                 self.editingmode == EditingMode.VI
                 and event.app.vi_state.input_mode == InputMode.NAVIGATION
@@ -625,7 +624,7 @@ class InputOutput:
 
         @kb.add("escape", "enter", eager=True, filter=~is_searching)  # This is Alt+Enter
         def _(event):
-            "Handle Alt+Enter key press"
+            """Handle Alt+Enter key press"""
             if self.multiline_mode:
                 # In multiline mode, Alt+Enter submits
                 event.current_buffer.validate_and_handle()
