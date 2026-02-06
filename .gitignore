@@ -150,6 +150,7 @@ apps/meeseeks_cli/data/
 configs/*.toml
 configs/*.yaml
 configs/*.yml
+configs/mcp.json
 !configs/*.example.json
 
 # Pyre type checker

@@ -45,7 +45,7 @@ def test_execute_step_content_fallback():
     runner = ActionPlanRunner(
         tool_registry=registry,
         permission_policy=PermissionPolicy(),
-        approval_callback=None,
+        approval_callback=lambda _step: True,
         hook_manager=default_hook_manager(),
     )
     step = ActionStep(
@@ -97,6 +97,7 @@ def test_action_runner_blocks_tools_in_plan_mode():
     task_queue = runner.run(task_queue)
     assert task_queue.last_error
     assert "tool not allowed" in task_queue.last_error
+    assert "tool not allowed" in task_queue.task_result
     assert events
     payload = events[-1]["payload"]
     assert payload.get("success") is False
@@ -190,6 +191,43 @@ def test_action_runner_denies_set_without_approval():
     permission_events = [event for event in events if event.get("type") == "permission"]
     assert permission_events
     assert permission_events[0]["payload"]["decision"] == "deny"
+
+
+def test_action_runner_records_tool_errors_in_task_result():
+    """Surface tool failures in task_result for LLM context."""
+    registry = ToolRegistry()
+
+    class ExplodingTool:
+        def run(self, _step):
+            raise RuntimeError("boom")
+
+    registry.register(
+        ToolSpec(
+            tool_id="exploding_tool",
+            name="Exploding",
+            description="Always fails",
+            factory=lambda: ExplodingTool(),
+        )
+    )
+    runner = ActionPlanRunner(
+        tool_registry=registry,
+        permission_policy=PermissionPolicy(),
+        approval_callback=lambda _step: True,
+        hook_manager=default_hook_manager(),
+    )
+    task_queue = TaskQueue(
+        action_steps=[
+            ActionStep(
+                action_consumer="exploding_tool",
+                action_type="get",
+                action_argument="payload",
+            )
+        ]
+    )
+    task_queue = runner.run(task_queue)
+    assert task_queue.last_error
+    assert "boom" in task_queue.last_error
+    assert "ERROR: boom" in task_queue.task_result
 
 
 def test_summarize_result_truncates_long_text():

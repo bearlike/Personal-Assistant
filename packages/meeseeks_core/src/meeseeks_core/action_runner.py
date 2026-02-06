@@ -199,7 +199,6 @@ class ActionPlanRunner:
         logging.error("Error processing action step: {}", exc)
         self._record_failure(action_step, str(exc), task_queue)
         self._tool_registry.disable(action_step.action_consumer, f"Runtime error: {exc}")
-        action_step.result = None
         self._emit_tool_result(action_step, None, error=str(exc))
         mock = get_mock_speaker()
         self._hook_manager.run_post_tool_use(action_step, mock(content=f"Tool error: {exc}"))
@@ -209,6 +208,9 @@ class ActionPlanRunner:
         if reason:
             note = f"{note}: {reason}"
         task_queue.last_error = note
+        if step.result is None and reason:
+            mock = get_mock_speaker()
+            step.result = mock(content=f"ERROR: {reason}")
 
     def _emit_tool_result(
         self, action_step: ActionStep, result: str | None, *, error: str | None = None
