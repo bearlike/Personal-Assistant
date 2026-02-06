@@ -125,6 +125,33 @@ def test_build_approval_callback_auto_approve(tmp_path, monkeypatch):
     assert callback(step) is True
 
 
+def test_build_approval_callback_session_yes(monkeypatch, tmp_path):
+    """Enable session-wide auto-approve when selected."""
+    from meeseeks_cli.cli_master import _build_approval_callback
+
+    monkeypatch.setattr(
+        "meeseeks_cli.cli_master._confirm_rich_panel", lambda *args, **kwargs: "session"
+    )
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="tool",
+            name="Tool",
+            description="Tool",
+            factory=lambda: None,
+        )
+    )
+    console = Console(record=True)
+    state = CliState(session_id="s")
+    callback = _build_approval_callback(
+        lambda _: "n", console, state, registry, auto_approve_enabled=False
+    )
+    step = DummyStep("tool", "set", "arg")
+    assert callback is not None
+    assert callback(step) is True
+    assert state.auto_approve_all is True
+
+
 def test_mcp_yes_always_updates_config(tmp_path, monkeypatch):
     """Persist MCP auto-approve when user selects Yes, always."""
     config_path = tmp_path / "mcp.json"

@@ -130,3 +130,18 @@ def test_confirm_rich_panel_allows_always():
         allow_always=True,
     )
     assert result == "always"
+
+
+def test_confirm_rich_panel_allows_session():
+    """Return session when prompt input selects session-wide approval."""
+    console = Console(record=True)
+    result = cli_dialogs._confirm_rich_panel(
+        console,
+        lambda _prompt: "s",
+        "Approve tool use?",
+        subject="tool:action",
+        default=False,
+        allow_always=False,
+        allow_session=True,
+    )
+    assert result == "session"

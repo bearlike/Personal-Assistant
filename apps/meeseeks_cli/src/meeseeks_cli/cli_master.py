@@ -929,6 +929,7 @@ def _build_approval_callback(
                 subject=subject,
                 default=False,
                 allow_always=bool(is_mcp),
+                allow_session=True,
             )
             if rich_decision == "always":
                 if is_mcp and server_name and tool_name:
@@ -938,6 +939,9 @@ def _build_approval_callback(
                         save_mcp_config(config)
                     except Exception as exc:
                         console.print(f"Failed to persist auto-approve: {exc}")
+                return True
+            if rich_decision == "session":
+                state.auto_approve_all = True
                 return True
             if rich_decision == "yes":
                 if is_mcp and server_name and tool_name:
@@ -964,11 +968,14 @@ def _build_approval_callback(
         if approval_style == "textual" and dialogs.can_use_textual():
             choice = dialogs.select_one(
                 "Approve tool use",
-                ["Yes", "No", "Yes, always"],
+                ["Yes", "No", "Yes, always", "Yes, this session"],
                 subtitle=subject,
             )
             if choice is None or choice == "No":
                 return False
+            if choice == "Yes, this session":
+                state.auto_approve_all = True
+                return True
             if choice == "Yes, always" and is_mcp and server_name and tool_name:
                 try:
                     config = _load_mcp_config()
@@ -978,12 +985,15 @@ def _build_approval_callback(
                     console.print(f"Failed to persist auto-approve: {exc}")
             return True
 
-        prompt = f"Approve {subject}? [y/N/a] "
+        prompt = f"Approve {subject}? [y/N/a/s] "
         try:
             response = prompt_func(prompt).strip().lower()
         except (EOFError, KeyboardInterrupt):
             console.print("\nApproval denied.")
             return False
+        if response in {"s", "session"}:
+            state.auto_approve_all = True
+            return True
         if response in {"a", "always"} and is_mcp and server_name and tool_name:
             try:
                 config = _load_mcp_config()

@@ -272,6 +272,7 @@ def _confirm_rich_panel(
     subject: str | None = None,
     default: bool = False,
     allow_always: bool = False,
+    allow_session: bool = False,
 ) -> str | None:
     if prompt_func is None or console is None:
         return None
@@ -299,6 +300,8 @@ def _confirm_rich_panel(
     suffix = "Y/n" if default else "y/N"
     if allow_always:
         suffix = f"{suffix}/a"
+    if allow_session:
+        suffix = f"{suffix}/s"
     prompt = f"{suffix}: "
     try:
         response = prompt_func(prompt).strip().lower()
@@ -310,6 +313,8 @@ def _confirm_rich_panel(
 
     if response in {"a", "always"} and allow_always:
         decision = "always"
+    elif response in {"s", "session"} and allow_session:
+        decision = "session"
     elif response in {"y", "yes"}:
         decision = "yes"
     else:
