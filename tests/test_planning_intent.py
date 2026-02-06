@@ -49,3 +49,23 @@ def test_filter_specs_by_intent_keeps_multiple_capabilities():
         "mcp_utils_internet_search_searxng_web_search",
         "aider_read_file_tool",
     }
+
+
+def test_spec_capabilities_prefers_metadata():
+    """Prefer explicit capability metadata when provided."""
+    planner = Planner(ToolRegistry())
+    spec = ToolSpec(
+        tool_id="custom_tool",
+        name="custom_tool",
+        description="test",
+        factory=lambda: object(),
+        metadata={"capabilities": ["web_search"]},
+    )
+    assert planner._spec_capabilities(spec) == {"web_search"}
+
+
+def test_spec_capabilities_infers_web_read():
+    """Infer web_read capability from tool id."""
+    planner = Planner(ToolRegistry())
+    spec = _spec("mcp_utils_internet_search_web_url_read", kind="mcp")
+    assert "web_read" in planner._spec_capabilities(spec)

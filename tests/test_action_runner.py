@@ -3,6 +3,7 @@
 import pytest
 from meeseeks_core.action_runner import ActionPlanRunner
 from meeseeks_core.classes import ActionStep, TaskQueue, set_available_tools
+from meeseeks_core.common import get_mock_speaker
 from meeseeks_core.hooks import default_hook_manager
 from meeseeks_core.permissions import PermissionPolicy
 from meeseeks_core.tool_registry import ToolRegistry, ToolSpec
@@ -189,3 +190,28 @@ def test_action_runner_denies_set_without_approval():
     permission_events = [event for event in events if event.get("type") == "permission"]
     assert permission_events
     assert permission_events[0]["payload"]["decision"] == "deny"
+
+
+def test_summarize_result_truncates_long_text():
+    """Truncate long tool output summaries."""
+    long_text = "x" * 600
+    summary = ActionPlanRunner._summarize_result(long_text, None)
+    assert summary.endswith("...")
+    assert len(summary) == 500
+
+
+def test_format_step_summary_skips_empty_result():
+    """Skip summaries when tool output is empty."""
+    step = ActionStep(
+        action_consumer="dummy",
+        action_type="get",
+        action_argument="payload",
+    )
+    step.result = get_mock_speaker()(content="")
+    assert ActionPlanRunner._format_step_summary(step) == ""
+
+
+def test_summarize_result_none_returns_empty():
+    """Return empty summaries for None results."""
+    summary = ActionPlanRunner._summarize_result(None, None)
+    assert summary == ""

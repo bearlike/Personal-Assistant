@@ -106,3 +106,9 @@ testpaths = [
   "apps/meeseeks_chat/tests",
   "apps/meeseeks_cli/tests",
 ]
+
+[tool.coverage.run]
+omit = [
+  "packages/meeseeks_tools/src/meeseeks_tools/vendor/*",
+  "vendor/*",
+]

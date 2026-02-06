@@ -322,6 +322,33 @@ def test_render_mcp_invalid_json(tmp_path):
     assert "Failed to read MCP config" in context.console.export_text()
 
 
+def test_command_config_init_creates_example(monkeypatch, tmp_path):
+    """Create example config file via CLI command."""
+    context = _make_context(tmp_path)
+    registry = get_registry()
+
+    example_path = tmp_path / "app.example.json"
+    monkeypatch.setattr("meeseeks_core.config._APP_EXAMPLE_PATH", example_path)
+
+    registry.execute("/config", context, ["init", "--force"])
+    assert example_path.exists()
+    assert "Created config example" in context.console.export_text()
+
+
+def test_command_mcp_init_creates_config(tmp_path):
+    """Create MCP config file via CLI command."""
+    context = _make_context(tmp_path)
+    registry = get_registry()
+
+    config_path = tmp_path / "mcp.json"
+    set_mcp_config_path(config_path)
+
+    registry.execute("/mcp", context, ["init", "--force"])
+    assert config_path.exists()
+    payload = json.loads(config_path.read_text(encoding="utf-8"))
+    assert "servers" in payload
+
+
 def test_command_compact(monkeypatch, tmp_path):
     """Compact sessions via CLI command."""
     context = _make_context(tmp_path)

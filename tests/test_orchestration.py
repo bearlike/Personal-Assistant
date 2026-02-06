@@ -872,6 +872,95 @@ def test_orchestrate_session_max_iters(monkeypatch, tmp_path):
     assert run_calls.count == 1
 
 
+def test_orchestrator_max_iters_zero_marks_limit(tmp_path):
+    """Mark completion reason when max_iters is zero."""
+    session_store = SessionStore(root_dir=str(tmp_path))
+    registry = ToolRegistry()
+    orchestrator = Orchestrator(
+        session_store=session_store,
+        tool_registry=registry,
+        permission_policy=PermissionPolicy(),
+        approval_callback=lambda *_a, **_k: True,
+        hook_manager=HookManager(),
+    )
+    task_queue, state = orchestrator.run(
+        "hello",
+        max_iters=0,
+        initial_task_queue=TaskQueue(action_steps=[]),
+        return_state=True,
+        session_id=session_store.create_session(),
+    )
+    assert task_queue.action_steps == []
+    assert state.done is False
+    assert state.done_reason == "max_iterations_reached"
+
+
+def test_resolve_mode_plan_trigger():
+    """Switch to plan mode when plan keywords are present."""
+    assert Orchestrator._resolve_mode("Make a plan for launch", None) == "plan"
+
+
+def test_should_replan_blocks_permission_denied():
+    """Avoid replanning when permission was denied."""
+    task_queue = TaskQueue(action_steps=[])
+    task_queue.last_error = "permission denied for tool"
+    assert Orchestrator._should_replan(task_queue, 0, 3, mode="act") is False
+
+
+def test_should_replan_blocks_tool_not_allowed():
+    """Avoid replanning when tool not allowed error occurs."""
+    task_queue = TaskQueue(action_steps=[])
+    task_queue.last_error = "tool not allowed in plan mode"
+    assert Orchestrator._should_replan(task_queue, 0, 3, mode="act") is False
+
+
+def test_run_action_plan_plan_mode_filters_tools(monkeypatch, tmp_path):
+    """Pass plan-safe tool ids to the action runner in plan mode."""
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="plan_tool",
+            name="Plan Tool",
+            description="Safe tool for planning.",
+            factory=lambda: None,
+            metadata={"plan_safe": True},
+        )
+    )
+    registry.register(
+        ToolSpec(
+            tool_id="mut_tool",
+            name="Mutating Tool",
+            description="Mutating tool.",
+            factory=lambda: None,
+        )
+    )
+    captured = {}
+
+    class DummyRunner:
+        def __init__(self, *args, **kwargs):
+            captured["allowed"] = kwargs.get("allowed_tool_ids")
+
+        def run(self, task_queue):
+            return task_queue
+
+    monkeypatch.setattr("meeseeks_core.orchestrator.ActionPlanRunner", DummyRunner)
+
+    orchestrator = Orchestrator(
+        session_store=SessionStore(root_dir=str(tmp_path)),
+        tool_registry=registry,
+        permission_policy=PermissionPolicy(),
+        approval_callback=lambda *_a, **_k: True,
+        hook_manager=HookManager(),
+    )
+    orchestrator._run_action_plan(
+        session_id="session",
+        task_queue=TaskQueue(action_steps=[]),
+        mode="plan",
+    )
+
+    assert captured["allowed"] == {"plan_tool"}
+
+
 def test_orchestrate_session_compact(tmp_path):
     """Compact session transcripts when limits are exceeded."""
     session_store = SessionStore(root_dir=str(tmp_path))

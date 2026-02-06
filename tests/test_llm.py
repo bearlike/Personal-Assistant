@@ -61,6 +61,22 @@ def test_build_chat_model_prefixes_openai_model(monkeypatch):
     assert captured["api_base"] == "http://host/v1"
 
 
+def test_build_chat_model_passes_api_key(monkeypatch):
+    """Pass api_key through when provided."""
+    captured: dict[str, object] = {}
+
+    class DummyChatLiteLLM:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    module = types.ModuleType("langchain_litellm")
+    module.ChatLiteLLM = DummyChatLiteLLM
+    monkeypatch.setitem(sys.modules, "langchain_litellm", module)
+
+    build_chat_model(model_name="gpt-4o", openai_api_base=None, api_key="key")
+    assert captured["api_key"] == "key"
+
+
 def test_parse_model_list_config_list():
     """Parse model allowlists from list values."""
     assert llm_module._normalize_model_list(["Foo", "bar"]) == [
@@ -76,6 +92,17 @@ def test_parse_model_list_empty():
         "foo",
         "bar",
     ]
+
+
+def test_parse_model_list_none():
+    """Handle None values gracefully."""
+    assert llm_module._normalize_model_list(None) == []
+    assert llm_module._normalize_model_list({"model": "gpt-5"}) == []
+
+
+def test_strip_provider_handles_none():
+    """Return empty string when model name is missing."""
+    assert llm_module._strip_provider(None) == ""
 
 
 def test_matches_model_list_wildcard():
@@ -107,3 +134,11 @@ def test_model_supports_reasoning_effort_with_provider_prefix():
     """Treat provider-prefixed model names as GPT-5 family."""
     set_config_override({"llm": {"reasoning_effort_models": []}})
     assert model_supports_reasoning_effort("openai/gpt-5.2") is True
+
+
+def test_resolve_litellm_model_keeps_prefixed_name():
+    """Avoid prefixing models that already include a provider."""
+    assert (
+        llm_module._resolve_litellm_model("openai/gpt-4o", "http://host/v1")
+        == "openai/gpt-4o"
+    )

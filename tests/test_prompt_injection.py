@@ -192,6 +192,50 @@ def test_prompt_can_disable_tool_guidance():
     assert "Tool guidance" not in prompt
 
 
+def test_prompt_schema_skips_empty_fields():
+    """Skip schema rendering when no fields are defined."""
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="mcp_empty",
+            name="Empty Schema",
+            description="Test",
+            factory=lambda: object(),
+            kind="mcp",
+            metadata={"schema": {}},
+        )
+    )
+    context = ContextSnapshot(
+        summary=None,
+        recent_events=[],
+        selected_events=None,
+        events=[],
+        budget=get_token_budget([], None, None),
+    )
+    prompt = PromptBuilder(registry).build(get_system_prompt(), context, component_status=None)
+    assert "Tool input schemas" not in prompt
+
+
+def test_prompt_tool_guidance_skips_non_local():
+    """Skip tool prompts for non-local tools when local_only is requested."""
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="mcp_tool",
+            name="MCP Tool",
+            description="Test",
+            factory=lambda: object(),
+            kind="mcp",
+            prompt_path="tools/aider-edit-blocks",
+        )
+    )
+    prompts = PromptBuilder(registry)._render_tool_prompts(
+        registry.list_specs(),
+        local_only=True,
+    )
+    assert prompts == []
+
+
 def test_ha_render_system_prompt_includes_entities():
     """Render the HA prompt with provided entity list."""
     prompt = ha_render_system_prompt(all_entities=["scene.lamp_power_on"])
