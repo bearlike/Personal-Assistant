@@ -387,10 +387,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#environment-setup" class="md-nav__link">
+  <a href="#configuration-setup" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Environment setup
+        Configuration setup
       
     </span>
   </a>
@@ -413,6 +413,17 @@
     <span class="md-ellipsis">
       
         Optional components
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli-approval-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI approval UI
       
     </span>
   </a>
@@ -613,10 +624,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#environment-setup" class="md-nav__link">
+  <a href="#configuration-setup" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Environment setup
+        Configuration setup
       
     </span>
   </a>
@@ -639,6 +650,17 @@
     <span class="md-ellipsis">
       
         Optional components
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli-approval-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI approval UI
       
     </span>
   </a>
@@ -735,32 +757,34 @@
 </code></pre>
 <p>Pre-push runs:
 - <code>scripts/ci/check.sh</code> (ruff format/check, mypy, pytest)</p>
-<h2 id="environment-setup">Environment setup</h2>
+<h2 id="configuration-setup">Configuration setup</h2>
 <ol>
-<li>Copy <code>.env.example</code> to <code>.env</code>.</li>
-<li>Set at least:</li>
-<li><code>OPENAI_API_KEY</code> (for your OpenAI-compatible endpoint)</li>
-<li><code>OPENAI_API_BASE</code> (LiteLLM proxy or other OpenAI-compatible base URL)</li>
-<li><code>DEFAULT_MODEL</code> (or <code>ACTION_PLAN_MODEL</code>)</li>
+<li>If configs are missing, run <code>/config init</code>, <code>/mcp init</code>, or <code>/init</code> from the CLI to scaffold examples.</li>
+<li>Use only JSON configs under <code>configs/</code>:</li>
+<li><code>configs/app.json</code> (runtime + LLM + integrations)</li>
+<li><code>configs/mcp.json</code> (MCP servers)</li>
+<li><code>configs/*.example.json</code> are templates for new installs</li>
+<li>Update <code>configs/app.json</code> with your runtime settings:</li>
+<li><code>llm.api_key</code> and <code>llm.api_base</code> (required)</li>
+<li><code>llm.default_model</code> and/or <code>llm.action_plan_model</code></li>
+<li>Optional: <code>llm.tool_model</code> for tool execution (falls back to <code>action_plan_model</code>, then <code>default_model</code>)</li>
+<li><code>runtime.session_dir</code> (optional, for transcript storage)</li>
 <li>If you use an OpenAI-compatible base URL and your model name has no provider
    prefix, Meeseeks will call <code>openai/&lt;model&gt;</code> automatically.</li>
-<li>Optional runtime paths:</li>
-<li><code>MESEEKS_SESSION_DIR</code> for session transcript storage</li>
-<li><code>MESEEKS_TOOL_MANIFEST</code> if you want a custom tool list (disables MCP auto-discovery)</li>
 </ol>
 <h2 id="mcp-setup-auto-discovery">MCP setup (auto-discovery)</h2>
-<p>MCP tools are auto-discovered from a server config file.
-1. Copy <code>configs/mcp.example.json</code> to <code>configs/mcp.json</code>.
-2. Set the MCP server <code>url</code> and any <code>headers</code> needed for auth.
-3. Set <code>MESEEKS_MCP_CONFIG=./configs/mcp.json</code> in <code>.env</code>.
-4. Start any interface once; a tool manifest is auto-generated and cached under <code>~/.meeseeks/</code>.</p>
-<p>Notes:
-If you override the manifest, keep at least one tool enabled for tasks that need external actions.
-- MCP tool names must match the server's advertised tool list.</p>
+<p>MCP tools are auto-discovered from <code>configs/mcp.json</code>.
+1. Set each MCP server <code>url</code> and any <code>headers</code> needed for auth.
+2. Start any interface once; a tool manifest is auto-generated and cached under <code>~/.meeseeks/</code>.</p>
 <h2 id="optional-components">Optional components</h2>
 <ul>
-<li>Langfuse: set <code>LANGFUSE_PUBLIC_KEY</code> + <code>LANGFUSE_SECRET_KEY</code> (or disable with <code>LANGFUSE_ENABLED=0</code>).</li>
-<li>Home Assistant: set <code>HA_URL</code> + <code>HA_TOKEN</code> (or disable with <code>MESEEKS_HOME_ASSISTANT_ENABLED=0</code>).</li>
+<li>Langfuse: set <code>langfuse.enabled</code> + keys in <code>configs/app.json</code>.</li>
+<li>Home Assistant: set <code>home_assistant.enabled</code> + credentials in <code>configs/app.json</code>.</li>
+</ul>
+<h2 id="cli-approval-ui">CLI approval UI</h2>
+<ul>
+<li>Default approval prompts render as a Rich panel with padded, dotted borders.</li>
+<li>Use <code>/automatic</code> or <code>--auto-approve</code> to bypass prompts when appropriate.</li>
 </ul>
 <h2 id="run-interfaces-local">Run interfaces (local)</h2>
 <ul>
@@ -772,8 +796,8 @@ If you override the manifest, keep at least one tool enabled for tasks that need
 <h2 id="docker-optional">Docker (optional)</h2>
 <ul>
 <li>Build images using <code>docker/Dockerfile.api</code> and <code>docker/Dockerfile.chat</code>.</li>
-<li>Provide the same <code>.env</code> values as local.</li>
-<li>Persist <code>MESEEKS_SESSION_DIR</code> if you want transcripts across restarts.</li>
+<li>Mount <code>configs/app.json</code> (and <code>configs/mcp.json</code> if you use MCP).</li>
+<li>Persist <code>data/sessions</code> if you want transcripts across restarts.</li>
 </ul>
 <h2 id="docs-optional">Docs (optional)</h2>
 <p>If you want to build the docs locally:</p>

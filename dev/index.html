@@ -590,11 +590,13 @@
 <li>Plan → act → observe loop to keep work grounded in tool results.</li>
 <li>Multiple interfaces (chat UI, REST API, Home Assistant, terminal CLI) backed by one core engine.</li>
 <li>Tool registry for local tools plus optional MCP tools.</li>
+<li>Built-in local file and shell tools (Aider adapters) for edit blocks, read, list, and shell execution.</li>
 <li>Session transcripts with compaction for long runs and context budget awareness.</li>
 <li>Context snapshots built from recent turns plus summaries of prior activity.</li>
 <li>Step-level reflection after tool execution to validate outcomes.</li>
 <li>Permission gate with approval callbacks plus lightweight hooks around tool execution.</li>
 <li>Optional components (Langfuse, Home Assistant) auto-disable when not configured.</li>
+<li>Langfuse tracing is session-scoped when enabled, grouping multi-turn runs.</li>
 </ul>
 <h2 id="repo-map-short">Repo map (short)</h2>
 <ul>
