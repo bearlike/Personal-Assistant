@@ -82,7 +82,6 @@ If you add a new interactive flow, use `DialogFactory` instead of writing custom
 - `MEESEEKS_CLI=1`: set at startup to tag CLI runtime context.
 - `MEESEEKS_LOG_STYLE=dark`: default log styling for the CLI.
 - `MESEEKS_MCP_CONFIG`: MCP server config used for discovery.
-- `MESEEKS_TOOL_MANIFEST`: optional override for tool registry.
 
 ## KISS / DRY rules for UI work
 - Reuse existing render helpers and dialogs; add small helpers if needed.

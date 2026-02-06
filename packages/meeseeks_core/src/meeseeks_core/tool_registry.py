@@ -253,18 +253,21 @@ def _ensure_auto_manifest(mcp_config_path: str) -> str | None:
             logging.warning("Failed to read existing MCP manifest: {}", exc)
 
     mcp_module = _load_mcp_support()
+    mcp_tools: dict[str, list[dict[str, object]]] = {}
+    failures: dict[str, Exception] = {}
+    global_failure: Exception | None = None
     if mcp_module is None:
-        return manifest_path if os.path.exists(manifest_path) else None
-
-    try:
-        config = mcp_module._load_mcp_config(mcp_config_path)
-        mcp_tools, failures = mcp_module.discover_mcp_tool_details_with_failures(config)
-    except Exception as exc:
-        logging.warning("Failed to auto-discover MCP tools: {}", exc)
-        return manifest_path if os.path.exists(manifest_path) else None
+        global_failure = RuntimeError("MCP support is not installed.")
+    else:
+        try:
+            config = mcp_module._load_mcp_config(mcp_config_path)
+            mcp_tools, failures = mcp_module.discover_mcp_tool_details_with_failures(config)
+        except Exception as exc:
+            logging.warning("Failed to auto-discover MCP tools: {}", exc)
+            global_failure = exc
 
     payload = _build_manifest_payload(mcp_tools)
-    if failures and existing_manifest:
+    if (failures or global_failure) and existing_manifest:
         payload_tools = payload.get("tools", [])
         if not isinstance(payload_tools, list):
             payload_tools = []
@@ -285,14 +288,17 @@ def _ensure_auto_manifest(mcp_config_path: str) -> str | None:
             if tool.get("kind") != "mcp":
                 continue
             server_name = tool.get("server")
-            if server_name not in failures:
+            if not global_failure and server_name not in failures:
                 continue
             tool_id = tool.get("tool_id")
             if not tool_id:
                 continue
             disabled_tool = dict(tool)
             disabled_tool["enabled"] = False
-            disabled_tool["disabled_reason"] = f"Discovery failed: {failures[server_name]}"
+            if global_failure:
+                disabled_tool["disabled_reason"] = f"Discovery failed: {global_failure}"
+            else:
+                disabled_tool["disabled_reason"] = f"Discovery failed: {failures[server_name]}"
             tools_by_id[tool_id] = disabled_tool
         payload["tools"] = list(tools_by_id.values())
     try:
@@ -306,16 +312,11 @@ def _ensure_auto_manifest(mcp_config_path: str) -> str | None:
 
 
 def load_registry(manifest_path: str | None = None) -> ToolRegistry:
-    """Load tool registry from a JSON manifest if available."""
+    """Load tool registry, auto-discovering MCP tools when configured."""
     if manifest_path is None:
-        manifest_path = os.getenv("MESEEKS_TOOL_MANIFEST")
-
-    if not manifest_path:
         mcp_config_path = os.getenv("MESEEKS_MCP_CONFIG")
         if mcp_config_path:
-            auto_manifest = _ensure_auto_manifest(mcp_config_path)
-            if auto_manifest:
-                manifest_path = auto_manifest
+            manifest_path = _ensure_auto_manifest(mcp_config_path)
 
     if not manifest_path:
         return _default_registry()
@@ -398,6 +399,14 @@ def load_registry(manifest_path: str | None = None) -> ToolRegistry:
 
     if not registry.list_specs(include_disabled=True):
         return _default_registry()
+
+    builtin_registry = _default_registry()
+    existing_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
+    for spec in builtin_registry.list_specs(include_disabled=True):
+        if spec.tool_id in existing_ids:
+            continue
+        registry.register(spec)
+        existing_ids.add(spec.tool_id)
 
     return registry
 

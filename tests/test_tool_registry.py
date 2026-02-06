@@ -8,7 +8,7 @@ from meeseeks_core.tool_registry import _ensure_auto_manifest, load_registry
 
 def test_default_registry(monkeypatch):
     """Load built-in tools when no manifest is configured."""
-    monkeypatch.delenv("MESEEKS_TOOL_MANIFEST", raising=False)
+    monkeypatch.delenv("MESEEKS_MCP_CONFIG", raising=False)
     monkeypatch.delenv("MESEEKS_HOME_ASSISTANT_ENABLED", raising=False)
     registry = load_registry()
     tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
@@ -17,7 +17,7 @@ def test_default_registry(monkeypatch):
 
 def test_default_registry_homeassistant_enabled(monkeypatch):
     """Enable Home Assistant tool when required env vars are set."""
-    monkeypatch.delenv("MESEEKS_TOOL_MANIFEST", raising=False)
+    monkeypatch.delenv("MESEEKS_MCP_CONFIG", raising=False)
     monkeypatch.delenv("MESEEKS_HOME_ASSISTANT_ENABLED", raising=False)
     monkeypatch.setenv("HA_URL", "http://localhost")
     monkeypatch.setenv("HA_TOKEN", "token")
@@ -317,7 +317,6 @@ def test_auto_manifest_from_mcp_config(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     monkeypatch.setenv("MESEEKS_MCP_CONFIG", str(config_path))
-    monkeypatch.delenv("MESEEKS_TOOL_MANIFEST", raising=False)
     monkeypatch.setenv("MESEEKS_CONFIG_DIR", str(tmp_path))
 
     manifest_path = tmp_path / "tool-manifest.auto.json"
@@ -346,7 +345,6 @@ def test_auto_manifest_marks_failed_server(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     monkeypatch.setenv("MESEEKS_MCP_CONFIG", str(config_path))
-    monkeypatch.delenv("MESEEKS_TOOL_MANIFEST", raising=False)
     monkeypatch.setenv("MESEEKS_CONFIG_DIR", str(tmp_path))
 
     manifest_path = tmp_path / "tool-manifest.auto.json"

@@ -20,8 +20,6 @@ uv run meeseeks
 - MCP tools are auto-discovered and cached on load.
 - Optional: add `auto_approve_tools` per server to allowlist tools (the CLI writes this when you pick “Yes, always”).
 
-Advanced: set `MESEEKS_TOOL_MANIFEST` to override the tool list (disables auto-discovery).
-
 ## Common commands
 - `/help` list commands
 - `/plan on|off` toggle plan display

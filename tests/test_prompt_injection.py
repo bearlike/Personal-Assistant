@@ -21,7 +21,6 @@ def _build_prompt(registry, *, recent_events=None, selected_events=None, summary
 
 def test_prompt_excludes_home_assistant_when_disabled(monkeypatch):
     """Ensure HA guidance is omitted when the tool is disabled."""
-    monkeypatch.delenv("MESEEKS_TOOL_MANIFEST", raising=False)
     monkeypatch.delenv("MESEEKS_MCP_CONFIG", raising=False)
     monkeypatch.setenv("MESEEKS_HOME_ASSISTANT_ENABLED", "0")
     registry = load_registry()
@@ -32,7 +31,6 @@ def test_prompt_excludes_home_assistant_when_disabled(monkeypatch):
 
 def test_prompt_includes_home_assistant_when_enabled(monkeypatch):
     """Ensure HA guidance is included when the tool is enabled."""
-    monkeypatch.delenv("MESEEKS_TOOL_MANIFEST", raising=False)
     monkeypatch.delenv("MESEEKS_MCP_CONFIG", raising=False)
     monkeypatch.delenv("MESEEKS_HOME_ASSISTANT_ENABLED", raising=False)
     monkeypatch.setenv("HA_URL", "http://example")
@@ -45,7 +43,6 @@ def test_prompt_includes_home_assistant_when_enabled(monkeypatch):
 
 def test_prompt_includes_recent_and_selected_events(monkeypatch):
     """Ensure recent/selected events are rendered in the system prompt."""
-    monkeypatch.delenv("MESEEKS_TOOL_MANIFEST", raising=False)
     monkeypatch.delenv("MESEEKS_MCP_CONFIG", raising=False)
     registry = load_registry()
     prompt = _build_prompt(
@@ -59,7 +56,6 @@ def test_prompt_includes_recent_and_selected_events(monkeypatch):
 
 def test_prompt_includes_summary(monkeypatch):
     """Include summary lines when present in context."""
-    monkeypatch.delenv("MESEEKS_TOOL_MANIFEST", raising=False)
     monkeypatch.delenv("MESEEKS_MCP_CONFIG", raising=False)
     registry = load_registry()
     prompt = _build_prompt(registry, summary="Remember this")

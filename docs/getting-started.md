@@ -58,7 +58,6 @@ Pre-push runs:
    prefix, Meeseeks will call `openai/<model>` automatically.
 4. Optional runtime paths:
    - `MESEEKS_SESSION_DIR` for session transcript storage
-   - `MESEEKS_TOOL_MANIFEST` if you want a custom tool list (disables MCP auto-discovery)
 
 ## MCP setup (auto-discovery)
 MCP tools are auto-discovered from a server config file.
@@ -66,10 +65,6 @@ MCP tools are auto-discovered from a server config file.
 2. Set the MCP server `url` and any `headers` needed for auth.
 3. Set `MESEEKS_MCP_CONFIG=./configs/mcp.json` in `.env`.
 4. Start any interface once; a tool manifest is auto-generated and cached under `~/.meeseeks/`.
-
-Notes:
-If you override the manifest, keep at least one tool enabled for tasks that need external actions.
-- MCP tool names must match the server's advertised tool list.
 
 ## Optional components
 - Langfuse: set `LANGFUSE_PUBLIC_KEY` + `LANGFUSE_SECRET_KEY` (or disable with `LANGFUSE_ENABLED=0`).
