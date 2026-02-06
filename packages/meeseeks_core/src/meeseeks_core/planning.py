@@ -304,9 +304,7 @@ class Planner:
             )
             if span is not None:
                 try:
-                    span.update_trace(
-                        output={"step_count": len(action_plan.action_steps or [])}
-                    )
+                    span.update_trace(output={"step_count": len(action_plan.action_steps or [])})
                 except Exception:
                     pass
         action_plan.human_message = user_query

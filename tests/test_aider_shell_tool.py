@@ -9,6 +9,7 @@ from meeseeks_tools.integration.aider_shell_tool import AiderShellTool
 
 def test_shell_tool_runs_command(monkeypatch, tmp_path):
     """Execute a shell command and return payload."""
+
     def _fake_run_cmd(command, cwd):
         assert command == "echo hello"
         assert cwd == str(tmp_path)
@@ -32,6 +33,7 @@ def test_shell_tool_runs_command(monkeypatch, tmp_path):
 
 def test_shell_tool_resolves_cwd(monkeypatch, tmp_path):
     """Resolve cwd within the project root."""
+
     def _fake_run_cmd(command, cwd):
         assert cwd == str(tmp_path / "subdir")
         return 0, "ok"

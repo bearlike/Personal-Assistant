@@ -9,7 +9,7 @@ from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from meeseeks_core.common import get_logger
 from meeseeks_core.config import get_config
@@ -17,10 +17,13 @@ from meeseeks_core.types import JsonValue
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from langfuse.langchain import CallbackHandler as LangfuseCallbackHandler
+    from langfuse.types import TraceContext
+else:
+    TraceContext = dict[str, str]
 
 logging = get_logger(name="core.components")
 
-_LANGFUSE_TRACE_CONTEXT: ContextVar[dict[str, str] | None] = ContextVar(
+_LANGFUSE_TRACE_CONTEXT: ContextVar[TraceContext | None] = ContextVar(
     "langfuse_trace_context",
     default=None,
 )
@@ -51,7 +54,7 @@ def build_langfuse_handler(
     trace_name: str,
     version: str,
     release: str,
-    trace_context: dict[str, str] | None = None,
+    trace_context: TraceContext | None = None,
 ) -> LangfuseCallbackHandler | None:
     """Create a Langfuse callback handler when configured."""
     status = resolve_langfuse_status()
@@ -109,11 +112,11 @@ def _is_hex_trace_id(value: str) -> bool:
     return bool(re.fullmatch(r"[0-9a-f]{32}", value))
 
 
-def _build_langfuse_trace_context(session_id: str | None) -> dict[str, str] | None:
+def _build_langfuse_trace_context(session_id: str | None) -> TraceContext | None:
     if not session_id:
         return None
     if _is_hex_trace_id(session_id):
-        return {"trace_id": session_id}
+        return cast(TraceContext, {"trace_id": session_id})
     try:
         from langfuse import Langfuse
     except Exception:  # pragma: no cover - defensive
@@ -124,7 +127,7 @@ def _build_langfuse_trace_context(session_id: str | None) -> dict[str, str] | No
         return None
     if not trace_id or not _is_hex_trace_id(trace_id):
         return None
-    return {"trace_id": trace_id}
+    return cast(TraceContext, {"trace_id": trace_id})
 
 
 @contextmanager
