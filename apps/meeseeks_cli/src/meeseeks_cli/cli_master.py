@@ -143,6 +143,13 @@ def _ensure_history_path(path: str) -> str:
     return path
 
 
+def _render_resume_hint(console: Console, session_id: str, session_dir: str | None) -> None:
+    command = f"uv run meeseeks --session {session_id}"
+    if session_dir:
+        command = f"{command} --session-dir {session_dir}"
+    console.print(f"Resume: {command}", style="dim")
+
+
 def _parse_command(text: str) -> tuple[str, list[str]]:
     parts = text.strip().split()
     command = parts[0]
@@ -465,6 +472,7 @@ def run_cli(args: argparse.Namespace) -> int:
             user_input = session.prompt("meeseeks> ").strip()
         except (EOFError, KeyboardInterrupt):
             console.print("\nBye.")
+            _render_resume_hint(console, state.session_id, args.session_dir)
             return 0
 
         if not user_input:
@@ -479,6 +487,7 @@ def run_cli(args: argparse.Namespace) -> int:
                 prompt_func=session.prompt,
             )
             if not registry.execute(command, context, cmd_args):
+                _render_resume_hint(console, state.session_id, args.session_dir)
                 return 0
             continue
 
