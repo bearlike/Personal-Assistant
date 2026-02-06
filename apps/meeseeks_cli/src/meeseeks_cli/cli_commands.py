@@ -207,6 +207,19 @@ def _cmd_plan(context: CommandContext, args: list[str]) -> bool:
     return True
 
 
+@REGISTRY.command("/mode", "Set orchestration mode: /mode act|plan")
+def _cmd_mode(context: CommandContext, args: list[str]) -> bool:
+    if not args:
+        context.console.print(f"Current mode: {context.state.mode}")
+        return True
+    value = args[0].lower()
+    if value not in {"act", "plan"}:
+        context.console.print("Usage: /mode act|plan")
+        return True
+    context.state.mode = value
+    context.console.print(f"Mode set to: {context.state.mode}")
+    return True
+
 @REGISTRY.command("/mcp", "List MCP tools and servers (/mcp select|init)")
 def _cmd_mcp(context: CommandContext, args: list[str]) -> bool:
     if args and args[0].lower() == "init":

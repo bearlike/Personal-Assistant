@@ -156,6 +156,21 @@ def _resolve_display_model(model_name: str | None) -> str:
     )
 
 
+def _resolve_query_mode(query: str, state: CliState) -> str:
+    lowered = query.strip().lower()
+    plan_triggers = [
+        "make a plan",
+        "create a plan",
+        "draft a plan",
+        "plan the",
+        "plan for",
+        "planning",
+    ]
+    if any(trigger in lowered for trigger in plan_triggers):
+        return "plan"
+    return state.mode if state.mode in {"plan", "act"} else "act"
+
+
 @dataclass(frozen=True)
 class HeaderContext:
     """Structured data needed to render the CLI header."""
@@ -477,20 +492,38 @@ def _run_query(
     prompt_func: Callable[[str], str] | None,
 ) -> None:
     initial_task_queue = None
+    mode = _resolve_query_mode(query, state)
     if state.show_plan:
         initial_task_queue = generate_action_plan(
             user_query=query,
             model_name=state.model_name,
             session_summary=store.load_summary(state.session_id),
+            mode=mode,
         )
         _render_plan_with_registry(console, initial_task_queue, tool_registry)
 
+    auto_approve = bool(
+        state.auto_approve_all
+        or getattr(args, "auto_approve", False)
+        or prompt_func is None
+    )
+    logging.debug(
+        "Auto-approve resolved: {} (state={}, args={}, prompt_func_none={})",
+        auto_approve,
+        state.auto_approve_all,
+        getattr(args, "auto_approve", False),
+        prompt_func is None,
+    )
     approval_callback = _build_approval_callback(
         prompt_func,
         console,
         state,
         tool_registry,
+        auto_approve_enabled=auto_approve,
     )
+    if approval_callback is None and prompt_func is None:
+        logging.debug("Forcing auto-approve for headless query execution.")
+        approval_callback = auto_approve
     hook_manager = _build_cli_hook_manager(console, tool_registry)
     task_queue = orchestrate_session(
         user_query=query,
@@ -502,6 +535,7 @@ def _run_query(
         tool_registry=tool_registry,
         approval_callback=approval_callback,
         hook_manager=hook_manager,
+        mode=mode,
     )
 
     _render_results_with_registry(
@@ -831,10 +865,19 @@ def _build_approval_callback(
     console: Console,
     state: CliState,
     tool_registry: ToolRegistry,
+    *,
+    auto_approve_enabled: bool,
 ) -> Callable[[ActionStep], bool] | None:
-    if state.auto_approve_all:
+    logging.debug(
+        "Approval callback build: auto_approve_enabled={}, prompt_func_none={}",
+        auto_approve_enabled,
+        prompt_func is None,
+    )
+    if auto_approve_enabled:
+        logging.debug("Approval callback: auto-approve enabled.")
         return auto_approve
     if prompt_func is None:
+        logging.debug("Approval callback: prompt disabled, returning None.")
         return None
     dialogs = DialogFactory(console=console, prompt_func=prompt_func, prefer_inline=True)
     specs_by_id = _tool_specs_by_id(tool_registry)

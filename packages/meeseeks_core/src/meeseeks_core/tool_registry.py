@@ -54,6 +54,10 @@ class ToolSpec:
     prompt_path: str | None = None
     metadata: dict[str, JsonValue] = field(default_factory=dict)
 
+    def is_plan_safe(self) -> bool:
+        """Return True if the tool is safe to use in plan mode."""
+        return bool(self.metadata.get("plan_safe"))
+
 
 class ToolRegistry:
     """Registry of configured tools and their instantiated runners."""
@@ -119,6 +123,13 @@ class ToolRegistry:
             return specs
         return [spec for spec in specs if spec.enabled]
 
+    def list_specs_for_mode(self, mode: str, *, include_disabled: bool = False) -> list[ToolSpec]:
+        """List specs filtered by orchestration mode."""
+        specs = self.list_specs(include_disabled=include_disabled)
+        if mode != "plan":
+            return specs
+        return [spec for spec in specs if spec.is_plan_safe()]
+
     def tool_catalog(self) -> list[dict[str, str]]:
         """Return a serialized catalog of registered tool metadata."""
         return [
@@ -182,6 +193,7 @@ def _default_registry() -> ToolRegistry:
                 "AiderReadFileTool",
             ),
             prompt_path="tools/aider-read-file",
+            metadata={"plan_safe": True},
         )
     )
     registry.register(
@@ -194,6 +206,7 @@ def _default_registry() -> ToolRegistry:
                 "AiderListDirTool",
             ),
             prompt_path="tools/aider-list-dir",
+            metadata={"plan_safe": True},
         )
     )
     return registry
@@ -247,6 +260,7 @@ def _built_in_manifest_entries() -> list[dict[str, object]]:
             "kind": "local",
             "enabled": True,
             "prompt": "tools/aider-read-file",
+            "plan_safe": True,
         },
         {
             "tool_id": "aider_list_dir_tool",
@@ -257,6 +271,7 @@ def _built_in_manifest_entries() -> list[dict[str, object]]:
             "kind": "local",
             "enabled": True,
             "prompt": "tools/aider-list-dir",
+            "plan_safe": True,
         },
     ]
     if not ha_status.enabled and ha_status.reason:

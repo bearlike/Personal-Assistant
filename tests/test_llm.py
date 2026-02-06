@@ -6,7 +6,6 @@ import types
 from meeseeks_core import llm as llm_module
 from meeseeks_core.config import set_config_override
 from meeseeks_core.llm import (
-    allows_temperature,
     build_chat_model,
     model_supports_reasoning_effort,
     resolve_reasoning_effort,
@@ -26,13 +25,6 @@ def test_resolve_reasoning_effort_gpt5_pro(monkeypatch):
     assert resolve_reasoning_effort("gpt-5-pro") == "high"
 
 
-def test_allows_temperature_gpt5_variants():
-    """Respect GPT-5 temperature constraints."""
-    assert allows_temperature("gpt-5.2", "none") is True
-    assert allows_temperature("gpt-5.2", "medium") is False
-    assert allows_temperature("gpt-5", "medium") is False
-
-
 def test_build_chat_model_includes_reasoning_effort(monkeypatch):
     """Attach reasoning_effort to model kwargs when supported."""
     set_config_override({"llm": {"reasoning_effort": "", "reasoning_effort_models": []}})
@@ -46,7 +38,7 @@ def test_build_chat_model_includes_reasoning_effort(monkeypatch):
     module.ChatLiteLLM = DummyChatLiteLLM
     monkeypatch.setitem(sys.modules, "langchain_litellm", module)
 
-    build_chat_model(model_name="gpt-5.2", temperature=0.2, openai_api_base=None)
+    build_chat_model(model_name="gpt-5.2", openai_api_base=None)
     model_kwargs = captured.get("model_kwargs") or {}
     assert model_kwargs.get("reasoning_effort") == "medium"
     assert "temperature" not in captured
@@ -64,7 +56,7 @@ def test_build_chat_model_prefixes_openai_model(monkeypatch):
     module.ChatLiteLLM = DummyChatLiteLLM
     monkeypatch.setitem(sys.modules, "langchain_litellm", module)
 
-    build_chat_model(model_name="gpt-4o", temperature=0.0, openai_api_base="http://host/v1")
+    build_chat_model(model_name="gpt-4o", openai_api_base="http://host/v1")
     assert captured["model"] == "openai/gpt-4o"
     assert captured["api_base"] == "http://host/v1"
 
@@ -111,6 +103,7 @@ def test_resolve_reasoning_effort_env_override(monkeypatch):
     assert resolve_reasoning_effort("gpt-5") == "low"
 
 
-def test_allows_temperature_without_model_name():
-    """Allow temperature when model name is missing."""
-    assert allows_temperature(None, None) is True
+def test_model_supports_reasoning_effort_with_provider_prefix():
+    """Treat provider-prefixed model names as GPT-5 family."""
+    set_config_override({"llm": {"reasoning_effort_models": []}})
+    assert model_supports_reasoning_effort("openai/gpt-5.2") is True

@@ -63,12 +63,14 @@ class Orchestrator:
         initial_task_queue: TaskQueue | None = None,
         return_state: bool = False,
         session_id: str | None = None,
+        mode: str | None = None,
     ) -> TaskQueue | tuple[TaskQueue, OrchestrationState]:
         """Run a plan-act-observe loop for a session."""
         if session_id is None:
             session_id = self._session_store.create_session()
 
         state = OrchestrationState(goal=user_query, session_id=session_id)
+        resolved_mode = self._resolve_mode(user_query, mode)
         state.summary = self._session_store.load_summary(session_id)
         state.tool_results = state.tool_results or []
         state.open_questions = state.open_questions or []
@@ -102,13 +104,13 @@ class Orchestrator:
             model_name=self._model_name,
         )
         task_queue = initial_task_queue or self._planner.generate(
-            user_query, self._model_name, context=context
+            user_query, self._model_name, context=context, mode=resolved_mode
         )
         state.plan = task_queue.action_steps
         self._append_action_plan(session_id, task_queue.action_steps)
 
         for iteration in range(max_iters):
-            task_queue = self._run_action_plan(session_id, task_queue)
+            task_queue = self._run_action_plan(session_id, task_queue, mode=resolved_mode)
             state.tool_results.append(task_queue.task_result or "")
 
             if self._action_steps_complete(task_queue):
@@ -116,7 +118,7 @@ class Orchestrator:
                 state.done_reason = "completed"
                 break
 
-            if iteration < max_iters - 1:
+            if self._should_replan(task_queue, iteration, max_iters, mode=resolved_mode):
                 revised_query = self._build_revised_query(user_query, task_queue)
                 context = self._context_builder.build(
                     session_id=session_id,
@@ -124,12 +126,21 @@ class Orchestrator:
                     model_name=self._model_name,
                 )
                 task_queue = self._planner.generate(
-                    revised_query, self._model_name, context=context
+                    revised_query, self._model_name, context=context, mode=resolved_mode
                 )
                 state.plan = task_queue.action_steps
                 self._append_action_plan(session_id, task_queue.action_steps)
+            else:
+                state.done = True
+                state.done_reason = (
+                    "blocked"
+                    if task_queue.last_error
+                    and "permission denied" in task_queue.last_error.lower()
+                    else "incomplete"
+                )
+                break
 
-        if state.done and self._should_synthesize_response(task_queue):
+        if state.done and resolved_mode != "plan" and self._should_synthesize_response(task_queue):
             tool_outputs = self._collect_tool_outputs(task_queue)
             response = self._synthesizer.synthesize(
                 user_query=user_query,
@@ -163,8 +174,15 @@ class Orchestrator:
 
         return (task_queue, state) if return_state else task_queue
 
-    def _run_action_plan(self, session_id: str, task_queue: TaskQueue) -> TaskQueue:
+    def _run_action_plan(
+        self, session_id: str, task_queue: TaskQueue, *, mode: str
+    ) -> TaskQueue:
         reflector = StepReflector(self._model_name)
+        allowed_tools = None
+        if mode == "plan":
+            allowed_tools = {
+                spec.tool_id for spec in self._tool_registry.list_specs_for_mode("plan")
+            }
         runner = ActionPlanRunner(
             tool_registry=self._tool_registry,
             permission_policy=self._permission_policy,
@@ -172,6 +190,8 @@ class Orchestrator:
             hook_manager=self._hook_manager,
             reflector=reflector,
             event_logger=lambda event: self._session_store.append_event(session_id, event),
+            allowed_tool_ids=allowed_tools,
+            mode=mode,
         )
         return runner.run(task_queue)
 
@@ -259,6 +279,8 @@ class Orchestrator:
 
     @staticmethod
     def _action_steps_complete(task_queue: TaskQueue) -> bool:
+        if task_queue.last_error:
+            return False
         return all(step.result is not None for step in task_queue.action_steps)
 
     @staticmethod
@@ -271,6 +293,37 @@ class Orchestrator:
             f"{failure_note}"
             "Please revise the action plan to resolve remaining tasks."
         )
+
+    @staticmethod
+    def _resolve_mode(user_query: str, mode: str | None) -> str:
+        if mode in {"plan", "act"}:
+            return mode
+        lowered = user_query.strip().lower()
+        plan_triggers = [
+            "make a plan",
+            "create a plan",
+            "draft a plan",
+            "plan the",
+            "plan for",
+            "planning",
+        ]
+        if any(trigger in lowered for trigger in plan_triggers):
+            return "plan"
+        return "act"
+
+    @staticmethod
+    def _should_replan(
+        task_queue: TaskQueue, iteration: int, max_iters: int, *, mode: str
+    ) -> bool:
+        if iteration >= max_iters - 1:
+            return False
+        if mode == "plan":
+            return False
+        if task_queue.last_error:
+            lowered = task_queue.last_error.lower()
+            if "permission denied" in lowered or "tool not allowed" in lowered:
+                return False
+        return True
 
 
 __all__ = ["Orchestrator"]

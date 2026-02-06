@@ -140,7 +140,6 @@ class AbstractTool(abc.ABC):
         name: str,
         description: str,
         model_name: str | None = None,
-        temperature: float = 0.3,
         use_llm: bool = True,
     ) -> None:
         """Initialize tool configuration."""
@@ -167,7 +166,6 @@ class AbstractTool(abc.ABC):
         if self.use_llm:
             self.model = build_chat_model(
                 model_name=self.model_name,
-                temperature=temperature,
                 openai_api_base=get_config_value("llm", "api_base"),
                 api_key=get_config_value("llm", "api_key"),
             )

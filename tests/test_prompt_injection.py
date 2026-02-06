@@ -109,9 +109,87 @@ def test_prompt_includes_mcp_schema(monkeypatch, tmp_path):
     )
     registry = load_registry(str(manifest_path))
     prompt = _build_prompt(registry)
-    assert "MCP tool input schemas" in prompt
+    assert "Tool input schemas" in prompt
     assert "mcp_srv_tool" in prompt
     assert "question" in prompt
+
+
+def test_prompt_avoids_tool_prefix_labels():
+    """Avoid prefixing tool IDs with 'tool:' in prompts."""
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="aider_edit_block_tool",
+            name="Aider Edit Blocks",
+            description="Apply edit blocks.",
+            factory=lambda: object(),
+        )
+    )
+    prompt = _build_prompt(registry)
+    assert not any(line.startswith("- tool:") for line in prompt.splitlines())
+
+
+def test_prompt_can_disable_tool_schemas():
+    """Allow callers to suppress schema injection when needed."""
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="mcp_srv_tool",
+            name="Test Tool",
+            description="Test",
+            factory=lambda: object(),
+            kind="mcp",
+            metadata={
+                "schema": {
+                    "required": ["question"],
+                    "properties": {"question": {"type": "string"}},
+                }
+            },
+        )
+    )
+    context = ContextSnapshot(
+        summary=None,
+        recent_events=[],
+        selected_events=None,
+        events=[],
+        budget=get_token_budget([], None, None),
+    )
+    prompt = PromptBuilder(registry).build(
+        get_system_prompt(),
+        context,
+        component_status=None,
+        include_tool_schemas=False,
+    )
+    assert "Tool input schemas" not in prompt
+
+
+def test_prompt_can_disable_tool_guidance():
+    """Allow callers to suppress tool guidance injection."""
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="aider_edit_block_tool",
+            name="Aider Edit Blocks",
+            description="Apply edits.",
+            factory=lambda: object(),
+            kind="local",
+            prompt_path="tools/aider-edit-blocks",
+        )
+    )
+    context = ContextSnapshot(
+        summary=None,
+        recent_events=[],
+        selected_events=None,
+        events=[],
+        budget=get_token_budget([], None, None),
+    )
+    prompt = PromptBuilder(registry).build(
+        get_system_prompt(),
+        context,
+        component_status=None,
+        include_tool_guidance=False,
+    )
+    assert "Tool guidance" not in prompt
 
 
 def test_ha_render_system_prompt_includes_entities():

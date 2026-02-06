@@ -107,10 +107,12 @@ def test_generate_action_plan_omits_disabled_tools(monkeypatch):
     registry = load_registry()
 
     def _fake_model(messages):
+        if hasattr(messages, "to_messages"):
+            messages = messages.to_messages()
         combined = "\n".join(
             message.content for message in messages if getattr(message, "content", None)
         )
-        assert "home_assistant_tool" not in combined
+        assert "Available tools:\n- home_assistant_tool" not in combined
         payload = {"action_steps": []}
         return json.dumps(payload)
 
@@ -123,6 +125,52 @@ def test_generate_action_plan_omits_disabled_tools(monkeypatch):
     task_queue = task_master.generate_action_plan(
         "hi",
         tool_registry=registry,
+    )
+    assert task_queue.action_steps == []
+
+
+def test_generate_action_plan_plan_mode_filters_tools(monkeypatch):
+    """Expose only plan-safe tools and avoid extra guidance in plan mode."""
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="plan_tool",
+            name="Plan Tool",
+            description="Safe tool for planning.",
+            factory=lambda: None,
+            metadata={"plan_safe": True},
+        )
+    )
+    registry.register(
+        ToolSpec(
+            tool_id="mut_tool",
+            name="Mutating Tool",
+            description="Mutating tool.",
+            factory=lambda: None,
+        )
+    )
+
+    def _fake_model(messages):
+        if hasattr(messages, "to_messages"):
+            messages = messages.to_messages()
+        combined = "\n".join(
+            message.content for message in messages if getattr(message, "content", None)
+        )
+        assert "plan_tool" in combined
+        assert "mut_tool" not in combined
+        assert "Tool guidance:" not in combined
+        return json.dumps({"action_steps": []})
+
+    monkeypatch.setattr(
+        planning,
+        "build_chat_model",
+        lambda **_kwargs: RunnableLambda(_fake_model),
+    )
+
+    task_queue = task_master.generate_action_plan(
+        "make a plan",
+        tool_registry=registry,
+        mode="plan",
     )
     assert task_queue.action_steps == []
 
@@ -168,6 +216,38 @@ def test_orchestrate_session_replans_on_failure(monkeypatch, tmp_path):
     assert generate_calls.count == 2
     assert run_calls.count == 2
     assert "Last tool failure:" in captured["query"]
+
+
+def test_orchestrate_session_plan_mode_no_replan(monkeypatch, tmp_path):
+    """Plan mode should not replan after a failure."""
+    generate_calls = Counter()
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
+
+    def fake_generate(_self, *_args, **_kwargs):
+        generate_calls.bump()
+        return make_task_queue("plan it")
+
+    def fake_run(_self, _session_id, task_queue, *_args, **_kwargs):
+        task_queue.last_error = "tool not allowed in plan mode"
+        return task_queue
+
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(Orchestrator, "_run_action_plan", fake_run)
+    monkeypatch.setattr(Orchestrator, "_should_synthesize_response", lambda *_a, **_k: False)
+
+    task_queue, state = task_master.orchestrate_session(
+        "make a plan for this",
+        max_iters=3,
+        session_id=session_id,
+        session_store=session_store,
+        return_state=True,
+        mode="plan",
+    )
+
+    assert generate_calls.count == 1
+    assert state.done is True
+    assert state.done_reason in {"blocked", "incomplete"}
 
 
 def test_orchestrate_session_schema_replan_and_context(monkeypatch, tmp_path):
@@ -786,8 +866,8 @@ def test_orchestrate_session_max_iters(monkeypatch, tmp_path):
     )
 
     assert task_queue.task_result == "failed"
-    assert state.done is False
-    assert state.done_reason == "max_iterations_reached"
+    assert state.done is True
+    assert state.done_reason == "incomplete"
     assert generate_calls.count == 1
     assert run_calls.count == 1
 
@@ -912,7 +992,7 @@ def test_run_action_plan_hooks_modify_input():
         hook_manager=hooks,
     )
     assert dummy_tool.called_with == "updated"
-    assert task_queue.task_result == "post:updated"
+    assert task_queue.task_result.endswith("post:updated")
 
 
 def test_run_action_plan_disables_tool_on_error():

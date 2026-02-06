@@ -6,10 +6,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any, Protocol, cast
 
-from meeseeks_core.common import get_logger
 from meeseeks_core.config import get_config_value
-
-logging = get_logger(name="core.llm")
 
 
 class ChatModel(Protocol):
@@ -32,6 +29,12 @@ def _normalize_model_list(raw: object) -> list[str]:
     return []
 
 
+def _strip_provider(model_name: str | None) -> str:
+    if not model_name:
+        return ""
+    return model_name.split("/", 1)[-1].strip().lower()
+
+
 def _matches_model_list(model_name: str, entries: Iterable[str]) -> bool:
     for entry in entries:
         if entry.endswith("*") and model_name.startswith(entry[:-1]):
@@ -45,11 +48,12 @@ def model_supports_reasoning_effort(model_name: str | None) -> bool:
     """Return True if the model is known to support reasoning_effort."""
     if not model_name:
         return False
-    normalized = model_name.lower()
+    raw = model_name.lower()
+    normalized = _strip_provider(model_name)
     allowlist = _normalize_model_list(
         get_config_value("llm", "reasoning_effort_models", default=[])
     )
-    if _matches_model_list(normalized, allowlist):
+    if _matches_model_list(raw, allowlist) or _matches_model_list(normalized, allowlist):
         return True
     return normalized.startswith("gpt-5")
 
@@ -61,22 +65,10 @@ def resolve_reasoning_effort(model_name: str | None) -> str | None:
         return configured.strip().lower()
     if not model_supports_reasoning_effort(model_name):
         return None
-    normalized = (model_name or "").lower()
+    normalized = _strip_provider(model_name)
     if "gpt-5-pro" in normalized:
         return "high"
     return "medium"
-
-
-def allows_temperature(model_name: str | None, reasoning_effort: str | None) -> bool:
-    """Return True when temperature can be sent for the model/effect combo."""
-    if not model_name:
-        return True
-    normalized = model_name.lower()
-    if not normalized.startswith("gpt-5"):
-        return True
-    if normalized.startswith(("gpt-5.1", "gpt-5.2")):
-        return reasoning_effort == "none"
-    return False
 
 
 def _resolve_litellm_model(model_name: str, openai_api_base: str | None) -> str:
@@ -89,7 +81,6 @@ def _resolve_litellm_model(model_name: str, openai_api_base: str | None) -> str:
 
 def build_chat_model(
     model_name: str,
-    temperature: float,
     *,
     openai_api_base: str | None = None,
     api_key: str | None = None,
@@ -101,16 +92,6 @@ def build_chat_model(
         raise ImportError("langchain-litellm is required to build ChatLiteLLM") from exc
 
     reasoning_effort = resolve_reasoning_effort(model_name)
-    allow_temp = allows_temperature(model_name, reasoning_effort)
-    if not allow_temp:
-        logging.info(
-            "Omitting temperature for model '{}' with reasoning_effort '{}'.",
-            model_name,
-            reasoning_effort,
-        )
-        temperature_value: float | None = None
-    else:
-        temperature_value = temperature
 
     model_kwargs: dict[str, Any] = {}
     if reasoning_effort is not None:
@@ -123,8 +104,6 @@ def build_chat_model(
         kwargs["api_base"] = openai_api_base
     if api_key:
         kwargs["api_key"] = api_key
-    if temperature_value is not None:
-        kwargs["temperature"] = temperature_value
     if model_kwargs:
         kwargs["model_kwargs"] = model_kwargs
 
@@ -132,7 +111,6 @@ def build_chat_model(
 
 
 __all__ = [
-    "allows_temperature",
     "build_chat_model",
     "ChatModel",
     "model_supports_reasoning_effort",

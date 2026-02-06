@@ -55,6 +55,8 @@ def generate_action_plan(
     session_summary: str | None = None,
     recent_events: list[EventRecord] | None = None,
     selected_events: list[EventRecord] | None = None,
+    *,
+    mode: str = "act",
 ) -> TaskQueue:
     """Generate an action plan for a user query."""
     tool_registry = tool_registry or load_registry()
@@ -70,7 +72,9 @@ def generate_action_plan(
         selected_events,
         resolved_model,
     )
-    return Planner(tool_registry).generate(user_query, resolved_model, context=context)
+    return Planner(tool_registry).generate(
+        user_query, resolved_model, context=context, mode=mode
+    )
 
 
 def run_action_plan(
@@ -81,6 +85,8 @@ def run_action_plan(
     approval_callback: Callable[[ActionStep], bool] | None = None,
     hook_manager: HookManager | None = None,
     model_name: str | None = None,
+    *,
+    mode: str = "act",
 ) -> TaskQueue:
     """Execute a task queue with permissions and hooks."""
     tool_registry = tool_registry or load_registry()
@@ -94,6 +100,7 @@ def run_action_plan(
         hook_manager=hook_manager,
         event_logger=event_logger,
         reflector=StepReflector(model_name),
+        mode=mode,
     )
     return runner.run(task_queue)
 
@@ -110,6 +117,7 @@ def orchestrate_session(
     permission_policy: PermissionPolicy | None = None,
     approval_callback: Callable[[ActionStep], bool] | None = None,
     hook_manager: HookManager | None = None,
+    mode: str | None = None,
 ) -> TaskQueue | tuple[TaskQueue, OrchestrationState]:
     """Run the plan-act-observe orchestration loop."""
     return Orchestrator(
@@ -125,6 +133,7 @@ def orchestrate_session(
         initial_task_queue=initial_task_queue,
         return_state=return_state,
         session_id=session_id,
+        mode=mode,
     )
 
 

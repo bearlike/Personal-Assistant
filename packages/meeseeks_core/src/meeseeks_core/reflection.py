@@ -73,7 +73,6 @@ class StepReflector:
         )
         model = build_chat_model(
             model_name=reflection_model,
-            temperature=0.0,
             openai_api_base=get_config_value("llm", "api_base"),
             api_key=get_config_value("llm", "api_key"),
         )

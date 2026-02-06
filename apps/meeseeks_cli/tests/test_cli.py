@@ -5,7 +5,7 @@ import json
 import types
 from importlib.metadata import PackageNotFoundError
 
-from meeseeks_core.classes import ActionStep, TaskQueue  # noqa: E402
+from meeseeks_core.classes import ActionStep, TaskQueue, set_available_tools  # noqa: E402
 from meeseeks_core.common import get_mock_speaker  # noqa: E402
 from meeseeks_core.config import get_config_value, set_config_override, set_mcp_config_path  # noqa: E402
 from meeseeks_core.session_store import SessionStore  # noqa: E402
@@ -92,7 +92,9 @@ def test_build_approval_callback_accepts():
     console = Console(record=True)
     state = CliState(session_id="s")
     registry = load_registry()
-    callback = _build_approval_callback(lambda _: "y", console, state, registry)
+    callback = _build_approval_callback(
+        lambda _: "y", console, state, registry, auto_approve_enabled=False
+    )
     step = DummyStep("tool", "set", "arg")
     assert callback is not None
     assert callback(step) is True
@@ -103,7 +105,10 @@ def test_build_approval_callback_none():
     console = Console(record=True)
     state = CliState(session_id="s")
     registry = load_registry()
-    assert _build_approval_callback(None, console, state, registry) is None
+    assert (
+        _build_approval_callback(None, console, state, registry, auto_approve_enabled=False)
+        is None
+    )
 
 
 def test_build_approval_callback_auto_approve(tmp_path, monkeypatch):
@@ -115,7 +120,9 @@ def test_build_approval_callback_auto_approve(tmp_path, monkeypatch):
     def _boom(_prompt):
         raise AssertionError("prompt should not be called")
 
-    callback = _build_approval_callback(_boom, console, state, registry)
+    callback = _build_approval_callback(
+        _boom, console, state, registry, auto_approve_enabled=True
+    )
     step = DummyStep("tool", "set", "arg")
     assert callback is not None
     assert callback(step) is True
@@ -155,7 +162,9 @@ def test_mcp_yes_always_updates_config(tmp_path, monkeypatch):
     )
     console = Console(record=True)
     state = CliState(session_id="s")
-    callback = _build_approval_callback(lambda _: "y", console, state, registry)
+    callback = _build_approval_callback(
+        lambda _: "y", console, state, registry, auto_approve_enabled=False
+    )
     step = DummyStep("mcp_srv_tool", "set", "arg")
     assert callback is not None
     assert callback(step) is True
@@ -208,6 +217,97 @@ def test_run_query(monkeypatch, tmp_path):
     )
     assert captured["tool_registry"] is tool_registry
     assert captured["session_id"] == session_id
+
+
+def test_run_query_auto_approves_in_headless(monkeypatch, tmp_path):
+    """Enable auto-approve when no prompt function is available."""
+    store = SessionStore(root_dir=str(tmp_path))
+    session_id = store.create_session()
+    state = CliState(session_id=session_id, show_plan=False)
+    tool_registry = load_registry()
+    console = Console(record=True)
+    captured: dict[str, object] = {}
+
+    def fake_build(_prompt, _console, _state, _registry, *, auto_approve_enabled):
+        captured["auto_approve"] = auto_approve_enabled
+        return lambda _step: True
+
+    def fake_orchestrate(*args, **kwargs):
+        step = ActionStep(
+            action_consumer="home_assistant_tool",
+            action_type="get",
+            action_argument="hi",
+        )
+        task_queue = TaskQueue(action_steps=[step])
+        task_queue.task_result = "ok"
+        return task_queue
+
+    monkeypatch.setattr("meeseeks_cli.cli_master._build_approval_callback", fake_build)
+    monkeypatch.setattr("meeseeks_cli.cli_master.orchestrate_session", fake_orchestrate)
+
+    _run_query(
+        console,
+        store,
+        state,
+        tool_registry,
+        "hi",
+        types.SimpleNamespace(max_iters=1),
+        prompt_func=None,
+    )
+
+    assert captured["auto_approve"] is True
+
+
+def test_run_query_headless_auto_approves_set_tool(monkeypatch, tmp_path):
+    """Execute a set action when headless auto-approve is enabled."""
+    store = SessionStore(root_dir=str(tmp_path))
+    session_id = store.create_session()
+    state = CliState(session_id=session_id, show_plan=False)
+    console = Console(record=True)
+    tool_registry = ToolRegistry()
+    executed = {"called": False}
+    set_available_tools(["dummy_set_tool"])
+
+    class DummyTool:
+        def run(self, _step):
+            executed["called"] = True
+            MockSpeaker = get_mock_speaker()
+            return MockSpeaker(content="ok")
+
+    tool_registry.register(
+        ToolSpec(
+            tool_id="dummy_set_tool",
+            name="Dummy Set Tool",
+            description="Dummy tool for set actions",
+            factory=lambda: DummyTool(),
+        )
+    )
+
+    def fake_generate(_self, _query, *_args, **_kwargs):
+        step = ActionStep(
+            action_consumer="dummy_set_tool",
+            action_type="set",
+            action_argument="payload",
+        )
+        return TaskQueue(action_steps=[step])
+
+    monkeypatch.setattr("meeseeks_core.planning.Planner.generate", fake_generate)
+    monkeypatch.setattr(
+        "meeseeks_core.orchestrator.Orchestrator._should_synthesize_response",
+        lambda *_a, **_k: False,
+    )
+
+    _run_query(
+        console,
+        store,
+        state,
+        tool_registry,
+        "hi",
+        types.SimpleNamespace(max_iters=1, auto_approve=True),
+        prompt_func=None,
+    )
+
+    assert executed["called"] is True
 
 
 def test_run_query_renders_tool_output_and_response(monkeypatch, tmp_path):
