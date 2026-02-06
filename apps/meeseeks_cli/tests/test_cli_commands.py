@@ -6,6 +6,7 @@ import json
 import pytest
 from rich.console import Console
 
+from meeseeks_core.config import set_config_override, set_mcp_config_path  # noqa: E402
 from meeseeks_core.session_store import SessionStore  # noqa: E402
 from meeseeks_core.tool_registry import ToolRegistry, ToolSpec  # noqa: E402
 
@@ -180,8 +181,7 @@ def test_command_models_no_prompt(tmp_path):
 
 def test_fetch_models_success(monkeypatch):
     """Fetch available models from the configured endpoint."""
-    monkeypatch.setenv("OPENAI_API_BASE", "http://example.com/v1")
-    monkeypatch.setenv("OPENAI_API_KEY", "key")
+    set_config_override({"llm": {"api_base": "http://example.com/v1", "api_key": "key"}})
 
     class DummyResponse:
         def read(self):
@@ -198,11 +198,9 @@ def test_fetch_models_success(monkeypatch):
     assert models == ["model-x"]
 
 
-def test_fetch_models_missing_env(monkeypatch):
+def test_fetch_models_missing_env():
     """Raise when model fetch env vars are missing."""
-    monkeypatch.delenv("OPENAI_API_BASE", raising=False)
-    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
-    monkeypatch.setenv("OPENAI_API_KEY", "key")
+    set_config_override({"llm": {"api_base": "", "api_key": "key"}}, replace=True)
     with pytest.raises(RuntimeError):
         cli_commands._fetch_models()
 
@@ -217,27 +215,27 @@ def test_handle_model_wizard_cancel(monkeypatch, tmp_path):
     assert context.state.model_name is None
 
 
-def test_command_mcp(monkeypatch, tmp_path):
+def test_command_mcp(tmp_path):
     """Render MCP command output with valid config."""
     context = _make_context(tmp_path)
     registry = get_registry()
 
     config_path = tmp_path / "mcp.json"
     config_path.write_text(json.dumps({"servers": {"srv": {"transport": "stdio"}}}))
-    monkeypatch.setenv("MESEEKS_MCP_CONFIG", str(config_path))
+    set_mcp_config_path(config_path)
 
     registry.execute("/mcp", context, [])
     assert "MCP" in context.console.export_text()
 
 
-def test_command_mcp_shows_servers_without_tools(monkeypatch, tmp_path):
+def test_command_mcp_shows_servers_without_tools(tmp_path):
     """Render configured MCP servers even when no tools are discovered."""
     context = _make_context(tmp_path)
     registry = get_registry()
 
     config_path = tmp_path / "mcp.json"
     config_path.write_text(json.dumps({"servers": {"srv": {"transport": "stdio"}}}))
-    monkeypatch.setenv("MESEEKS_MCP_CONFIG", str(config_path))
+    set_mcp_config_path(config_path)
 
     registry.execute("/mcp", context, [])
     output = context.console.export_text()
@@ -314,12 +312,12 @@ def test_command_mcp_lists_disabled_tools(tmp_path):
     assert "Built-in Tools" in output
 
 
-def test_render_mcp_invalid_json(monkeypatch, tmp_path):
+def test_render_mcp_invalid_json(tmp_path):
     """Handle invalid MCP config JSON gracefully."""
     context = _make_context(tmp_path)
     config_path = tmp_path / "mcp.json"
     config_path.write_text("{bad json")
-    monkeypatch.setenv("MESEEKS_MCP_CONFIG", str(config_path))
+    set_mcp_config_path(config_path)
     cli_commands._render_mcp(context.console, context.tool_registry)
     assert "Failed to read MCP config" in context.console.export_text()
 

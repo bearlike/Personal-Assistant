@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import os
 from typing import Literal
 
 from langchain_core.messages import SystemMessage
@@ -13,6 +12,7 @@ from pydantic.v1 import BaseModel, Field
 
 from meeseeks_core.classes import ActionStep
 from meeseeks_core.common import format_action_argument, get_logger
+from meeseeks_core.config import get_config_value
 from meeseeks_core.llm import build_chat_model
 
 logging = get_logger(name="core.reflection")
@@ -39,13 +39,13 @@ class StepReflector:
             action_step.objective or action_step.expected_output or action_step.execution_checklist
         ):
             return None
-        if os.getenv("MEESEEKS_STEP_REFLECTION", "1") == "0":
+        if not get_config_value("reflection", "enabled", default=True):
             return None
         reflection_model = (
-            os.getenv("STEP_REFLECTION_MODEL")
+            get_config_value("reflection", "model")
             or self._model_name
-            or os.getenv("ACTION_PLAN_MODEL")
-            or os.getenv("DEFAULT_MODEL")
+            or get_config_value("llm", "action_plan_model")
+            or get_config_value("llm", "default_model")
         )
         if not reflection_model:
             return None
@@ -74,7 +74,8 @@ class StepReflector:
         model = build_chat_model(
             model_name=reflection_model,
             temperature=0.0,
-            openai_api_base=os.getenv("OPENAI_API_BASE"),
+            openai_api_base=get_config_value("llm", "api_base"),
+            api_key=get_config_value("llm", "api_key"),
         )
         try:
             return (prompt | model | parser).invoke(

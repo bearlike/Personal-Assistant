@@ -3,18 +3,18 @@
 
 from __future__ import annotations
 
-import os
 from collections.abc import Callable
 
 from meeseeks_core.action_runner import ActionPlanRunner
 from meeseeks_core.classes import ActionStep, OrchestrationState, TaskQueue
 from meeseeks_core.common import get_logger
 from meeseeks_core.compaction import should_compact, summarize_events
+from meeseeks_core.config import get_config_value
 from meeseeks_core.context import ContextBuilder
 from meeseeks_core.hooks import HookManager, default_hook_manager
 from meeseeks_core.permissions import (
     PermissionPolicy,
-    approval_callback_from_env,
+    approval_callback_from_config,
     load_permission_policy,
 )
 from meeseeks_core.planning import Planner, ResponseSynthesizer
@@ -43,13 +43,13 @@ class Orchestrator:
         """Initialize orchestration dependencies."""
         self._model_name = (
             model_name
-            or os.getenv("ACTION_PLAN_MODEL")
-            or os.getenv("DEFAULT_MODEL", "gpt-3.5-turbo")
+            or get_config_value("llm", "action_plan_model")
+            or get_config_value("llm", "default_model", default="gpt-5.2")
         )
         self._session_store = session_store or SessionStore()
         self._tool_registry = tool_registry or load_registry()
         self._permission_policy = permission_policy or load_permission_policy()
-        self._approval_callback = approval_callback or approval_callback_from_env()
+        self._approval_callback = approval_callback or approval_callback_from_config()
         self._hook_manager = hook_manager or default_hook_manager()
         self._context_builder = ContextBuilder(self._session_store)
         self._planner = Planner(self._tool_registry)

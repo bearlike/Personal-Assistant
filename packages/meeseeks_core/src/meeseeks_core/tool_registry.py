@@ -14,6 +14,7 @@ from typing import Protocol
 from meeseeks_core.classes import ActionStep, set_available_tools
 from meeseeks_core.common import MockSpeaker, get_logger
 from meeseeks_core.components import resolve_home_assistant_status
+from meeseeks_core.config import get_config_value, get_mcp_config_path
 from meeseeks_core.types import JsonValue
 
 logging = get_logger(name="core.tool_registry")
@@ -171,13 +172,38 @@ def _default_registry() -> ToolRegistry:
             prompt_path="tools/aider-edit-blocks",
         )
     )
+    registry.register(
+        ToolSpec(
+            tool_id="aider_read_file_tool",
+            name="Aider Read File",
+            description="Read local files using Aider helpers.",
+            factory=_import_factory(
+                "meeseeks_tools.integration.aider_file_tools",
+                "AiderReadFileTool",
+            ),
+            prompt_path="tools/aider-read-file",
+        )
+    )
+    registry.register(
+        ToolSpec(
+            tool_id="aider_list_dir_tool",
+            name="Aider List Directory",
+            description="List files under a directory using Aider helpers.",
+            factory=_import_factory(
+                "meeseeks_tools.integration.aider_file_tools",
+                "AiderListDirTool",
+            ),
+            prompt_path="tools/aider-list-dir",
+        )
+    )
     return registry
 
 
 def _default_manifest_cache_path() -> str:
-    base_dir = os.getenv("MESEEKS_CONFIG_DIR")
+    base_dir = get_config_value("runtime", "config_dir")
     if not base_dir:
         base_dir = os.path.join(os.path.expanduser("~"), ".meeseeks")
+    base_dir = os.path.expanduser(str(base_dir))
     os.makedirs(base_dir, exist_ok=True)
     return os.path.join(base_dir, "tool-manifest.auto.json")
 
@@ -211,6 +237,26 @@ def _built_in_manifest_entries() -> list[dict[str, object]]:
             "kind": "local",
             "enabled": True,
             "prompt": "tools/aider-edit-blocks",
+        },
+        {
+            "tool_id": "aider_read_file_tool",
+            "name": "Aider Read File",
+            "description": "Read local files using Aider helpers.",
+            "module": "meeseeks_tools.integration.aider_file_tools",
+            "class": "AiderReadFileTool",
+            "kind": "local",
+            "enabled": True,
+            "prompt": "tools/aider-read-file",
+        },
+        {
+            "tool_id": "aider_list_dir_tool",
+            "name": "Aider List Directory",
+            "description": "List files under a directory using Aider helpers.",
+            "module": "meeseeks_tools.integration.aider_file_tools",
+            "class": "AiderListDirTool",
+            "kind": "local",
+            "enabled": True,
+            "prompt": "tools/aider-list-dir",
         },
     ]
     if not ha_status.enabled and ha_status.reason:
@@ -316,8 +362,8 @@ def _ensure_auto_manifest(mcp_config_path: str) -> str | None:
 def load_registry(manifest_path: str | None = None) -> ToolRegistry:
     """Load tool registry, auto-discovering MCP tools when configured."""
     if manifest_path is None:
-        mcp_config_path = os.getenv("MESEEKS_MCP_CONFIG")
-        if mcp_config_path:
+        mcp_config_path = get_mcp_config_path()
+        if mcp_config_path and os.path.exists(mcp_config_path):
             manifest_path = _ensure_auto_manifest(mcp_config_path)
 
     if not manifest_path:

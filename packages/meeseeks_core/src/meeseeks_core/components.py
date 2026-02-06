@@ -3,12 +3,12 @@
 
 from __future__ import annotations
 
-import os
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from meeseeks_core.common import get_logger
+from meeseeks_core.config import get_config
 from meeseeks_core.types import JsonValue
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -27,40 +27,10 @@ class ComponentStatus:
     metadata: dict[str, JsonValue] = field(default_factory=dict)
 
 
-def _env_falsey(value: str | None) -> bool:
-    if value is None:
-        return False
-    return value.strip().lower() in {"0", "false", "no", "off"}
-
-
 def resolve_langfuse_status() -> ComponentStatus:
     """Determine whether Langfuse callbacks are available and configured."""
-    enabled_flag = os.getenv("LANGFUSE_ENABLED")
-    if _env_falsey(enabled_flag):
-        return ComponentStatus(
-            name="langfuse",
-            enabled=False,
-            reason="disabled via LANGFUSE_ENABLED",
-        )
-    try:
-        from langfuse.callback import CallbackHandler  # noqa: F401
-    except ImportError:
-        return ComponentStatus(
-            name="langfuse",
-            enabled=False,
-            reason="langfuse not installed",
-        )
-
-    public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
-    secret_key = os.getenv("LANGFUSE_SECRET_KEY")
-    if not public_key or not secret_key:
-        return ComponentStatus(
-            name="langfuse",
-            enabled=False,
-            reason="missing LANGFUSE_PUBLIC_KEY/LANGFUSE_SECRET_KEY",
-            metadata={"required_env": ["LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY"]},
-        )
-    return ComponentStatus(name="langfuse", enabled=True)
+    enabled, reason, metadata = get_config().langfuse.evaluate()
+    return ComponentStatus(name="langfuse", enabled=enabled, reason=reason, metadata=metadata)
 
 
 def build_langfuse_handler(
@@ -94,23 +64,13 @@ def build_langfuse_handler(
 
 def resolve_home_assistant_status() -> ComponentStatus:
     """Determine whether the Home Assistant tool is configured."""
-    enabled_flag = os.getenv("MESEEKS_HOME_ASSISTANT_ENABLED")
-    if _env_falsey(enabled_flag):
-        return ComponentStatus(
-            name="home_assistant_tool",
-            enabled=False,
-            reason="disabled via MESEEKS_HOME_ASSISTANT_ENABLED",
-        )
-    base_url = os.getenv("HA_URL")
-    token = os.getenv("HA_TOKEN")
-    if not base_url or not token:
-        return ComponentStatus(
-            name="home_assistant_tool",
-            enabled=False,
-            reason="missing HA_URL/HA_TOKEN",
-            metadata={"required_env": ["HA_URL", "HA_TOKEN"]},
-        )
-    return ComponentStatus(name="home_assistant_tool", enabled=True)
+    enabled, reason, metadata = get_config().home_assistant.evaluate()
+    return ComponentStatus(
+        name="home_assistant_tool",
+        enabled=enabled,
+        reason=reason,
+        metadata=metadata,
+    )
 
 
 def format_component_status(statuses: Iterable[ComponentStatus]) -> str:

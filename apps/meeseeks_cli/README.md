@@ -15,8 +15,7 @@ uv run meeseeks
 ```
 
 ## MCP setup (required for /mcp tools)
-- Create MCP server config: `configs/mcp.example.json`.
-- Set `MESEEKS_MCP_CONFIG` in `.env`.
+- Configure MCP servers in `configs/mcp.json`.
 - MCP tools are auto-discovered and cached on load.
 - Optional: add `auto_approve_tools` per server to allowlist tools (the CLI writes this when you pick “Yes, always”).
 
@@ -29,6 +28,8 @@ uv run meeseeks
 - `/new` start a new session
 - `/mcp` list MCP tools and servers
 - `/mcp init` scaffold an MCP config file
+- `/config init` scaffold a config example file
+- `/init` scaffold both config and MCP examples
 - `/mcp select` filter the MCP tools displayed
 - `/models` switch models using a wizard
 - `/automatic` enable auto-approve for this session (prompts for confirmation)

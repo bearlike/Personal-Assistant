@@ -2,12 +2,12 @@
 
 # ruff: noqa: I001
 import json
-import os
 import types
 from importlib.metadata import PackageNotFoundError
 
 from meeseeks_core.classes import ActionStep, TaskQueue  # noqa: E402
 from meeseeks_core.common import get_mock_speaker  # noqa: E402
+from meeseeks_core.config import get_config_value, set_config_override, set_mcp_config_path  # noqa: E402
 from meeseeks_core.session_store import SessionStore  # noqa: E402
 from meeseeks_core.tool_registry import ToolRegistry, ToolSpec, load_registry  # noqa: E402
 from rich.console import Console  # noqa: E402
@@ -128,7 +128,7 @@ def test_mcp_yes_always_updates_config(tmp_path, monkeypatch):
         '{"servers": {"srv": {"transport": "http", "url": "http://example"}}}',
         encoding="utf-8",
     )
-    monkeypatch.setenv("MESEEKS_MCP_CONFIG", str(config_path))
+    set_mcp_config_path(config_path)
 
     class DummyDialogs:
         def __init__(self, *args, **kwargs):
@@ -532,15 +532,14 @@ def test_cli_bootstrap_and_format_helpers(monkeypatch):
     assert _verbosity_to_level(1) == "DEBUG"
     assert _verbosity_to_level(2) == "TRACE"
 
-    monkeypatch.delenv("LOG_LEVEL", raising=False)
     _bootstrap_cli_logging_env(["prog"])
-    assert os.getenv("LOG_LEVEL") == "WARNING"
+    assert get_config_value("runtime", "log_level") == "WARNING"
     _bootstrap_cli_logging_env(["prog", "-vv"])
-    assert os.getenv("LOG_LEVEL") == "TRACE"
+    assert get_config_value("runtime", "log_level") == "TRACE"
 
-    monkeypatch.setenv("VERSION", "9.9.9")
+    set_config_override({"runtime": {"version": "9.9.9"}})
     assert _resolve_cli_version() == "9.9.9"
-    monkeypatch.delenv("VERSION", raising=False)
+    set_config_override({"runtime": {"version": ""}})
     assert _resolve_cli_version()
 
     def _raise_missing(_name):
@@ -563,7 +562,7 @@ def test_run_cli_single_query(monkeypatch, tmp_path):
         '{"servers": {"missing": {"transport": "http", "url": "http://example"}}}',
         encoding="utf-8",
     )
-    monkeypatch.setenv("MESEEKS_MCP_CONFIG", str(config_path))
+    set_mcp_config_path(str(config_path))
 
     args = types.SimpleNamespace(
         query="hi",

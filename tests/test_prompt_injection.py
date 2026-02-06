@@ -2,6 +2,7 @@
 
 from meeseeks_core import planning as planning_module
 from meeseeks_core.common import get_system_prompt, ha_render_system_prompt
+from meeseeks_core.config import set_config_override, set_mcp_config_path
 from meeseeks_core.context import ContextSnapshot
 from meeseeks_core.planning import PromptBuilder
 from meeseeks_core.token_budget import get_token_budget
@@ -21,8 +22,8 @@ def _build_prompt(registry, *, recent_events=None, selected_events=None, summary
 
 def test_prompt_excludes_home_assistant_when_disabled(monkeypatch):
     """Ensure HA guidance is omitted when the tool is disabled."""
-    monkeypatch.delenv("MESEEKS_MCP_CONFIG", raising=False)
-    monkeypatch.setenv("MESEEKS_HOME_ASSISTANT_ENABLED", "0")
+    set_mcp_config_path(None)
+    set_config_override({"home_assistant": {"enabled": False}})
     registry = load_registry()
     prompt = _build_prompt(registry)
     assert "Additional Devices Information" not in prompt
@@ -31,10 +32,10 @@ def test_prompt_excludes_home_assistant_when_disabled(monkeypatch):
 
 def test_prompt_includes_home_assistant_when_enabled(monkeypatch):
     """Ensure HA guidance is included when the tool is enabled."""
-    monkeypatch.delenv("MESEEKS_MCP_CONFIG", raising=False)
-    monkeypatch.delenv("MESEEKS_HOME_ASSISTANT_ENABLED", raising=False)
-    monkeypatch.setenv("HA_URL", "http://example")
-    monkeypatch.setenv("HA_TOKEN", "token")
+    set_mcp_config_path(None)
+    set_config_override(
+        {"home_assistant": {"enabled": True, "url": "http://example", "token": "token"}}
+    )
     registry = load_registry()
     prompt = _build_prompt(registry)
     assert "Additional Devices Information" in prompt
@@ -43,7 +44,7 @@ def test_prompt_includes_home_assistant_when_enabled(monkeypatch):
 
 def test_prompt_includes_recent_and_selected_events(monkeypatch):
     """Ensure recent/selected events are rendered in the system prompt."""
-    monkeypatch.delenv("MESEEKS_MCP_CONFIG", raising=False)
+    set_mcp_config_path(None)
     registry = load_registry()
     prompt = _build_prompt(
         registry,
@@ -56,7 +57,7 @@ def test_prompt_includes_recent_and_selected_events(monkeypatch):
 
 def test_prompt_includes_summary(monkeypatch):
     """Include summary lines when present in context."""
-    monkeypatch.delenv("MESEEKS_MCP_CONFIG", raising=False)
+    set_mcp_config_path(None)
     registry = load_registry()
     prompt = _build_prompt(registry, summary="Remember this")
     assert "Session summary" in prompt

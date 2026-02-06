@@ -13,7 +13,7 @@ from meeseeks_core.hooks import HookManager, default_hook_manager
 from meeseeks_core.permissions import (
     PermissionDecision,
     PermissionPolicy,
-    approval_callback_from_env,
+    approval_callback_from_config,
     load_permission_policy,
 )
 from meeseeks_core.reflection import StepReflection, StepReflector
@@ -48,7 +48,7 @@ class ActionPlanRunner:
         """Initialize the action plan runner."""
         self._tool_registry = tool_registry or load_registry()
         self._permission_policy = permission_policy or load_permission_policy()
-        self._approval_callback = approval_callback or approval_callback_from_env()
+        self._approval_callback = approval_callback or approval_callback_from_config()
         self._hook_manager = hook_manager or default_hook_manager()
         self._reflector = reflector
         self._event_logger = event_logger

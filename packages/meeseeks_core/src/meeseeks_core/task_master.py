@@ -3,23 +3,22 @@
 
 from __future__ import annotations
 
-import os
 import warnings
 from collections.abc import Callable
 from typing import cast
 
-from dotenv import load_dotenv
 from langchain_core._api.beta_decorator import LangChainBetaWarning
 
 from meeseeks_core.action_runner import ActionPlanRunner
 from meeseeks_core.classes import ActionStep, OrchestrationState, TaskQueue
 from meeseeks_core.common import get_logger
+from meeseeks_core.config import get_config_value
 from meeseeks_core.context import ContextSnapshot
 from meeseeks_core.hooks import HookManager, default_hook_manager
 from meeseeks_core.orchestrator import Orchestrator
 from meeseeks_core.permissions import (
     PermissionPolicy,
-    approval_callback_from_env,
+    approval_callback_from_config,
     load_permission_policy,
 )
 from meeseeks_core.planning import Planner
@@ -32,7 +31,6 @@ from meeseeks_core.types import Event, EventRecord
 logging = get_logger(name="core.task_master")
 
 warnings.simplefilter("ignore", LangChainBetaWarning)
-load_dotenv()
 
 
 def _build_context_snapshot(
@@ -62,7 +60,9 @@ def generate_action_plan(
     tool_registry = tool_registry or load_registry()
     resolved_model = cast(
         str,
-        model_name or os.getenv("ACTION_PLAN_MODEL") or os.getenv("DEFAULT_MODEL", "gpt-3.5-turbo"),
+        model_name
+        or get_config_value("llm", "action_plan_model")
+        or get_config_value("llm", "default_model", default="gpt-5.2"),
     )
     context = _build_context_snapshot(
         session_summary,
@@ -85,7 +85,7 @@ def run_action_plan(
     """Execute a task queue with permissions and hooks."""
     tool_registry = tool_registry or load_registry()
     permission_policy = permission_policy or load_permission_policy()
-    approval_callback = approval_callback or approval_callback_from_env()
+    approval_callback = approval_callback or approval_callback_from_config()
     hook_manager = hook_manager or default_hook_manager()
     runner = ActionPlanRunner(
         tool_registry=tool_registry,

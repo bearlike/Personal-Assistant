@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "utils": {
+      "transport": "streamable_http",
+      "url": "http://127.0.0.1:6783/mcp/Codex-Tools-Personal",
+      "headers": {
+        "Authorization": "Bearer sk-REPLACE_ME"
+      }
+    }
+  }
+}

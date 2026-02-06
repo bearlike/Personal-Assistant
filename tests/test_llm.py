@@ -4,6 +4,7 @@ import sys
 import types
 
 from meeseeks_core import llm as llm_module
+from meeseeks_core.config import set_config_override
 from meeseeks_core.llm import (
     allows_temperature,
     build_chat_model,
@@ -14,15 +15,14 @@ from meeseeks_core.llm import (
 
 def test_resolve_reasoning_effort_defaults(monkeypatch):
     """Default to medium for GPT-5 family models."""
-    monkeypatch.delenv("MESEEKS_REASONING_EFFORT", raising=False)
-    monkeypatch.delenv("MESEEKS_REASONING_EFFORT_MODELS", raising=False)
+    set_config_override({"llm": {"reasoning_effort": "", "reasoning_effort_models": []}})
     assert resolve_reasoning_effort("gpt-5.2") == "medium"
     assert resolve_reasoning_effort("gpt-5.1") == "medium"
 
 
 def test_resolve_reasoning_effort_gpt5_pro(monkeypatch):
     """Use high reasoning effort for GPT-5 pro."""
-    monkeypatch.delenv("MESEEKS_REASONING_EFFORT", raising=False)
+    set_config_override({"llm": {"reasoning_effort": ""}})
     assert resolve_reasoning_effort("gpt-5-pro") == "high"
 
 
@@ -35,8 +35,7 @@ def test_allows_temperature_gpt5_variants():
 
 def test_build_chat_model_includes_reasoning_effort(monkeypatch):
     """Attach reasoning_effort to model kwargs when supported."""
-    monkeypatch.delenv("MESEEKS_REASONING_EFFORT", raising=False)
-    monkeypatch.delenv("MESEEKS_REASONING_EFFORT_MODELS", raising=False)
+    set_config_override({"llm": {"reasoning_effort": "", "reasoning_effort_models": []}})
     captured: dict[str, object] = {}
 
     class DummyChatLiteLLM:
@@ -70,21 +69,18 @@ def test_build_chat_model_prefixes_openai_model(monkeypatch):
     assert captured["api_base"] == "http://host/v1"
 
 
-def test_parse_model_list_env(monkeypatch):
-    """Parse model allowlists from JSON or CSV env values."""
-    monkeypatch.setenv("MESEEKS_REASONING_EFFORT_MODELS", '["Foo","bar"]')
-    assert llm_module._parse_model_list_env("MESEEKS_REASONING_EFFORT_MODELS") == [
+def test_parse_model_list_config_list():
+    """Parse model allowlists from list values."""
+    assert llm_module._normalize_model_list(["Foo", "bar"]) == [
         "foo",
         "bar",
     ]
 
 
-def test_parse_model_list_env_empty(monkeypatch):
-    """Return empty list for blank env values."""
-    monkeypatch.setenv("MESEEKS_REASONING_EFFORT_MODELS", "   ")
-    assert llm_module._parse_model_list_env("MESEEKS_REASONING_EFFORT_MODELS") == []
-    monkeypatch.setenv("MESEEKS_REASONING_EFFORT_MODELS", "foo, Bar")
-    assert llm_module._parse_model_list_env("MESEEKS_REASONING_EFFORT_MODELS") == [
+def test_parse_model_list_empty():
+    """Return empty list for blank values."""
+    assert llm_module._normalize_model_list("   ") == []
+    assert llm_module._normalize_model_list("foo, Bar") == [
         "foo",
         "bar",
     ]
@@ -99,7 +95,7 @@ def test_matches_model_list_wildcard():
 
 def test_model_supports_reasoning_effort_allowlist(monkeypatch):
     """Respect explicit allowlists for non-GPT-5 models."""
-    monkeypatch.setenv("MESEEKS_REASONING_EFFORT_MODELS", '["custom*"]')
+    set_config_override({"llm": {"reasoning_effort_models": ["custom*"]}})
     assert llm_module.model_supports_reasoning_effort("custom-model") is True
     assert llm_module.model_supports_reasoning_effort("other") is False
 
@@ -111,7 +107,7 @@ def test_model_supports_reasoning_effort_without_name():
 
 def test_resolve_reasoning_effort_env_override(monkeypatch):
     """Use explicit env override for reasoning effort."""
-    monkeypatch.setenv("MESEEKS_REASONING_EFFORT", "LOW")
+    set_config_override({"llm": {"reasoning_effort": "LOW"}})
     assert resolve_reasoning_effort("gpt-5") == "low"
 
 

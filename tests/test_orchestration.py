@@ -7,6 +7,7 @@ from meeseeks_core import planning, task_master  # noqa: E402
 from meeseeks_core.action_runner import ActionPlanRunner  # noqa: E402
 from meeseeks_core.classes import ActionStep, TaskQueue, set_available_tools  # noqa: E402
 from meeseeks_core.common import get_mock_speaker  # noqa: E402
+from meeseeks_core.config import set_config_override  # noqa: E402
 from meeseeks_core.context import ContextBuilder  # noqa: E402
 from meeseeks_core.hooks import HookManager  # noqa: E402
 from meeseeks_core.orchestrator import Orchestrator  # noqa: E402
@@ -102,7 +103,7 @@ def test_orchestrator_creates_session_when_missing(monkeypatch, tmp_path):
 
 def test_generate_action_plan_omits_disabled_tools(monkeypatch):
     """Ensure prompt does not advertise disabled tools."""
-    monkeypatch.setenv("MESEEKS_HOME_ASSISTANT_ENABLED", "0")
+    set_config_override({"home_assistant": {"enabled": False}})
     registry = load_registry()
 
     def _fake_model(messages):
@@ -313,7 +314,7 @@ def test_orchestrate_session_schema_replan_and_context(monkeypatch, tmp_path):
         lambda **_kwargs: RunnableLambda(fake_model),
     )
     monkeypatch.setattr(Orchestrator, "_should_synthesize_response", lambda *_a, **_k: False)
-    monkeypatch.setenv("MEESEEKS_CONTEXT_SELECTION", "0")
+    set_config_override({"context": {"selection_enabled": False}})
 
     policy = PermissionPolicy(
         rules=[],
@@ -740,8 +741,7 @@ def test_orchestrate_session_context_selection(monkeypatch, tmp_path):
         task_queue.task_result = "ok"
         return task_queue
 
-    monkeypatch.setenv("MEESEEKS_CONTEXT_SELECT_THRESHOLD", "0")
-    monkeypatch.setenv("MEESEEKS_RECENT_EVENT_LIMIT", "1")
+    set_config_override({"context": {"selection_threshold": 0.0, "recent_event_limit": 1}})
     monkeypatch.setattr(ContextBuilder, "_select_context_events", fake_select)
     monkeypatch.setattr(Planner, "generate", fake_generate)
     monkeypatch.setattr(ActionPlanRunner, "run", fake_run)
@@ -999,7 +999,7 @@ def test_orchestrate_session_auto_compact(monkeypatch, tmp_path):
     """Auto-compact sessions based on token budget."""
     session_store = SessionStore(root_dir=str(tmp_path))
     session_id = session_store.create_session()
-    monkeypatch.setenv("MESEEKS_AUTO_COMPACT_THRESHOLD", "0")
+    set_config_override({"token_budget": {"auto_compact_threshold": 0.0}})
 
     def fake_generate(*_args, **_kwargs):
         return make_task_queue("say hi")

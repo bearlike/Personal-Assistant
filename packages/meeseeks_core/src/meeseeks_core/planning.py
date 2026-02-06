@@ -18,6 +18,7 @@ from meeseeks_core.components import (
     format_component_status,
     resolve_langfuse_status,
 )
+from meeseeks_core.config import get_config_value
 from meeseeks_core.context import ContextSnapshot, render_event_lines
 from meeseeks_core.llm import build_chat_model
 from meeseeks_core.tool_registry import ToolRegistry
@@ -163,13 +164,14 @@ class Planner:
             user_id=user_id,
             session_id=session_id,
             trace_name=user_id,
-            version=os.getenv("VERSION", "Not Specified"),
-            release=os.getenv("ENVMODE", "Not Specified"),
+            version=get_config_value("runtime", "version", default="Not Specified"),
+            release=get_config_value("runtime", "envmode", default="Not Specified"),
         )
         model = build_chat_model(
             model_name=model_name,
             temperature=0.4,
-            openai_api_base=os.getenv("OPENAI_API_BASE"),
+            openai_api_base=get_config_value("llm", "api_base"),
+            api_key=get_config_value("llm", "api_key"),
         )
         parser = PydanticOutputParser(pydantic_object=TaskQueue)
         component_status = self._resolve_component_status()
@@ -237,7 +239,7 @@ class ResponseSynthesizer:
         context: ContextSnapshot | None,
     ) -> str:
         """Synthesize a response from tool outputs."""
-        model_name = model_name or os.getenv("DEFAULT_MODEL", "gpt-3.5-turbo")
+        model_name = model_name or get_config_value("llm", "default_model", default="gpt-5.2")
         system_prompt = self._prompt_builder.build(
             get_system_prompt("response-synthesizer"),
             context,
@@ -255,7 +257,8 @@ class ResponseSynthesizer:
         model = build_chat_model(
             model_name=model_name,
             temperature=0.3,
-            openai_api_base=os.getenv("OPENAI_API_BASE"),
+            openai_api_base=get_config_value("llm", "api_base"),
+            api_key=get_config_value("llm", "api_key"),
         )
         output = (prompt | model).invoke(
             {

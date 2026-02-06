@@ -3,11 +3,11 @@
 
 from __future__ import annotations
 
-import os
 import sys
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 
+from meeseeks_core.config import get_config_value
 from rich.console import Console
 from textual.app import App, ComposeResult
 from textual.containers import Vertical
@@ -15,7 +15,7 @@ from textual.widgets import Input, Label, OptionList, SelectionList
 
 
 def _textual_enabled() -> bool:
-    if os.getenv("MEESEEKS_DISABLE_TEXTUAL") == "1":
+    if get_config_value("cli", "disable_textual", default=False):
         return False
     return sys.stdin.isatty() and sys.stdout.isatty()
 
@@ -27,11 +27,14 @@ class DialogFactory:
     console: Console | None = None
     prompt_func: Callable[[str], str] | None = None
     force_textual: bool | None = None
+    prefer_inline: bool = False
 
     def can_use_textual(self) -> bool:
         """Return True when Textual dialogs are allowed."""
         if self.force_textual is not None:
             return self.force_textual
+        if self.prefer_inline and self.prompt_func is not None:
+            return False
         return _textual_enabled()
 
     def select_one(

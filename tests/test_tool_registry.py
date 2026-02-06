@@ -3,13 +3,14 @@
 import json
 from types import SimpleNamespace
 
+from meeseeks_core.config import set_config_override, set_mcp_config_path
 from meeseeks_core.tool_registry import _ensure_auto_manifest, load_registry
 
 
 def test_default_registry(monkeypatch):
     """Load built-in tools when no manifest is configured."""
-    monkeypatch.delenv("MESEEKS_MCP_CONFIG", raising=False)
-    monkeypatch.delenv("MESEEKS_HOME_ASSISTANT_ENABLED", raising=False)
+    set_mcp_config_path("")
+    set_config_override({"home_assistant": {"enabled": False}})
     registry = load_registry()
     tool_ids = {spec.tool_id for spec in registry.list_specs(include_disabled=True)}
     assert "home_assistant_tool" in tool_ids
@@ -17,10 +18,10 @@ def test_default_registry(monkeypatch):
 
 def test_default_registry_homeassistant_enabled(monkeypatch):
     """Enable Home Assistant tool when required env vars are set."""
-    monkeypatch.delenv("MESEEKS_MCP_CONFIG", raising=False)
-    monkeypatch.delenv("MESEEKS_HOME_ASSISTANT_ENABLED", raising=False)
-    monkeypatch.setenv("HA_URL", "http://localhost")
-    monkeypatch.setenv("HA_TOKEN", "token")
+    set_mcp_config_path("")
+    set_config_override(
+        {"home_assistant": {"enabled": True, "url": "http://localhost", "token": "token"}}
+    )
     registry = load_registry()
     enabled_ids = {spec.tool_id for spec in registry.list_specs()}
     assert "home_assistant_tool" in enabled_ids
@@ -85,7 +86,7 @@ def test_manifest_local_tool(tmp_path, monkeypatch):
 
 def test_manifest_empty_falls_back(tmp_path, monkeypatch):
     """Fall back to defaults when manifest contains no tools."""
-    monkeypatch.delenv("MESEEKS_HOME_ASSISTANT_ENABLED", raising=False)
+    set_config_override({"home_assistant": {"enabled": False}})
     manifest_path = tmp_path / "manifest.json"
     manifest_path.write_text(json.dumps({"tools": []}), encoding="utf-8")
 
@@ -105,7 +106,7 @@ def test_disable_unknown_tool_is_noop():
 
 def test_manifest_skips_missing_local_class(tmp_path, monkeypatch):
     """Skip local tools that omit module/class metadata."""
-    monkeypatch.delenv("MESEEKS_HOME_ASSISTANT_ENABLED", raising=False)
+    set_config_override({"home_assistant": {"enabled": False}})
     manifest_path = tmp_path / "manifest.json"
     manifest_path.write_text(
         json.dumps(
@@ -180,7 +181,7 @@ def test_auto_manifest_returns_existing_when_mcp_missing(tmp_path, monkeypatch):
     """Reuse existing manifest when MCP support is unavailable."""
     manifest_path = tmp_path / "tool-manifest.auto.json"
     manifest_path.write_text("{}", encoding="utf-8")
-    monkeypatch.setenv("MESEEKS_CONFIG_DIR", str(tmp_path))
+    set_config_override({"runtime": {"config_dir": str(tmp_path)}})
     monkeypatch.setattr("meeseeks_core.tool_registry._load_mcp_support", lambda: None)
 
     result = _ensure_auto_manifest(str(tmp_path / "mcp.json"))
@@ -191,7 +192,7 @@ def test_auto_manifest_handles_discovery_error(tmp_path, monkeypatch):
     """Keep existing manifest when MCP discovery fails."""
     manifest_path = tmp_path / "tool-manifest.auto.json"
     manifest_path.write_text("{}", encoding="utf-8")
-    monkeypatch.setenv("MESEEKS_CONFIG_DIR", str(tmp_path))
+    set_config_override({"runtime": {"config_dir": str(tmp_path)}})
 
     class DummyMcpModule:
         def _load_mcp_config(self, _path):
@@ -208,7 +209,7 @@ def test_auto_manifest_handles_discovery_error(tmp_path, monkeypatch):
 
 def test_auto_manifest_handles_write_failure(tmp_path, monkeypatch):
     """Return None when auto manifest write fails and no prior file exists."""
-    monkeypatch.setenv("MESEEKS_CONFIG_DIR", str(tmp_path))
+    set_config_override({"runtime": {"config_dir": str(tmp_path)}})
     manifest_path = tmp_path / "tool-manifest.auto.json"
 
     class DummyMcpModule:
@@ -316,8 +317,8 @@ def test_auto_manifest_from_mcp_config(tmp_path, monkeypatch):
         '{"servers": {"srv": {"transport": "http", "url": "http://example"}}}',
         encoding="utf-8",
     )
-    monkeypatch.setenv("MESEEKS_MCP_CONFIG", str(config_path))
-    monkeypatch.setenv("MESEEKS_CONFIG_DIR", str(tmp_path))
+    set_mcp_config_path(str(config_path))
+    set_config_override({"runtime": {"config_dir": str(tmp_path)}})
 
     manifest_path = tmp_path / "tool-manifest.auto.json"
     manifest_path.write_text("{bad json", encoding="utf-8")
@@ -344,8 +345,8 @@ def test_auto_manifest_marks_failed_server(tmp_path, monkeypatch):
         '{"servers": {"srv": {"transport": "http", "url": "http://example"}}}',
         encoding="utf-8",
     )
-    monkeypatch.setenv("MESEEKS_MCP_CONFIG", str(config_path))
-    monkeypatch.setenv("MESEEKS_CONFIG_DIR", str(tmp_path))
+    set_mcp_config_path(str(config_path))
+    set_config_override({"runtime": {"config_dir": str(tmp_path)}})
 
     manifest_path = tmp_path / "tool-manifest.auto.json"
     manifest_path.write_text(json.dumps({"tools": "bad"}), encoding="utf-8")
