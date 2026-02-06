@@ -53,14 +53,14 @@ def test_format_component_status():
 
 def test_langfuse_status_requires_keys(monkeypatch):
     """Disable Langfuse when keys are missing but module is present."""
-    module = types.ModuleType("langfuse.callback")
+    module = types.ModuleType("langfuse.langchain")
 
     class CallbackHandler:
         def __init__(self, **_kwargs):
             pass
 
     module.CallbackHandler = CallbackHandler
-    monkeypatch.setitem(sys.modules, "langfuse.callback", module)
+    monkeypatch.setitem(sys.modules, "langfuse.langchain", module)
     set_config_override({"langfuse": {"enabled": True, "public_key": "", "secret_key": ""}})
     status = resolve_langfuse_status()
     assert status.enabled is False
@@ -70,14 +70,21 @@ def test_langfuse_status_requires_keys(monkeypatch):
 def test_build_langfuse_handler_configured(monkeypatch):
     """Construct a Langfuse callback handler when configured."""
     created = {}
-    module = types.ModuleType("langfuse.callback")
+    langfuse_module = types.ModuleType("langfuse")
+    langchain_module = types.ModuleType("langfuse.langchain")
+
+    class Langfuse:
+        def __init__(self, **kwargs):
+            created["client"] = kwargs
 
     class CallbackHandler:
         def __init__(self, **kwargs):
             created.update(kwargs)
 
-    module.CallbackHandler = CallbackHandler
-    monkeypatch.setitem(sys.modules, "langfuse.callback", module)
+    langfuse_module.Langfuse = Langfuse
+    langchain_module.CallbackHandler = CallbackHandler
+    monkeypatch.setitem(sys.modules, "langfuse", langfuse_module)
+    monkeypatch.setitem(sys.modules, "langfuse.langchain", langchain_module)
     set_config_override(
         {"langfuse": {"enabled": True, "public_key": "pub", "secret_key": "secret"}}
     )
@@ -89,7 +96,11 @@ def test_build_langfuse_handler_configured(monkeypatch):
         release="dev",
     )
     assert handler is not None
-    assert created["user_id"] == "user"
+    assert created["public_key"] == "pub"
+    assert created["client"]["public_key"] == "pub"
+    assert created["client"]["secret_key"] == "secret"
+    metadata = getattr(handler, "langfuse_metadata", {})
+    assert metadata.get("langfuse_user_id") == "user"
 
 
 def test_build_langfuse_handler_disabled(monkeypatch):

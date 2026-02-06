@@ -268,8 +268,11 @@ class LangfuseConfig(BaseModel):
                 {"required_config": missing},
             )
         try:
-            from langfuse.callback import CallbackHandler  # noqa: F401
-        except ImportError:
+            from langfuse.langchain import CallbackHandler  # noqa: F401
+        except ModuleNotFoundError as exc:
+            message = str(exc).lower()
+            if "langchain" in message:
+                return False, "langchain not installed", {}
             return False, "langfuse not installed", {}
         return True, None, {}
 

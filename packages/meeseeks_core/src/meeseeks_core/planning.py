@@ -288,6 +288,9 @@ class Planner:
         config: dict[str, object] = {}
         if langfuse_handler is not None:
             config["callbacks"] = [langfuse_handler]
+            metadata = getattr(langfuse_handler, "langfuse_metadata", None)
+            if isinstance(metadata, dict) and metadata:
+                config["metadata"] = metadata
         action_plan = (prompt | model | parser).invoke(
             {"user_query": user_query.strip()},
             config=config or None,

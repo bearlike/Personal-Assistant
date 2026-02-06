@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
@@ -12,7 +13,7 @@ from meeseeks_core.config import get_config
 from meeseeks_core.types import JsonValue
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
-    from langfuse.callback import CallbackHandler as LangfuseCallbackHandler
+    from langfuse.langchain import CallbackHandler as LangfuseCallbackHandler
 
 logging = get_logger(name="core.components")
 
@@ -47,16 +48,22 @@ def build_langfuse_handler(
         logging.debug("Langfuse disabled: {}", status.reason)
         return None
 
-    from langfuse.callback import CallbackHandler
+    config = get_config().langfuse
+    _ensure_langfuse_client(config)
+
+    from langfuse.langchain import CallbackHandler
 
     try:
-        return CallbackHandler(
+        handler = CallbackHandler(public_key=config.public_key or None)
+        _attach_langfuse_metadata(
+            handler,
             user_id=user_id,
             session_id=session_id,
             trace_name=trace_name,
             version=version,
             release=release,
         )
+        return handler
     except Exception as exc:  # pragma: no cover - defensive
         logging.warning("Langfuse initialization failed: {}", exc)
         return None
@@ -81,6 +88,61 @@ def format_component_status(statuses: Iterable[ComponentStatus]) -> str:
         reason = f" ({status.reason})" if status.reason else ""
         lines.append(f"- {status.name}: {state}{reason}")
     return "\n".join(lines)
+
+
+def _ensure_langfuse_client(config) -> None:
+    if config is None:
+        return
+    if not config.public_key or not config.secret_key:
+        return
+
+    os.environ.setdefault("LANGFUSE_PUBLIC_KEY", config.public_key)
+    os.environ.setdefault("LANGFUSE_SECRET_KEY", config.secret_key)
+    if config.host:
+        os.environ.setdefault("LANGFUSE_BASE_URL", config.host)
+        os.environ.setdefault("LANGFUSE_HOST", config.host)
+
+    try:
+        from langfuse import Langfuse
+    except Exception as exc:  # pragma: no cover - defensive
+        logging.debug("Langfuse client unavailable: {}", exc)
+        return
+
+    try:
+        Langfuse(
+            public_key=config.public_key,
+            secret_key=config.secret_key,
+            base_url=config.host or None,
+        )
+    except Exception as exc:  # pragma: no cover - defensive
+        logging.debug("Langfuse client init failed: {}", exc)
+
+
+def _attach_langfuse_metadata(
+    handler: object,
+    *,
+    user_id: str,
+    session_id: str,
+    trace_name: str,
+    version: str,
+    release: str,
+) -> None:
+    metadata: dict[str, object] = {}
+    if user_id:
+        metadata["langfuse_user_id"] = user_id
+    if session_id:
+        metadata["langfuse_session_id"] = session_id
+    tags: list[str] = []
+    if trace_name:
+        tags.append(trace_name)
+    if version:
+        tags.append(f"version:{version}")
+    if release:
+        tags.append(f"release:{release}")
+    if tags:
+        metadata["langfuse_tags"] = tags
+    if metadata:
+        setattr(handler, "langfuse_metadata", metadata)
 
 
 __all__ = [
