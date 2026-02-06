@@ -64,6 +64,7 @@ Meeseeks is an AI task agent assistant built on a plan-act-observe orchestration
 
 ## Tooling and integrations
 - (✅) **Tool registry:** Discovers local tools and optional MCP tools with manual manifest overrides.
+- (✅) **Local file + shell tools:** Built-in Aider adapters for edit blocks, read files, list dirs, and shell commands (approval-gated).
 - (✅) **Home Assistant:** Ships a Conversation integration for voice control and entity actions.
 - (✅) **REST API:** Exposes the assistant over HTTP for third-party integration.
 - (✅) **Web chat UI:** Streamlit interface with plans, tool input types, and responses.
@@ -71,7 +72,7 @@ Meeseeks is an AI task agent assistant built on a plan-act-observe orchestration
 
 ## Safety and observability
 - (✅) **Permission gate:** Uses approval callbacks and hooks to control tool execution.
-- (✅) **Operational visibility:** Optional Langfuse tracing is available and stays off if unconfigured.
+- (✅) **Operational visibility:** Optional Langfuse tracing (session-scoped traces) stays off if unconfigured.
 
 ## Optional add-ons
 Optional features that can be installed when needed.
@@ -82,6 +83,7 @@ Optional features that can be installed when needed.
 ## Interface notes
 - **CLI layout adapts to terminal width.** Headers and tool result cards adjust to small and wide shells.
 - **Interactive CLI controls.** Use a model picker, MCP browser, session summary, and token budget commands.
+- **Inline approvals.** Rich-based approval prompts render with padded, dotted borders and clear after input.
 - **Unified experience.** Web, API, Home Assistant, and CLI interfaces share the same core engine to reduce duplicated maintenance.
 
 ## Monorepo layout

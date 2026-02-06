@@ -1,0 +1,7 @@
+coverage:
+  status:
+    patch:
+      default:
+        paths:
+          - "packages/meeseeks_tools/src/meeseeks_tools/vendor/**"
+          - "vendor/**"
