@@ -50,7 +50,8 @@
     "approval_mode": "ask"
   },
   "cli": {
-    "disable_textual": false
+    "disable_textual": false,
+    "approval_style": "aider"
   },
   "chat": {
     "streamlit_port": 8501,

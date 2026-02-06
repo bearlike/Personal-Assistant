@@ -212,6 +212,38 @@ def _confirm_fallback(
     return choice in {"y", "yes"}
 
 
+def _confirm_aider(
+    message: str,
+    *,
+    default: bool = False,
+    subject: str | None = None,
+    prompt_func: Callable[[str], str] | None = None,
+) -> bool | None:
+    try:
+        from meeseeks_tools.vendor.aider.io import InputOutput
+    except Exception:
+        return None
+
+    io = InputOutput(pretty=True, fancy_input=False)
+    default_char = "y" if default else "n"
+
+    if prompt_func is None:
+        return io.confirm_ask(message, default=default_char, subject=subject)
+
+    import builtins
+
+    original_input = builtins.input
+
+    def _fake_input(prompt: str) -> str:
+        return prompt_func(prompt)
+
+    try:
+        builtins.input = _fake_input
+        return io.confirm_ask(message, default=default_char, subject=subject)
+    finally:
+        builtins.input = original_input
+
+
 class _BaseDialog(App):
     CSS = """
     Screen { align: center middle; }

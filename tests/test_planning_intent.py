@@ -51,6 +51,18 @@ def test_filter_specs_by_intent_keeps_multiple_capabilities():
     }
 
 
+def test_filter_specs_by_intent_includes_shell_tool():
+    """Include shell tool when the query asks to run commands."""
+    planner = Planner(ToolRegistry())
+    specs = [
+        _spec("aider_shell_tool", kind="local"),
+        _spec("aider_read_file_tool", kind="local"),
+    ]
+    filtered = planner._filter_specs_by_intent(specs, "Run a command in the terminal")
+    tool_ids = {spec.tool_id for spec in filtered}
+    assert tool_ids == {"aider_shell_tool"}
+
+
 def test_spec_capabilities_prefers_metadata():
     """Prefer explicit capability metadata when provided."""
     planner = Planner(ToolRegistry())

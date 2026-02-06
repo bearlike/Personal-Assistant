@@ -56,3 +56,33 @@ def render_dir_payload(path: str, entries: list[str]) -> RenderableType:
 def render_json_payload(payload: dict[str, Any]) -> RenderableType:
     """Render JSON payloads as a fenced code block."""
     return render_markdown(f"```json\n{payload}\n```")
+
+
+def render_shell_payload(
+    command: str | None,
+    stdout: str | None,
+    stderr: str | None,
+    exit_code: int | None = None,
+    duration_ms: int | None = None,
+    cwd: str | None = None,
+) -> RenderableType:
+    """Render shell execution output using markdown."""
+    header_lines: list[str] = []
+    if command:
+        header_lines.append(f"$ {command}")
+    if cwd:
+        header_lines.append(f"cwd: {cwd}")
+    if exit_code is not None:
+        header_lines.append(f"exit_code: {exit_code}")
+    if duration_ms is not None:
+        header_lines.append(f"duration_ms: {duration_ms}")
+    header = "\n".join(header_lines) or "Shell command"
+    body_parts: list[str] = []
+    if stdout:
+        body_parts.append(f"```text\n{stdout.rstrip()}\n```")
+    if stderr:
+        body_parts.append(f"```text\n{stderr.rstrip()}\n```")
+    body = "\n\n".join(body_parts)
+    if body:
+        return render_markdown(f"{header}\n\n{body}")
+    return render_markdown(header)

@@ -318,10 +318,20 @@ class PermissionsConfig(BaseModel):
 
 class CLIConfig(BaseModel):
     disable_textual: bool = Field(False, example=False)
+    approval_style: str = Field("inline", example="aider")
 
     @validator("disable_textual", pre=True, always=True)
     def _normalize_disable_textual(cls, value: Any) -> bool:
         return _coerce_bool(value, default=False)
+
+    @validator("approval_style", pre=True, always=True)
+    def _normalize_approval_style(cls, value: Any) -> str:
+        if value is None:
+            return "inline"
+        normalized = str(value).strip().lower()
+        if normalized in {"inline", "textual", "aider"}:
+            return normalized
+        return "inline"
 
 
 class ChatConfig(BaseModel):

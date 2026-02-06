@@ -46,6 +46,9 @@ INTENT_KEYWORDS: dict[str, set[str]] = {
     "file": {
         "file",
         "edit",
+        "write",
+        "create",
+        "script",
         "patch",
         "diff",
         "repo",
@@ -64,11 +67,20 @@ INTENT_KEYWORDS: dict[str, set[str]] = {
         "sensor",
         "climate",
     },
+    "shell": {
+        "shell",
+        "command",
+        "run",
+        "execute",
+        "terminal",
+        "cli",
+    },
 }
 INTENT_CAPABILITIES: dict[str, set[str]] = {
     "web": {"web_search", "web_read"},
     "file": {"file_read", "file_write"},
     "home": {"home_assistant"},
+    "shell": {"shell_exec"},
 }
 
 
@@ -309,6 +321,8 @@ class Planner:
             inferred.add("file_read")
         if "aider_edit_block" in tool_id:
             inferred.add("file_write")
+        if "shell" in tool_id:
+            inferred.add("shell_exec")
         if "home_assistant" in tool_id:
             inferred.add("home_assistant")
         return inferred

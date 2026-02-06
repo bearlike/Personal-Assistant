@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sys
+
 from meeseeks_cli import cli_dialogs
 from rich.console import Console
 
@@ -81,3 +83,22 @@ def test_confirm_fallback_negative_response():
     console = Console(record=True)
     result = cli_dialogs._confirm_fallback(console, lambda _: "n", "Confirm?", default=True)
     assert result is False
+
+
+def test_confirm_aider_uses_dummy_io(monkeypatch):
+    """Use Aider confirm helper when available."""
+    import types
+
+    class DummyIO:
+        def __init__(self, **_kwargs):
+            pass
+
+        def confirm_ask(self, _question, default="n", subject=None):
+            return default == "y" or subject == "ok"
+
+    module = types.ModuleType("meeseeks_tools.vendor.aider.io")
+    module.InputOutput = DummyIO
+    monkeypatch.setitem(sys.modules, "meeseeks_tools.vendor.aider.io", module)
+
+    result = cli_dialogs._confirm_aider("Approve?", default=False, subject="ok")
+    assert result is True

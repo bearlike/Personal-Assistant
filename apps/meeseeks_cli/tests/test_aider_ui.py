@@ -25,3 +25,17 @@ def test_render_dir_payload_handles_empty_entries():
     rendered = aider_ui.render_dir_payload("root", [])
     assert isinstance(rendered, Markdown)
     assert "no files" in rendered.markup.lower()
+
+
+def test_render_shell_payload_renders_header():
+    """Render shell payload with command header."""
+    rendered = aider_ui.render_shell_payload(
+        "echo hello",
+        "hello\n",
+        "",
+        exit_code=0,
+        duration_ms=10,
+        cwd=".",
+    )
+    assert isinstance(rendered, Markdown)
+    assert "$ echo hello" in rendered.markup

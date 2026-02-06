@@ -209,6 +209,18 @@ def _default_registry() -> ToolRegistry:
             metadata={"plan_safe": True},
         )
     )
+    registry.register(
+        ToolSpec(
+            tool_id="aider_shell_tool",
+            name="Aider Shell",
+            description="Run shell commands using Aider helpers.",
+            factory=_import_factory(
+                "meeseeks_tools.integration.aider_shell_tool",
+                "AiderShellTool",
+            ),
+            prompt_path="tools/aider-shell",
+        )
+    )
     return registry
 
 
@@ -272,6 +284,16 @@ def _built_in_manifest_entries() -> list[dict[str, object]]:
             "enabled": True,
             "prompt": "tools/aider-list-dir",
             "plan_safe": True,
+        },
+        {
+            "tool_id": "aider_shell_tool",
+            "name": "Aider Shell",
+            "description": "Run shell commands using Aider helpers.",
+            "module": "meeseeks_tools.integration.aider_shell_tool",
+            "class": "AiderShellTool",
+            "kind": "local",
+            "enabled": True,
+            "prompt": "tools/aider-shell",
         },
     ]
     if not ha_status.enabled and ha_status.reason:

@@ -94,10 +94,11 @@ from meeseeks_cli.aider_ui import (
     render_dir_payload,
     render_file_payload,
     render_markdown,
+    render_shell_payload,
 )
 from meeseeks_cli.cli_commands import get_registry
 from meeseeks_cli.cli_context import CliState, CommandContext
-from meeseeks_cli.cli_dialogs import DialogFactory
+from meeseeks_cli.cli_dialogs import DialogFactory, _confirm_aider
 
 logging = get_logger(name="meeseeks.cli")
 
@@ -810,22 +811,16 @@ def _render_tool_payload(payload: dict[str, object], style: str) -> RenderableTy
         exit_code = payload.get("exit_code")
         stdout = payload.get("stdout")
         stderr = payload.get("stderr")
-        header_lines: list[str] = []
-        if isinstance(command, str) and command:
-            header_lines.append(f"$ {command}")
-        if exit_code is not None:
-            header_lines.append(f"exit_code: {exit_code}")
-        header = Text("\n".join(header_lines) or "Shell command", style=style or "bold")
-        sections: list[RenderableType] = [header]
-        if isinstance(stdout, str) and stdout:
-            sections.append(Text("\nstdout:\n", style="dim"))
-            sections.append(Text(stdout, style=style))
-        if isinstance(stderr, str) and stderr:
-            sections.append(Text("\nstderr:\n", style="dim"))
-            sections.append(Text(stderr, style=style))
-        if len(sections) == 1:
-            return header
-        return Group(*sections)
+        duration_ms = payload.get("duration_ms")
+        cwd = payload.get("cwd")
+        return render_shell_payload(
+            command if isinstance(command, str) else None,
+            stdout if isinstance(stdout, str) else None,
+            stderr if isinstance(stderr, str) else None,
+            exit_code if isinstance(exit_code, int) else None,
+            duration_ms if isinstance(duration_ms, int) else None,
+            cwd if isinstance(cwd, str) else None,
+        )
     return None
 
 
@@ -878,6 +873,8 @@ def _build_approval_callback(
         logging.debug("Approval callback: prompt disabled, returning None.")
         return None
     dialogs = DialogFactory(console=console, prompt_func=prompt_func, prefer_inline=True)
+    approval_style = str(get_config_value("cli", "approval_style", default="inline")).strip()
+    approval_style = approval_style.lower()
     specs_by_id = _tool_specs_by_id(tool_registry)
 
     def _approve(action_step: ActionStep) -> bool:
@@ -897,14 +894,25 @@ def _build_approval_callback(
                 except Exception:
                     pass
 
-        if dialogs.can_use_textual():
+        subject = (
+            f"{action_step.action_consumer}:{action_step.action_type} "
+            f"({format_action_argument(action_step.action_argument)})"
+        )
+        if approval_style == "aider":
+            decision = _confirm_aider(
+                "Approve tool use?",
+                default=False,
+                subject=subject,
+                prompt_func=prompt_func,
+            )
+            if decision is not None:
+                return decision
+
+        if approval_style in {"inline", "textual"} and dialogs.can_use_textual():
             choice = dialogs.select_one(
                 "Approve tool use",
                 ["Yes", "No", "Yes, always"],
-                subtitle=(
-                    f"{action_step.action_consumer}:{action_step.action_type} "
-                    f"({format_action_argument(action_step.action_argument)})"
-                ),
+                subtitle=subject,
             )
             if choice is None or choice == "No":
                 return False
@@ -917,11 +925,7 @@ def _build_approval_callback(
                     console.print(f"Failed to persist auto-approve: {exc}")
             return True
 
-        prompt = (
-            "Approve "
-            f"{action_step.action_consumer}:{action_step.action_type} "
-            f"({format_action_argument(action_step.action_argument)})? [y/N/a] "
-        )
+        prompt = f"Approve {subject}? [y/N/a] "
         try:
             response = prompt_func(prompt).strip().lower()
         except (EOFError, KeyboardInterrupt):

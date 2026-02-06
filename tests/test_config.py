@@ -104,6 +104,7 @@ def test_preflight_disables_failed_integrations(monkeypatch):
         "evaluate",
         lambda *_a, **_k: (True, None, {}),
     )
+
     def _raise_probe(*_a, **_k):
         raise ValueError("boom")
 

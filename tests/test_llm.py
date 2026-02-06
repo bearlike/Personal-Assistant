@@ -138,7 +138,4 @@ def test_model_supports_reasoning_effort_with_provider_prefix():
 
 def test_resolve_litellm_model_keeps_prefixed_name():
     """Avoid prefixing models that already include a provider."""
-    assert (
-        llm_module._resolve_litellm_model("openai/gpt-4o", "http://host/v1")
-        == "openai/gpt-4o"
-    )
+    assert llm_module._resolve_litellm_model("openai/gpt-4o", "http://host/v1") == "openai/gpt-4o"
