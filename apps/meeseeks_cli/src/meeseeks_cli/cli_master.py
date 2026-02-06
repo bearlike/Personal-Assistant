@@ -374,12 +374,12 @@ def run_cli(args: argparse.Namespace) -> int:
     console = Console(color_system=None if args.no_color else "auto")
     config = get_config()
     logging.info(
-        "Config paths: app=%s mcp=%s",
+        "Config paths: app={} mcp={}",
         get_app_config_path(),
         get_mcp_config_path() or "(disabled)",
     )
     logging.info(
-        "LLM config: default=%s action_plan=%s tool=%s api_base=%s model_override=%s",
+        "LLM config: default={} action_plan={} tool={} api_base={} model_override={}",
         get_config_value("llm", "default_model", default=""),
         get_config_value("llm", "action_plan_model", default=""),
         get_config_value("llm", "tool_model", default=""),
