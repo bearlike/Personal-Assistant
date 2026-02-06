@@ -502,14 +502,12 @@ def _run_query(
         )
         _render_plan_with_registry(console, initial_task_queue, tool_registry)
 
-    auto_approve = bool(
-        state.auto_approve_all
-        or getattr(args, "auto_approve", False)
-        or prompt_func is None
+    auto_approve_enabled = bool(
+        state.auto_approve_all or getattr(args, "auto_approve", False) or prompt_func is None
     )
     logging.debug(
         "Auto-approve resolved: {} (state={}, args={}, prompt_func_none={})",
-        auto_approve,
+        auto_approve_enabled,
         state.auto_approve_all,
         getattr(args, "auto_approve", False),
         prompt_func is None,
@@ -519,7 +517,7 @@ def _run_query(
         console,
         state,
         tool_registry,
-        auto_approve_enabled=auto_approve,
+        auto_approve_enabled=auto_approve_enabled,
     )
     if approval_callback is None and prompt_func is None:
         logging.debug("Forcing auto-approve for headless query execution.")
