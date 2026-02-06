@@ -51,10 +51,10 @@ default-groups = []
 [tool.uv.sources]
 meeseeks-core = { workspace = true }
 meeseeks-tools = { workspace = true }
-meeseeks-cli = { path = "apps/meeseeks_cli" }
-meeseeks-api = { path = "apps/meeseeks_api" }
-meeseeks-chat = { path = "apps/meeseeks_chat" }
-meeseeks-ha-conversation = { path = "meeseeks_ha_conversation" }
+meeseeks-cli = { path = "apps/meeseeks_cli", editable = true }
+meeseeks-api = { path = "apps/meeseeks_api", editable = true }
+meeseeks-chat = { path = "apps/meeseeks_chat", editable = true }
+meeseeks-ha-conversation = { path = "meeseeks_ha_conversation", editable = true }
 
 [build-system]
 requires = ["hatchling>=1.25.0"]

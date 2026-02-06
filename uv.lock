@@ -1848,7 +1848,7 @@ wheels = [
 [[package]]
 name = "meeseeks-api"
 version = "2.0.0a0"
-source = { directory = "apps/meeseeks_api" }
+source = { editable = "apps/meeseeks_api" }
 dependencies = [
     { name = "flask" },
     { name = "flask-restx" },
@@ -1867,7 +1867,7 @@ requires-dist = [
 [[package]]
 name = "meeseeks-chat"
 version = "2.0.0a0"
-source = { directory = "apps/meeseeks_chat" }
+source = { editable = "apps/meeseeks_chat" }
 dependencies = [
     { name = "meeseeks-core" },
     { name = "meeseeks-tools", extra = ["mcp"] },
@@ -1884,7 +1884,7 @@ requires-dist = [
 [[package]]
 name = "meeseeks-cli"
 version = "2.0.0a0"
-source = { directory = "apps/meeseeks_cli" }
+source = { editable = "apps/meeseeks_cli" }
 dependencies = [
     { name = "meeseeks-core" },
     { name = "meeseeks-tools", extra = ["mcp"] },
@@ -1945,7 +1945,7 @@ provides-extras = ["observability"]
 [[package]]
 name = "meeseeks-ha-conversation"
 version = "2.0.0a0"
-source = { directory = "meeseeks_ha_conversation" }
+source = { editable = "meeseeks_ha_conversation" }
 dependencies = [
     { name = "aiohttp" },
     { name = "async-timeout" },
@@ -2042,11 +2042,11 @@ docs = [
 
 [package.metadata]
 requires-dist = [
-    { name = "meeseeks-api", marker = "extra == 'api'", directory = "apps/meeseeks_api" },
-    { name = "meeseeks-chat", marker = "extra == 'chat'", directory = "apps/meeseeks_chat" },
-    { name = "meeseeks-cli", marker = "extra == 'cli'", directory = "apps/meeseeks_cli" },
+    { name = "meeseeks-api", marker = "extra == 'api'", editable = "apps/meeseeks_api" },
+    { name = "meeseeks-chat", marker = "extra == 'chat'", editable = "apps/meeseeks_chat" },
+    { name = "meeseeks-cli", marker = "extra == 'cli'", editable = "apps/meeseeks_cli" },
     { name = "meeseeks-core", editable = "packages/meeseeks_core" },
-    { name = "meeseeks-ha-conversation", marker = "extra == 'ha'", directory = "meeseeks_ha_conversation" },
+    { name = "meeseeks-ha-conversation", marker = "extra == 'ha'", editable = "meeseeks_ha_conversation" },
     { name = "meeseeks-tools", marker = "extra == 'tools'", editable = "packages/meeseeks_tools" },
 ]
 provides-extras = ["cli", "api", "chat", "ha", "tools"]
