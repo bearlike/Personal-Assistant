@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 
 from langchain_core.messages import SystemMessage
@@ -11,6 +12,7 @@ from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplat
 from pydantic.v1 import BaseModel, Field
 
 from meeseeks_core.common import format_action_argument, get_logger
+from meeseeks_core.components import build_langfuse_handler, langfuse_trace_span
 from meeseeks_core.config import get_config_value
 from meeseeks_core.llm import build_chat_model
 from meeseeks_core.session_store import SessionStore
@@ -154,10 +156,45 @@ class ContextBuilder:
             openai_api_base=get_config_value("llm", "api_base"),
             api_key=get_config_value("llm", "api_key"),
         )
+        handler = build_langfuse_handler(
+            user_id="meeseeks-context",
+            session_id=f"context-{os.getpid()}-{os.urandom(4).hex()}",
+            trace_name="meeseeks-context",
+            version=get_config_value("runtime", "version", default="Not Specified"),
+            release=get_config_value("runtime", "envmode", default="Not Specified"),
+        )
+        config: dict[str, object] = {}
+        if handler is not None:
+            config["callbacks"] = [handler]
+            metadata = getattr(handler, "langfuse_metadata", None)
+            if isinstance(metadata, dict) and metadata:
+                config["metadata"] = metadata
         try:
-            selection = (prompt | model | parser).invoke(
-                {"user_query": user_query.strip(), "candidates": candidates_text}
-            )
+            with langfuse_trace_span("context-select") as span:
+                if span is not None:
+                    try:
+                        span.update_trace(
+                            input={
+                                "user_query": user_query.strip(),
+                                "candidate_count": len(lines),
+                            }
+                        )
+                    except Exception:
+                        pass
+                selection = (prompt | model | parser).invoke(
+                    {"user_query": user_query.strip(), "candidates": candidates_text},
+                    config=config or None,
+                )
+                if span is not None:
+                    try:
+                        span.update_trace(
+                            output={
+                                "keep_ids": selection.keep_ids,
+                                "drop_ids": selection.drop_ids,
+                            }
+                        )
+                    except Exception:
+                        pass
         except Exception as exc:  # pragma: no cover - defensive
             logging.warning("Context selection failed: {}", exc)
             return events[-3:]

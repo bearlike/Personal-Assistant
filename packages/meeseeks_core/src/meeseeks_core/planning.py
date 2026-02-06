@@ -16,6 +16,7 @@ from meeseeks_core.components import (
     ComponentStatus,
     build_langfuse_handler,
     format_component_status,
+    langfuse_trace_span,
     resolve_langfuse_status,
 )
 from meeseeks_core.config import get_config_value
@@ -291,10 +292,23 @@ class Planner:
             metadata = getattr(langfuse_handler, "langfuse_metadata", None)
             if isinstance(metadata, dict) and metadata:
                 config["metadata"] = metadata
-        action_plan = (prompt | model | parser).invoke(
-            {"user_query": user_query.strip()},
-            config=config or None,
-        )
+        with langfuse_trace_span("action-plan") as span:
+            if span is not None:
+                try:
+                    span.update_trace(input={"user_query": user_query.strip()})
+                except Exception:
+                    pass
+            action_plan = (prompt | model | parser).invoke(
+                {"user_query": user_query.strip()},
+                config=config or None,
+            )
+            if span is not None:
+                try:
+                    span.update_trace(
+                        output={"step_count": len(action_plan.action_steps or [])}
+                    )
+                except Exception:
+                    pass
         action_plan.human_message = user_query
         return action_plan
 
@@ -377,12 +391,42 @@ class ResponseSynthesizer:
             openai_api_base=get_config_value("llm", "api_base"),
             api_key=get_config_value("llm", "api_key"),
         )
-        output = (prompt | model).invoke(
-            {
-                "user_query": user_query.strip(),
-                "tool_outputs": "\n".join(f"- {item}" for item in tool_outputs),
-            }
+        handler = build_langfuse_handler(
+            user_id="meeseeks-response",
+            session_id=f"response-{os.getpid()}-{os.urandom(4).hex()}",
+            trace_name="meeseeks-response",
+            version=get_config_value("runtime", "version", default="Not Specified"),
+            release=get_config_value("runtime", "envmode", default="Not Specified"),
         )
+        config: dict[str, object] = {}
+        if handler is not None:
+            config["callbacks"] = [handler]
+            metadata = getattr(handler, "langfuse_metadata", None)
+            if isinstance(metadata, dict) and metadata:
+                config["metadata"] = metadata
+        with langfuse_trace_span("response-synthesize") as span:
+            if span is not None:
+                try:
+                    span.update_trace(
+                        input={
+                            "user_query": user_query.strip(),
+                            "tool_output_count": len(tool_outputs),
+                        }
+                    )
+                except Exception:
+                    pass
+            output = (prompt | model).invoke(
+                {
+                    "user_query": user_query.strip(),
+                    "tool_outputs": "\n".join(f"- {item}" for item in tool_outputs),
+                },
+                config=config or None,
+            )
+            if span is not None:
+                try:
+                    span.update_trace(output={"response": str(getattr(output, "content", output))})
+                except Exception:
+                    pass
         content = getattr(output, "content", output)
         return str(content).strip()
 

@@ -4,7 +4,10 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Iterable
+import re
+from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -16,6 +19,13 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     from langfuse.langchain import CallbackHandler as LangfuseCallbackHandler
 
 logging = get_logger(name="core.components")
+
+_LANGFUSE_TRACE_CONTEXT: ContextVar[dict[str, str] | None] = ContextVar(
+    "langfuse_trace_context",
+    default=None,
+)
+_LANGFUSE_SESSION_ID: ContextVar[str | None] = ContextVar("langfuse_session_id", default=None)
+_LANGFUSE_USER_ID: ContextVar[str | None] = ContextVar("langfuse_user_id", default=None)
 
 
 @dataclass(frozen=True)
@@ -41,6 +51,7 @@ def build_langfuse_handler(
     trace_name: str,
     version: str,
     release: str,
+    trace_context: dict[str, str] | None = None,
 ) -> LangfuseCallbackHandler | None:
     """Create a Langfuse callback handler when configured."""
     status = resolve_langfuse_status()
@@ -53,12 +64,16 @@ def build_langfuse_handler(
 
     from langfuse.langchain import CallbackHandler
 
+    trace_context = trace_context or _LANGFUSE_TRACE_CONTEXT.get()
+    session_id_value = _LANGFUSE_SESSION_ID.get() or session_id
+    user_id_value = _LANGFUSE_USER_ID.get() or user_id
+
     try:
-        handler = CallbackHandler(public_key=config.public_key or None)
+        handler = CallbackHandler(public_key=config.public_key or None, trace_context=trace_context)
         _attach_langfuse_metadata(
             handler,
-            user_id=user_id,
-            session_id=session_id,
+            user_id=user_id_value,
+            session_id=session_id_value,
             trace_name=trace_name,
             version=version,
             release=release,
@@ -88,6 +103,71 @@ def format_component_status(statuses: Iterable[ComponentStatus]) -> str:
         reason = f" ({status.reason})" if status.reason else ""
         lines.append(f"- {status.name}: {state}{reason}")
     return "\n".join(lines)
+
+
+def _is_hex_trace_id(value: str) -> bool:
+    return bool(re.fullmatch(r"[0-9a-f]{32}", value))
+
+
+def _build_langfuse_trace_context(session_id: str | None) -> dict[str, str] | None:
+    if not session_id:
+        return None
+    if _is_hex_trace_id(session_id):
+        return {"trace_id": session_id}
+    try:
+        from langfuse import Langfuse
+    except Exception:  # pragma: no cover - defensive
+        return None
+    try:
+        trace_id = Langfuse.create_trace_id(seed=session_id)
+    except Exception:  # pragma: no cover - defensive
+        return None
+    if not trace_id or not _is_hex_trace_id(trace_id):
+        return None
+    return {"trace_id": trace_id}
+
+
+@contextmanager
+def langfuse_session_context(session_id: str, *, user_id: str | None = None) -> Iterator[None]:
+    """Bind a stable Langfuse trace context to the current session."""
+    trace_context = _build_langfuse_trace_context(session_id)
+    token_ctx = _LANGFUSE_TRACE_CONTEXT.set(trace_context)
+    token_session = _LANGFUSE_SESSION_ID.set(session_id)
+    token_user = _LANGFUSE_USER_ID.set(user_id or session_id)
+    try:
+        yield
+    finally:
+        _LANGFUSE_TRACE_CONTEXT.reset(token_ctx)
+        _LANGFUSE_SESSION_ID.reset(token_session)
+        _LANGFUSE_USER_ID.reset(token_user)
+
+
+@contextmanager
+def langfuse_trace_span(name: str) -> Iterator[object | None]:
+    """Open a Langfuse span bound to the current session trace context."""
+    status = resolve_langfuse_status()
+    if not status.enabled:
+        yield None
+        return
+    trace_context = _LANGFUSE_TRACE_CONTEXT.get()
+    if not trace_context:
+        yield None
+        return
+    try:
+        from langfuse import get_client
+    except Exception:  # pragma: no cover - defensive
+        yield None
+        return
+    try:
+        langfuse = get_client()
+        with langfuse.start_as_current_observation(
+            as_type="span",
+            name=name,
+            trace_context=trace_context,
+        ) as span:
+            yield span
+    except Exception:  # pragma: no cover - defensive
+        yield None
 
 
 def _ensure_langfuse_client(config) -> None:
@@ -149,6 +229,8 @@ __all__ = [
     "ComponentStatus",
     "build_langfuse_handler",
     "format_component_status",
+    "langfuse_session_context",
+    "langfuse_trace_span",
     "resolve_home_assistant_status",
     "resolve_langfuse_status",
 ]

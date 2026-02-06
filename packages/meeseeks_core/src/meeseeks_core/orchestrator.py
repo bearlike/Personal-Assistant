@@ -9,6 +9,7 @@ from meeseeks_core.action_runner import ActionPlanRunner
 from meeseeks_core.classes import ActionStep, OrchestrationState, TaskQueue
 from meeseeks_core.common import get_logger
 from meeseeks_core.compaction import should_compact, summarize_events
+from meeseeks_core.components import langfuse_session_context
 from meeseeks_core.config import get_config_value
 from meeseeks_core.context import ContextBuilder
 from meeseeks_core.hooks import HookManager, default_hook_manager
@@ -69,6 +70,27 @@ class Orchestrator:
         if session_id is None:
             session_id = self._session_store.create_session()
 
+        with langfuse_session_context(session_id):
+            return self._run_with_session_context(
+                user_query,
+                max_iters=max_iters,
+                initial_task_queue=initial_task_queue,
+                return_state=return_state,
+                session_id=session_id,
+                mode=mode,
+            )
+
+    def _run_with_session_context(
+        self,
+        user_query: str,
+        *,
+        max_iters: int,
+        initial_task_queue: TaskQueue | None,
+        return_state: bool,
+        session_id: str,
+        mode: str | None,
+    ) -> TaskQueue | tuple[TaskQueue, OrchestrationState]:
+        """Run orchestration with Langfuse session context set."""
         state = OrchestrationState(goal=user_query, session_id=session_id)
         resolved_mode = self._resolve_mode(user_query, mode)
         state.summary = self._session_store.load_summary(session_id)
