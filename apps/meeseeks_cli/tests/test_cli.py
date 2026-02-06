@@ -106,8 +106,7 @@ def test_build_approval_callback_none():
     state = CliState(session_id="s")
     registry = load_registry()
     assert (
-        _build_approval_callback(None, console, state, registry, auto_approve_enabled=False)
-        is None
+        _build_approval_callback(None, console, state, registry, auto_approve_enabled=False) is None
     )
 
 
@@ -120,9 +119,7 @@ def test_build_approval_callback_auto_approve(tmp_path, monkeypatch):
     def _boom(_prompt):
         raise AssertionError("prompt should not be called")
 
-    callback = _build_approval_callback(
-        _boom, console, state, registry, auto_approve_enabled=True
-    )
+    callback = _build_approval_callback(_boom, console, state, registry, auto_approve_enabled=True)
     step = DummyStep("tool", "set", "arg")
     assert callback is not None
     assert callback(step) is True

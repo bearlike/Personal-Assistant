@@ -105,9 +105,7 @@ class PromptBuilder:
         if self._tool_registry is not None:
             specs = tool_specs or self._tool_registry.list_specs()
             if specs:
-                tool_lines = "\n".join(
-                    f"- {spec.tool_id}: {spec.description}" for spec in specs
-                )
+                tool_lines = "\n".join(f"- {spec.tool_id}: {spec.description}" for spec in specs)
                 sections.append(f"Available tools:\n{tool_lines}")
             if mode == "act":
                 if include_tool_schemas:
@@ -184,9 +182,7 @@ class Planner:
         self._prompt_builder = PromptBuilder(tool_registry)
 
     @staticmethod
-    def _build_example_messages(
-        available_tool_ids: list[str], *, mode: str
-    ) -> list[BaseMessage]:
+    def _build_example_messages(available_tool_ids: list[str], *, mode: str) -> list[BaseMessage]:
         if mode != "plan":
             return []
 
@@ -321,11 +317,7 @@ class Planner:
         requested = self._infer_intent_capabilities(user_query)
         if not requested:
             return specs
-        filtered = [
-            spec
-            for spec in specs
-            if self._spec_capabilities(spec).intersection(requested)
-        ]
+        filtered = [spec for spec in specs if self._spec_capabilities(spec).intersection(requested)]
         return filtered or specs
 
     def _resolve_component_status(self) -> list[ComponentStatus]:

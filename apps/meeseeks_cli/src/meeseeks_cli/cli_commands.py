@@ -220,6 +220,7 @@ def _cmd_mode(context: CommandContext, args: list[str]) -> bool:
     context.console.print(f"Mode set to: {context.state.mode}")
     return True
 
+
 @REGISTRY.command("/mcp", "List MCP tools and servers (/mcp select|init)")
 def _cmd_mcp(context: CommandContext, args: list[str]) -> bool:
     if args and args[0].lower() == "init":

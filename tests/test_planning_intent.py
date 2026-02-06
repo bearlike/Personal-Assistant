@@ -43,9 +43,7 @@ def test_filter_specs_by_intent_keeps_multiple_capabilities():
         _spec("aider_read_file_tool", kind="local"),
         _spec("home_assistant_tool", kind="local"),
     ]
-    filtered = planner._filter_specs_by_intent(
-        specs, "Search the web and open the local file"
-    )
+    filtered = planner._filter_specs_by_intent(specs, "Search the web and open the local file")
     tool_ids = {spec.tool_id for spec in filtered}
     assert tool_ids == {
         "mcp_utils_internet_search_searxng_web_search",

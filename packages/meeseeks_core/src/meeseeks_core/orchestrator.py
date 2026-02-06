@@ -174,9 +174,7 @@ class Orchestrator:
 
         return (task_queue, state) if return_state else task_queue
 
-    def _run_action_plan(
-        self, session_id: str, task_queue: TaskQueue, *, mode: str
-    ) -> TaskQueue:
+    def _run_action_plan(self, session_id: str, task_queue: TaskQueue, *, mode: str) -> TaskQueue:
         reflector = StepReflector(self._model_name)
         allowed_tools = None
         if mode == "plan":
@@ -312,9 +310,7 @@ class Orchestrator:
         return "act"
 
     @staticmethod
-    def _should_replan(
-        task_queue: TaskQueue, iteration: int, max_iters: int, *, mode: str
-    ) -> bool:
+    def _should_replan(task_queue: TaskQueue, iteration: int, max_iters: int, *, mode: str) -> bool:
         if iteration >= max_iters - 1:
             return False
         if mode == "plan":

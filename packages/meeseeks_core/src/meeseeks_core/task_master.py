@@ -72,9 +72,7 @@ def generate_action_plan(
         selected_events,
         resolved_model,
     )
-    return Planner(tool_registry).generate(
-        user_query, resolved_model, context=context, mode=mode
-    )
+    return Planner(tool_registry).generate(user_query, resolved_model, context=context, mode=mode)
 
 
 def run_action_plan(
