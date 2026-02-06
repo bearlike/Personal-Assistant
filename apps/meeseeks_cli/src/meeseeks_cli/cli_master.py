@@ -72,6 +72,7 @@ from meeseeks_core.common import MockSpeaker, format_action_argument, get_logger
 from meeseeks_core.components import resolve_langfuse_status
 from meeseeks_core.config import (
     AppConfig,
+    get_app_config_path,
     get_config,
     get_config_value,
     get_mcp_config_path,
@@ -372,6 +373,19 @@ def run_cli(args: argparse.Namespace) -> int:
     """
     console = Console(color_system=None if args.no_color else "auto")
     config = get_config()
+    logging.info(
+        "Config paths: app=%s mcp=%s",
+        get_app_config_path(),
+        get_mcp_config_path() or "(disabled)",
+    )
+    logging.info(
+        "LLM config: default=%s action_plan=%s tool=%s api_base=%s model_override=%s",
+        get_config_value("llm", "default_model", default=""),
+        get_config_value("llm", "action_plan_model", default=""),
+        get_config_value("llm", "tool_model", default=""),
+        get_config_value("llm", "api_base", default=""),
+        args.model or "",
+    )
     if config.runtime.preflight_enabled:
         start_preflight(
             config,
