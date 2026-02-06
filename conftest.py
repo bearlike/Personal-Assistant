@@ -28,6 +28,7 @@ from meeseeks_core.config import (
     set_mcp_config_path,
 )
 
+
 @pytest.fixture(autouse=True)
 def app_config_file(tmp_path: Path):
     """Write a fresh app config file and point the loader at it."""

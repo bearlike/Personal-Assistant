@@ -559,9 +559,7 @@ def _maybe_warn_missing_configs(
         console.print(f"Home Assistant disabled: {ha_reason}", style="yellow")
 
     disabled_tools = [
-        spec
-        for spec in tool_registry.list_specs(include_disabled=True)
-        if not spec.enabled
+        spec for spec in tool_registry.list_specs(include_disabled=True) if not spec.enabled
     ]
     for spec in disabled_tools:
         reason = spec.metadata.get("disabled_reason") or "disabled"
@@ -579,9 +577,7 @@ def _maybe_warn_missing_configs(
 
 def _render_preflight_warnings(console: Console, results: dict[str, dict[str, object]]) -> None:
     failures = [
-        (name, info)
-        for name, info in results.items()
-        if info.get("enabled") and not info.get("ok")
+        (name, info) for name, info in results.items() if info.get("enabled") and not info.get("ok")
     ]
     for name, info in failures:
         reason = info.get("reason") or "unknown failure"

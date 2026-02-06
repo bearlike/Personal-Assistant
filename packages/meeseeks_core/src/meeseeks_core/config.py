@@ -262,14 +262,17 @@ class LangfuseConfig(BaseModel):
         if not self.secret_key:
             missing.append("langfuse.secret_key")
         if missing:
-            return False, "missing langfuse.public_key/langfuse.secret_key", {
-                "required_config": missing
-            }
+            return (
+                False,
+                "missing langfuse.public_key/langfuse.secret_key",
+                {"required_config": missing},
+            )
         try:
             from langfuse.callback import CallbackHandler  # noqa: F401
         except ImportError:
             return False, "langfuse not installed", {}
         return True, None, {}
+
 
 class HomeAssistantConfig(BaseModel):
     enabled: bool = Field(False, example=False)
@@ -289,10 +292,13 @@ class HomeAssistantConfig(BaseModel):
         if not self.token:
             missing.append("home_assistant.token")
         if missing:
-            return False, "missing home_assistant.url/home_assistant.token", {
-                "required_config": missing
-            }
+            return (
+                False,
+                "missing home_assistant.url/home_assistant.token",
+                {"required_config": missing},
+            )
         return True, None, {}
+
 
 class PermissionsConfig(BaseModel):
     policy_path: str = Field("", example="./configs/policy.json")
@@ -337,6 +343,7 @@ class APIConfig(BaseModel):
 
 class AppConfig(BaseModel):
     """Typed configuration for the Meeseeks runtime."""
+
     runtime: RuntimeConfig = Field(default_factory=RuntimeConfig)
     llm: LLMConfig = Field(default_factory=LLMConfig)
     context: ContextConfig = Field(default_factory=ContextConfig)
@@ -370,7 +377,7 @@ class AppConfig(BaseModel):
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(self.to_json(indent=indent) + "\n", encoding="utf-8")
 
-async def preflight(self, *, disable_on_failure: bool = True) -> dict[str, dict[str, Any]]:
+    async def preflight(self, *, disable_on_failure: bool = True) -> dict[str, dict[str, Any]]:
         """Run async validation checks for optional integrations."""
         results: dict[str, ConfigCheck] = {}
 

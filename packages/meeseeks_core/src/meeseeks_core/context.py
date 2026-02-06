@@ -86,9 +86,7 @@ class ContextBuilder:
         candidate_events = context_events[:-recent_limit] if recent_limit > 0 else context_events
         budget = get_token_budget(events, summary, model_name)
         selected_events: list[EventRecord] | None = None
-        selection_threshold = float(
-            get_config_value("context", "selection_threshold", default=0.8)
-        )
+        selection_threshold = float(get_config_value("context", "selection_threshold", default=0.8))
         if (
             bool(get_config_value("context", "selection_enabled", default=True))
             and candidate_events

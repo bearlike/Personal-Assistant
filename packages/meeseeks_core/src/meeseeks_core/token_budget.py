@@ -57,9 +57,7 @@ def _load_context_overrides() -> dict[str, int]:
 
 def get_context_window(model_name: str | None) -> int:
     """Resolve the context window for a model name or default."""
-    default_window = int(
-        get_config_value("token_budget", "default_context_window", default=128000)
-    )
+    default_window = int(get_config_value("token_budget", "default_context_window", default=128000))
     if not model_name:
         return default_window
     overrides = _load_context_overrides()
@@ -112,9 +110,7 @@ def get_token_budget(
     context_window = get_context_window(model_name)
     remaining_tokens = max(context_window - total_tokens, 0)
     if threshold is None:
-        threshold = float(
-            get_config_value("token_budget", "auto_compact_threshold", default=0.8)
-        )
+        threshold = float(get_config_value("token_budget", "auto_compact_threshold", default=0.8))
     utilization = total_tokens / context_window if context_window else 0.0
     return TokenBudget(
         total_tokens=total_tokens,
