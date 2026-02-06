@@ -288,6 +288,8 @@ def _ensure_auto_manifest(mcp_config_path: str) -> str | None:
             if tool.get("kind") != "mcp":
                 continue
             server_name = tool.get("server")
+            if not isinstance(server_name, str) or not server_name:
+                continue
             if not global_failure and server_name not in failures:
                 continue
             tool_id = tool.get("tool_id")
