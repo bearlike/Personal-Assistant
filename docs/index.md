@@ -45,17 +45,20 @@ Prompts are packaged under `packages/meeseeks_core/src/meeseeks_core/prompts/`.
 
 ```mermaid
 flowchart LR
+  User --> CLI
   User --> Chat
   User --> API
   HA --> API
-  User --> CLI
+  CLI --> Core
   Chat --> Core
   API --> Core
-  CLI --> Core
-  Core --> Tools
-  Tools --> HomeAssistant
+  Core --> Planner
+  Planner --> Tools
+  Tools --> LocalTools
   Tools --> MCP
+  Tools --> HomeAssistant
   Core --> SessionStore
+  Core --> Langfuse
 ```
 
 ## Getting started

@@ -100,17 +100,20 @@ Requests flow through a single core engine used by every interface, so behavior 
 
 ```mermaid
 flowchart LR
+  User --> CLI
   User --> Chat
   User --> API
   HA --> API
-  User --> CLI
+  CLI --> Core
   Chat --> Core
   API --> Core
-  CLI --> Core
-  Core --> Tools
+  Core --> Planner
+  Planner --> Tools
+  Tools --> LocalTools
+  Tools --> MCP
   Tools --> HomeAssistant
-  Tools --> External_MCPs
   Core --> SessionStore
+  Core --> Langfuse
 ```
 
 ## Documentation
