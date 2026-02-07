@@ -4,8 +4,6 @@
 <p align="center">
     <a href="https://deepwiki.com/bearlike/Assistant"><img alt="Ask DeepWiki" src="https://deepwiki.com/badge.svg"></a>
     <a href="https://github.com/bearlike/Assistant/actions/workflows/docker-buildx.yml"><img alt="Build and Push Docker Images" src="https://github.com/bearlike/Assistant/actions/workflows/docker-buildx.yml/badge.svg"></a>
-    <a href="https://codecov.io/gh/bearlike/Assistant"><img alt="Coverage" src="https://codecov.io/gh/bearlike/Assistant/branch/main/graph/badge.svg"></a>
-    <a href="https://codecov.io/gh/bearlike/Assistant?flags=core"><img alt="Coverage (core)" src="https://codecov.io/gh/bearlike/Assistant/branch/main/graph/badge.svg?flags=core"></a>
     <a href="https://github.com/bearlike/Assistant/actions/workflows/lint.yml"><img alt="Lint" src="https://github.com/bearlike/Assistant/actions/workflows/lint.yml/badge.svg"></a>
     <a href="https://github.com/bearlike/Assistant/actions/workflows/docs.yml"><img alt="Docs" src="https://github.com/bearlike/Assistant/actions/workflows/docs.yml/badge.svg"></a>
     <a href="https://github.com/bearlike/Assistant/releases"><img src="https://img.shields.io/github/v/release/bearlike/Assistant" alt="GitHub Release"></a>
