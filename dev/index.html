@@ -615,17 +615,20 @@
 <li>Tool results and summaries are stored in a session transcript for continuity.</li>
 </ul>
 <pre><code class="language-mermaid">flowchart LR
+  User --&gt; CLI
   User --&gt; Chat
   User --&gt; API
   HA --&gt; API
-  User --&gt; CLI
+  CLI --&gt; Core
   Chat --&gt; Core
   API --&gt; Core
-  CLI --&gt; Core
-  Core --&gt; Tools
-  Tools --&gt; HomeAssistant
+  Core --&gt; Planner
+  Planner --&gt; Tools
+  Tools --&gt; LocalTools
   Tools --&gt; MCP
+  Tools --&gt; HomeAssistant
   Core --&gt; SessionStore
+  Core --&gt; Langfuse
 </code></pre>
 <h2 id="getting-started">Getting started</h2>
 <p>See <a href="getting-started/">getting-started.md</a> for full setup (env, MCP, configs, and how to run each interface).</p>
