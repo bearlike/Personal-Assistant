@@ -6,15 +6,14 @@ Single-user REST API with session-based orchestration and event polling.
 
 from __future__ import annotations
 
+import threading
 from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timezone
-import threading
 
 from flask import Flask, request
 from flask_restx import Api, Resource, fields
-
 from meeseeks_core.classes import TaskQueue
 from meeseeks_core.common import get_logger
 from meeseeks_core.config import get_config, get_config_value, start_preflight
