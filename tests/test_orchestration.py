@@ -47,7 +47,11 @@ def _edit_block(path: str, search: str, replace: str) -> str:
 
 
 def _types_in_order(events, expected):
-    indices = [next(i for i, event in enumerate(events) if event["type"] == value) for value in expected]
+    indices = []
+    for value in expected:
+        indices.append(
+            next(i for i, event in enumerate(events) if event["type"] == value)
+        )
     assert indices == sorted(indices)
 
 
