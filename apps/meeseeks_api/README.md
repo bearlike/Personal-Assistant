@@ -14,4 +14,11 @@ uv sync --extra api
 uv run meeseeks-api
 ```
 
+## Core endpoints
+- `POST /api/sessions` create a session
+- `GET /api/sessions` list sessions
+- `POST /api/sessions/{session_id}/query` enqueue a run or core command
+- `GET /api/sessions/{session_id}/events?after=...` poll events
+- `POST /api/query` legacy synchronous endpoint
+
 [Link to GitHub Repository](https://github.com/bearlike/Assistant)

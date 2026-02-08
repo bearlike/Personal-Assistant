@@ -18,6 +18,8 @@ This page is generated from inline docstrings via mkdocstrings.
 
 ::: meeseeks_core.permissions
 
+::: meeseeks_core.session_runtime
+
 ::: meeseeks_core.session_store
 
 ::: meeseeks_core.task_master

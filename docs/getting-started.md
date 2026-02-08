@@ -81,6 +81,14 @@ MCP tools are auto-discovered from `configs/mcp.json`.
 - Chat UI: `uv run meeseeks-chat`
 - Home Assistant integration: install `meeseeks_ha_conversation/` as a custom component and point it at the API.
 
+API notes:
+- Session runtime endpoints support async runs with polling:
+  - `POST /api/sessions` create session
+  - `POST /api/sessions/{session_id}/query` enqueue or core commands
+  - `GET /api/sessions/{session_id}/events?after=...` poll events
+  - `GET /api/sessions` list sessions
+  - `POST /api/query` legacy synchronous endpoint
+
 ## Docker (optional)
 - Build images using `docker/Dockerfile.api` and `docker/Dockerfile.chat`.
 - Mount `configs/app.json` (and `configs/mcp.json` if you use MCP).

@@ -15,6 +15,7 @@ Meeseeks is an AI task agent assistant that breaks a request into small actions,
 
 **Reference**
 - [API reference](reference.md) - mkdocstrings reference for core modules
+- [Session runtime](session-runtime.md) - shared runtime used by CLI + API
 
 ## Feature highlights (quick view)
 - Plan → act → observe loop to keep work grounded in tool results.
@@ -25,6 +26,7 @@ Meeseeks is an AI task agent assistant that breaks a request into small actions,
 - Context snapshots built from recent turns plus summaries of prior activity.
 - Step-level reflection after tool execution to validate outcomes.
 - Permission gate with approval callbacks plus lightweight hooks around tool execution.
+- Shared session runtime for polling, cancellation, and session summaries across interfaces.
 - Optional components (Langfuse, Home Assistant) auto-disable when not configured.
 - Langfuse tracing is session-scoped when enabled, grouping multi-turn runs.
 
@@ -70,6 +72,8 @@ See [getting-started.md](getting-started.md) for full setup (env, MCP, configs, 
 - `/mcp` list MCP servers/tools (use `/mcp select` to filter)
 - `/mcp init` scaffold an MCP config file
 - `/summarize` compact the session
+- `/status` show session status
+- `/terminate` cancel the active run
 - `/new` start a fresh session
 - `/automatic` auto-approve tool actions for the session
 - `/quit` exit the CLI

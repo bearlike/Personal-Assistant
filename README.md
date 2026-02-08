@@ -83,6 +83,7 @@ Optional features that can be installed when needed.
 - **Interactive CLI controls.** Use a model picker, MCP browser, session summary, and token budget commands.
 - **Inline approvals.** Rich-based approval prompts render with padded, dotted borders and clear after input.
 - **Unified experience.** Web, API, Home Assistant, and CLI interfaces share the same core engine to reduce duplicated maintenance.
+- **Shared session runtime.** CLI and API use the same session runtime for polling, cancellation, and summaries.
 
 ## Monorepo layout
 
@@ -131,6 +132,7 @@ The docs landing page mirrors the feature highlights in this README. Keep both u
 
 **Reference**
 - [docs/reference.md](docs/reference.md) - API reference (mkdocstrings)
+- [docs/session-runtime.md](docs/session-runtime.md) - shared session runtime used by CLI + API
 
 ## Installation (quick)
 
