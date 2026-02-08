@@ -6,11 +6,11 @@ Single-user REST API with session-based orchestration and event polling.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import threading
-from typing import Callable
 
 from flask import Flask, request
 from flask_restx import Api, Resource, fields
@@ -50,6 +50,8 @@ def _parse_iso(value: str | None) -> datetime | None:
 
 @dataclass(frozen=True)
 class RunHandle:
+    """Active orchestration thread tracking."""
+
     thread: threading.Thread
     cancel_event: threading.Event
     started_at: str
@@ -59,6 +61,7 @@ class RunRegistry:
     """Track active orchestration threads per session."""
 
     def __init__(self) -> None:
+        """Initialize the run registry."""
         self._lock = threading.Lock()
         self._runs: dict[str, RunHandle] = {}
 
@@ -67,6 +70,7 @@ class RunRegistry:
         session_id: str,
         target: Callable[[threading.Event], None],
     ) -> bool:
+        """Start a new run for the session if one is not already active."""
         with self._lock:
             existing = self._runs.get(session_id)
             if existing and existing.thread.is_alive():
@@ -100,6 +104,7 @@ class RunRegistry:
                     self._runs.pop(session_id, None)
 
     def cancel(self, session_id: str) -> bool:
+        """Request cancellation for an active session run."""
         with self._lock:
             handle = self._runs.get(session_id)
             if not handle:
@@ -108,11 +113,13 @@ class RunRegistry:
             return True
 
     def is_running(self, session_id: str) -> bool:
+        """Return True if the session has an active run."""
         with self._lock:
             handle = self._runs.get(session_id)
             return bool(handle and handle.thread.is_alive())
 
     def get_cancel_event(self, session_id: str) -> threading.Event | None:
+        """Return the cancel event for a session, if present."""
         with self._lock:
             handle = self._runs.get(session_id)
             return handle.cancel_event if handle else None
@@ -174,6 +181,7 @@ task_queue_model = api.model(
 
 @app.before_request
 def log_request_info() -> None:
+    """Log request metadata for debugging."""
     logging.debug("Endpoint: {}", request.endpoint)
     logging.debug("Headers: {}", request.headers)
     logging.debug("Body: {}", request.get_data())
@@ -275,8 +283,11 @@ def _run_orchestration(
 
 @ns.route("/sessions")
 class Sessions(Resource):
+    """List and create sessions."""
+
     @api.doc(security="apikey")
     def get(self) -> tuple[dict, int]:
+        """List sessions for the single user."""
         auth_error = _require_api_key()
         if auth_error:
             return auth_error
@@ -285,6 +296,7 @@ class Sessions(Resource):
 
     @api.doc(security="apikey")
     def post(self) -> tuple[dict, int]:
+        """Create a new session."""
         auth_error = _require_api_key()
         if auth_error:
             return auth_error
@@ -301,8 +313,11 @@ class Sessions(Resource):
 
 @ns.route("/sessions/<string:session_id>/query")
 class SessionQuery(Resource):
+    """Enqueue a query or process slash commands for a session."""
+
     @api.doc(security="apikey")
     def post(self, session_id: str) -> tuple[dict, int]:
+        """Handle a session query."""
         auth_error = _require_api_key()
         if auth_error:
             return auth_error
@@ -324,9 +339,7 @@ class SessionQuery(Resource):
 
         started = run_registry.start(
             session_id,
-            target=lambda cancel_event: _run_orchestration(
-                session_id, user_query, cancel_event
-            ),
+            target=lambda cancel_event: _run_orchestration(session_id, user_query, cancel_event),
         )
         if not started:
             return {"message": "Session is already running."}, 409
@@ -335,15 +348,22 @@ class SessionQuery(Resource):
 
 @ns.route("/sessions/<string:session_id>/events")
 class SessionEvents(Resource):
+    """Return session events for polling."""
+
     @api.doc(security="apikey")
     def get(self, session_id: str) -> tuple[dict, int]:
+        """Return events for the session."""
         auth_error = _require_api_key()
         if auth_error:
             return auth_error
         after_ts = request.args.get("after")
         events = session_store.load_transcript(session_id)
         events = _filter_events(events, after_ts)
-        return {"session_id": session_id, "events": events, "running": run_registry.is_running(session_id)}, 200
+        return {
+            "session_id": session_id,
+            "events": events,
+            "running": run_registry.is_running(session_id),
+        }, 200
 
 
 @ns.route("/query")
@@ -366,6 +386,7 @@ class MeeseeksQuery(Resource):
     @api.response(400, "Invalid input")
     @api.response(401, "Unauthorized")
     def post(self) -> tuple[dict, int]:
+        """Process a synchronous query (legacy)."""
         auth_error = _require_api_key()
         if auth_error:
             return auth_error
@@ -404,6 +425,7 @@ class MeeseeksQuery(Resource):
 
 
 def main() -> None:
+    """Run the Meeseeks API server."""
     app.run(debug=True, host="0.0.0.0", port=5123)
 
 

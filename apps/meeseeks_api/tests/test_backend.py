@@ -136,9 +136,7 @@ def _fake_run(session_id: str, user_query: str, cancel_event):
             },
         )
         return
-    backend.session_store.append_event(
-        session_id, {"type": "assistant", "payload": {"text": "ok"}}
-    )
+    backend.session_store.append_event(session_id, {"type": "assistant", "payload": {"text": "ok"}})
     backend.session_store.append_event(
         session_id,
         {
@@ -158,6 +156,7 @@ def _wait_for_run(session_id: str, timeout: float = 2.0) -> None:
 
 
 def test_sessions_create_list_and_events(monkeypatch, tmp_path):
+    """Create a session, run, and assert list/events output."""
     _reset_backend(tmp_path, monkeypatch)
     monkeypatch.setattr(backend, "_run_orchestration", _fake_run)
     client = backend.app.test_client()
@@ -198,6 +197,7 @@ def test_sessions_create_list_and_events(monkeypatch, tmp_path):
 
 
 def test_slash_command_terminate(monkeypatch, tmp_path):
+    """Terminate a running session via slash command."""
     _reset_backend(tmp_path, monkeypatch)
 
     def slow_run(session_id: str, user_query: str, cancel_event):
