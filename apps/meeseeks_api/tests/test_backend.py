@@ -213,6 +213,46 @@ def test_sessions_list_skips_empty(monkeypatch, tmp_path):
     assert all(item["session_id"] != empty_session for item in sessions)
 
 
+def test_sessions_archive_and_list(monkeypatch, tmp_path):
+    """Archive sessions and include them when requested."""
+    _reset_backend(tmp_path, monkeypatch)
+    client = backend.app.test_client()
+    session_id = backend.session_store.create_session()
+    backend.session_store.append_event(
+        session_id, {"type": "user", "payload": {"text": "hello"}}
+    )
+
+    archive = client.post(
+        f"/api/sessions/{session_id}/archive",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+    )
+    assert archive.status_code == 200
+    assert archive.get_json()["archived"] is True
+
+    listing = client.get(
+        "/api/sessions",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+    )
+    sessions = listing.get_json()["sessions"]
+    assert all(item["session_id"] != session_id for item in sessions)
+
+    listing = client.get(
+        "/api/sessions?include_archived=1",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+    )
+    sessions = listing.get_json()["sessions"]
+    assert any(item["session_id"] == session_id for item in sessions)
+    archived_entry = next(item for item in sessions if item["session_id"] == session_id)
+    assert archived_entry.get("archived") is True
+
+    unarchive = client.delete(
+        f"/api/sessions/{session_id}/archive",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+    )
+    assert unarchive.status_code == 200
+    assert unarchive.get_json()["archived"] is False
+
+
 def test_slash_command_terminate(monkeypatch, tmp_path):
     """Terminate a running session via slash command."""
     _reset_backend(tmp_path, monkeypatch)

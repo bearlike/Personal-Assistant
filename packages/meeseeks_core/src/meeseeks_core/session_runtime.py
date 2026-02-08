@@ -209,14 +209,17 @@ class SessionRuntime:
             "done_reason": done_reason,
             "running": running,
             "context": context or {},
+            "archived": self._session_store.is_archived(session_id),
         }
 
-    def list_sessions(self) -> list[dict[str, object]]:
+    def list_sessions(self, *, include_archived: bool = False) -> list[dict[str, object]]:
         """List sessions with summary metadata."""
         summaries: list[dict[str, object]] = []
         for session_id in self._session_store.list_sessions():
             summary = self.summarize_session(session_id)
             if summary.get("created_at") is None and not summary.get("running"):
+                continue
+            if not include_archived and summary.get("archived"):
                 continue
             summaries.append(summary)
         return summaries

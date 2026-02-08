@@ -113,6 +113,15 @@ def _handle_slash_command(session_id: str, user_query: str) -> tuple[dict, int] 
     return None
 
 
+def _parse_bool(value: str | None) -> bool:
+    if value is None:
+        return False
+    lowered = value.strip().lower()
+    if not lowered:
+        return False
+    return lowered not in {"0", "false", "no", "off"}
+
+
 @ns.route("/sessions")
 class Sessions(Resource):
     """List and create sessions."""
@@ -123,7 +132,8 @@ class Sessions(Resource):
         auth_error = _require_api_key()
         if auth_error:
             return auth_error
-        sessions = runtime.list_sessions()
+        include_archived = _parse_bool(request.args.get("include_archived"))
+        sessions = runtime.list_sessions(include_archived=include_archived)
         return {"sessions": sessions}, 200
 
     @api.doc(security="apikey")
@@ -196,6 +206,33 @@ class SessionEvents(Resource):
             "events": events,
             "running": runtime.is_running(session_id),
         }, 200
+
+
+@ns.route("/sessions/<string:session_id>/archive")
+class SessionArchive(Resource):
+    """Archive or unarchive a session."""
+
+    @api.doc(security="apikey")
+    def post(self, session_id: str) -> tuple[dict, int]:
+        """Archive a session."""
+        auth_error = _require_api_key()
+        if auth_error:
+            return auth_error
+        if session_id not in runtime.session_store.list_sessions():
+            return {"message": "Session not found."}, 404
+        runtime.session_store.archive_session(session_id)
+        return {"session_id": session_id, "archived": True}, 200
+
+    @api.doc(security="apikey")
+    def delete(self, session_id: str) -> tuple[dict, int]:
+        """Unarchive a session."""
+        auth_error = _require_api_key()
+        if auth_error:
+            return auth_error
+        if session_id not in runtime.session_store.list_sessions():
+            return {"message": "Session not found."}, 404
+        runtime.session_store.unarchive_session(session_id)
+        return {"session_id": session_id, "archived": False}, 200
 
 
 @ns.route("/tools")

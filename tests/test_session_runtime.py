@@ -86,3 +86,23 @@ def test_runtime_list_sessions_skips_empty(tmp_path):
     session_ids = {session["session_id"] for session in sessions}
     assert filled_session in session_ids
     assert empty_session not in session_ids
+
+
+def test_runtime_list_sessions_filters_archived(tmp_path):
+    """Filter archived sessions unless requested."""
+    store = SessionStore(root_dir=str(tmp_path))
+    runtime = SessionRuntime(session_store=store)
+    active_session = store.create_session()
+    archived_session = store.create_session()
+    store.append_event(active_session, {"type": "user", "payload": {"text": "hello"}})
+    store.append_event(archived_session, {"type": "user", "payload": {"text": "bye"}})
+    store.archive_session(archived_session)
+
+    sessions = runtime.list_sessions()
+    session_ids = {session["session_id"] for session in sessions}
+    assert active_session in session_ids
+    assert archived_session not in session_ids
+
+    sessions_with_archived = runtime.list_sessions(include_archived=True)
+    all_ids = {session["session_id"] for session in sessions_with_archived}
+    assert archived_session in all_ids
