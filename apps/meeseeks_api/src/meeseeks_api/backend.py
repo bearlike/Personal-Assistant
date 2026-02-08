@@ -16,6 +16,7 @@ from meeseeks_core.config import get_config, get_config_value, start_preflight
 from meeseeks_core.permissions import auto_approve
 from meeseeks_core.session_runtime import SessionRuntime, parse_core_command
 from meeseeks_core.session_store import SessionStore
+from meeseeks_core.tool_registry import load_registry
 
 # Get the API token from app config
 MASTER_API_TOKEN = get_config_value("api", "master_token", default="msk-strong-password")
@@ -197,6 +198,33 @@ class SessionEvents(Resource):
         }, 200
 
 
+@ns.route("/tools")
+class Tools(Resource):
+    """List available tool integrations."""
+
+    @api.doc(security="apikey")
+    def get(self) -> tuple[dict, int]:
+        """Return tool specs for the UI."""
+        auth_error = _require_api_key()
+        if auth_error:
+            return auth_error
+        registry = load_registry()
+        specs = registry.list_specs(include_disabled=True)
+        tools = [
+            {
+                "tool_id": spec.tool_id,
+                "name": spec.name,
+                "kind": spec.kind,
+                "enabled": spec.enabled,
+                "description": spec.description,
+                "disabled_reason": spec.metadata.get("disabled_reason"),
+                "server": spec.metadata.get("server"),
+            }
+            for spec in specs
+        ]
+        return {"tools": tools}, 200
+
+
 @ns.route("/query")
 class MeeseeksQuery(Resource):
     """Legacy sync endpoint (CLI compatibility)."""
@@ -247,7 +275,7 @@ class MeeseeksQuery(Resource):
 
 def main() -> None:
     """Run the Meeseeks API server."""
-    app.run(debug=True, host="0.0.0.0", port=5123)
+    app.run(debug=True, host="0.0.0.0", port=5124)
 
 
 if __name__ == "__main__":

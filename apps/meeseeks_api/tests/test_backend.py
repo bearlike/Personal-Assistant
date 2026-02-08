@@ -242,3 +242,16 @@ def test_slash_command_terminate(monkeypatch, tmp_path):
     payload = events.get_json()
     assert payload["events"][-1]["type"] == "completion"
     assert payload["events"][-1]["payload"]["done_reason"] == "canceled"
+
+
+def test_tools_list(monkeypatch, tmp_path):
+    """Return tool metadata for the MCP picker."""
+    _reset_backend(tmp_path, monkeypatch)
+    client = backend.app.test_client()
+    response = client.get(
+        "/api/tools",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+    )
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert "tools" in payload
