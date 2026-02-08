@@ -102,23 +102,85 @@ Requests flow through a single core engine used by every interface, so behavior 
 
 ```mermaid
 flowchart LR
+  subgraph Clients["Clients / Interfaces"]
+    User[User]
+    CLI["CLI\n(apps/meeseeks_cli)"]
+    Chat["Chat UI\n(apps/meeseeks_chat)"]
+    API["REST API\n(apps/meeseeks_api)"]
+    HA["Home Assistant\n(meeseeks_ha_conversation)"]
+  end
+
+  subgraph Runtime["Shared Runtime\n(packages/meeseeks_core/session_runtime.py)"]
+    SessionRuntime["SessionRuntime"]
+    RunRegistry["RunRegistry"]
+  end
+
+  subgraph Core["Core Orchestration\n(packages/meeseeks_core)"]
+    TaskMaster["orchestrate_session\n(task_master.py)"]
+    Orchestrator["Orchestrator\n(orchestrator.py)"]
+    ActionPlanRunner["ActionPlanRunner\n(action_runner.py)"]
+    ContextBuilder["ContextBuilder\n(context.py)"]
+    ActionStep["ActionStep\n(classes.py)"]
+    TaskQueue["TaskQueue\n(classes.py)"]
+  end
+
+  subgraph LLM["LLM Abstraction\n(packages/meeseeks_core/llm.py)"]
+    ChatModel["ChatModel (Protocol)"]
+    BuildChatModel["build_chat_model()"]
+  end
+
+  subgraph Tools["Tool Abstractions + Implementations"]
+    ToolRegistry["ToolRegistry\n(tool_registry.py)"]
+    AbstractTool["AbstractTool\n(classes.py)"]
+    LocalTools["Local tools\n(Aider adapters)"]
+    MCPTools["MCP tools"]
+    HATools["Home Assistant tools"]
+  end
+
+  subgraph Store["Session Storage\n(packages/meeseeks_core/session_store.py)"]
+    SessionStore["SessionStore"]
+  end
+
+  subgraph Events["Session events"]
+    EventLog["JSONL event log"]
+    Polling["API polling\n(/events?after=...)"]
+  end
+
   User --> CLI
   User --> Chat
   User --> API
   HA --> API
-  CLI --> Runtime
-  Chat --> Runtime
-  API --> Runtime
-  Runtime --> Core
-  Runtime --> SessionStore
-  Runtime --> Planner
-  Planner --> Tools
-  Tools --> LocalTools
-  Tools --> MCP
-  Tools --> HomeAssistant
-  Runtime --> Events["Session events (JSONL)"]
-  Events --> Polling["Event polling (API only)"]
-  Core --> Langfuse
+
+  CLI --> SessionRuntime
+  Chat --> SessionRuntime
+  API --> SessionRuntime
+
+  SessionRuntime --> TaskMaster
+  SessionRuntime --> SessionStore
+  SessionRuntime --> RunRegistry
+
+  TaskMaster --> Orchestrator
+  Orchestrator --> ActionPlanRunner
+  Orchestrator --> ContextBuilder
+  Orchestrator --> ToolRegistry
+  Orchestrator --> SessionStore
+
+  ActionPlanRunner --> TaskQueue
+  ActionPlanRunner --> ActionStep
+
+  ToolRegistry --> AbstractTool
+  AbstractTool --> LocalTools
+  AbstractTool --> MCPTools
+  AbstractTool --> HATools
+
+  Orchestrator --> BuildChatModel
+  BuildChatModel --> ChatModel
+
+  SessionStore --> EventLog
+  EventLog --> Polling
+  API --> Polling
+
+  Orchestrator --> Langfuse
 ```
 
 ## Documentation
