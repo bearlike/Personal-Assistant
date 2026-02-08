@@ -54,6 +54,7 @@ Meeseeks is an AI task agent assistant built on a plan-act-observe orchestration
 - (✅) **Context compaction:** Summarizes long sessions and auto-compacts near the context budget.
 - (✅) **Token awareness:** Tracks context window usage and exposes budgets in the CLI.
 - (✅) **Selective recall:** Builds context from recent turns plus a summary of prior events.
+- (✅) **Session listing hygiene:** Filters empty sessions and supports archiving via the API.
 
 ## Model and provider support
 - (✅) **Model gateway:** Uses LiteLLM for OpenAI-compatible access across multiple providers.
@@ -62,7 +63,7 @@ Meeseeks is an AI task agent assistant built on a plan-act-observe orchestration
 
 ## Tooling and integrations
 - (✅) **Tool registry:** Discovers local tools and optional MCP tools with manual manifest overrides.
-- (✅) **Local file + shell tools:** Built-in Aider adapters for edit blocks, read files, list dirs, and shell commands (approval-gated).
+- (✅) **Local file + shell tools:** Built-in Aider adapters for edit blocks, read files, list dirs, and shell commands (approval-gated). Edit blocks require strict SEARCH/REPLACE format; the tool returns format guidance on mismatches.
 - (✅) **Home Assistant:** Ships a Conversation integration for voice control and entity actions.
 - (✅) **REST API:** Exposes the assistant over HTTP for third-party integration.
 - (✅) **Web chat UI:** Streamlit interface with plans, tool input types, and responses.

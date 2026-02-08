@@ -7,7 +7,8 @@ The session runtime is a small shared facade that powers both the CLI and the RE
 - Runs orchestration synchronously or in a background thread.
 - Tracks active runs per session and supports cancellation.
 - Filters session events for polling (`after` timestamp).
-- Summarizes a session (title, status, done reason, context).
+- Summarizes a session (title, status, done reason, context, archived flag).
+- Filters empty sessions from listings; archived sessions are hidden unless requested.
 
 ## Core commands
 These commands are supported across interfaces:
@@ -40,6 +41,12 @@ result = runtime.run_sync(user_query="Hello", session_id=session_id)
 runtime.start_async(session_id=session_id, user_query="Do the task")
 events = runtime.load_events(session_id, after=None)
 ```
+
+## Archiving behavior
+- `SessionStore.archive_session(session_id)` marks a session archived.
+- `SessionStore.unarchive_session(session_id)` removes the archive flag.
+- `SessionRuntime.list_sessions()` hides archived sessions by default. Use
+  `list_sessions(include_archived=True)` to include them.
 
 ## Design goals
 - Keep the core orchestration engine centralized.

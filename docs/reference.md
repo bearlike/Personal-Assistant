@@ -4,6 +4,8 @@ This page is generated from inline docstrings via mkdocstrings.
 
 ## Core
 
+SessionStore now includes archive helpers; see `meeseeks_core.session_store` for details.
+
 ::: meeseeks_core.classes
 
 ::: meeseeks_core.common

@@ -24,6 +24,7 @@ Meeseeks is an AI task agent assistant that breaks a request into small actions,
 - Built-in local file and shell tools (Aider adapters) for edit blocks, read, list, and shell execution.
 - Session transcripts with compaction for long runs and context budget awareness.
 - Context snapshots built from recent turns plus summaries of prior activity.
+- Session listings filter empty sessions and support archiving via the API.
 - Step-level reflection after tool execution to validate outcomes.
 - Permission gate with approval callbacks plus lightweight hooks around tool execution.
 - Shared session runtime for polling, cancellation, and session summaries across interfaces.
