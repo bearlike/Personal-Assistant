@@ -57,10 +57,10 @@ def test_query_success(monkeypatch):
     """Return a task result payload when authorized."""
     client = backend.app.test_client()
 
-    def fake_orchestrate(*args, **kwargs):
+    def fake_run_sync(*args, **kwargs):
         return _make_task_queue("ok")
 
-    monkeypatch.setattr(backend, "orchestrate_session", fake_orchestrate)
+    monkeypatch.setattr(backend.runtime, "run_sync", fake_run_sync)
     response = client.post(
         "/api/query",
         headers={"X-API-KEY": backend.MASTER_API_TOKEN},
@@ -76,14 +76,15 @@ def test_query_success(monkeypatch):
 def test_query_with_session_tag(monkeypatch, tmp_path):
     """Create or reuse a tagged session and pass it into orchestration."""
     backend.session_store = backend.SessionStore(root_dir=str(tmp_path))
+    backend.runtime = backend.SessionRuntime(session_store=backend.session_store)
     client = backend.app.test_client()
     captured = {}
 
-    def fake_orchestrate(*args, **kwargs):
+    def fake_run_sync(*args, **kwargs):
         captured["session_id"] = kwargs.get("session_id")
         return _make_task_queue("ok")
 
-    monkeypatch.setattr(backend, "orchestrate_session", fake_orchestrate)
+    monkeypatch.setattr(backend.runtime, "run_sync", fake_run_sync)
     response = client.post(
         "/api/query",
         headers={"X-API-KEY": backend.MASTER_API_TOKEN},
@@ -98,15 +99,16 @@ def test_query_with_session_tag(monkeypatch, tmp_path):
 def test_query_fork_from(monkeypatch, tmp_path):
     """Fork a session when requested and pass the fork into orchestration."""
     backend.session_store = backend.SessionStore(root_dir=str(tmp_path))
+    backend.runtime = backend.SessionRuntime(session_store=backend.session_store)
     source_session = backend.session_store.create_session()
     client = backend.app.test_client()
     captured = {}
 
-    def fake_orchestrate(*args, **kwargs):
+    def fake_run_sync(*args, **kwargs):
         captured["session_id"] = kwargs.get("session_id")
         return _make_task_queue("ok")
 
-    monkeypatch.setattr(backend, "orchestrate_session", fake_orchestrate)
+    monkeypatch.setattr(backend.runtime, "run_sync", fake_run_sync)
     response = client.post(
         "/api/query",
         headers={"X-API-KEY": backend.MASTER_API_TOKEN},
@@ -120,14 +122,14 @@ def test_query_fork_from(monkeypatch, tmp_path):
 
 def _reset_backend(tmp_path, monkeypatch):
     backend.session_store = backend.SessionStore(root_dir=str(tmp_path))
-    backend.run_registry = backend.RunRegistry()
+    backend.runtime = backend.SessionRuntime(session_store=backend.session_store)
 
 
-def _fake_run(session_id: str, user_query: str, cancel_event):
+def _fake_run_sync(*, session_id: str, user_query: str, should_cancel=None, **_kwargs):
     backend.session_store.append_event(
         session_id, {"type": "user", "payload": {"text": user_query}}
     )
-    if cancel_event.is_set():
+    if should_cancel and should_cancel():
         backend.session_store.append_event(
             session_id,
             {
@@ -149,7 +151,7 @@ def _fake_run(session_id: str, user_query: str, cancel_event):
 def _wait_for_run(session_id: str, timeout: float = 2.0) -> None:
     deadline = time.time() + timeout
     while time.time() < deadline:
-        if not backend.run_registry.is_running(session_id):
+        if not backend.runtime.is_running(session_id):
             return
         time.sleep(0.01)
     raise AssertionError("Run did not finish in time.")
@@ -158,7 +160,7 @@ def _wait_for_run(session_id: str, timeout: float = 2.0) -> None:
 def test_sessions_create_list_and_events(monkeypatch, tmp_path):
     """Create a session, run, and assert list/events output."""
     _reset_backend(tmp_path, monkeypatch)
-    monkeypatch.setattr(backend, "_run_orchestration", _fake_run)
+    monkeypatch.setattr(backend.runtime, "run_sync", _fake_run_sync)
     client = backend.app.test_client()
 
     create = client.post(
@@ -200,11 +202,11 @@ def test_slash_command_terminate(monkeypatch, tmp_path):
     """Terminate a running session via slash command."""
     _reset_backend(tmp_path, monkeypatch)
 
-    def slow_run(session_id: str, user_query: str, cancel_event):
+    def slow_run_sync(*, session_id: str, user_query: str, should_cancel=None, **_kwargs):
         backend.session_store.append_event(
             session_id, {"type": "user", "payload": {"text": user_query}}
         )
-        while not cancel_event.is_set():
+        while should_cancel and not should_cancel():
             time.sleep(0.01)
         backend.session_store.append_event(
             session_id,
@@ -214,7 +216,7 @@ def test_slash_command_terminate(monkeypatch, tmp_path):
             },
         )
 
-    monkeypatch.setattr(backend, "_run_orchestration", slow_run)
+    monkeypatch.setattr(backend.runtime, "run_sync", slow_run_sync)
     client = backend.app.test_client()
     session_id = backend.session_store.create_session()
 
