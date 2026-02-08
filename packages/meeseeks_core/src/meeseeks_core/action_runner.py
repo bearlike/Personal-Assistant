@@ -9,6 +9,7 @@ from dataclasses import dataclass
 
 from meeseeks_core.classes import ActionStep, TaskQueue
 from meeseeks_core.common import get_logger, get_mock_speaker
+from meeseeks_core.errors import ToolInputError
 from meeseeks_core.hooks import HookManager, default_hook_manager
 from meeseeks_core.permissions import (
     PermissionDecision,
@@ -203,7 +204,8 @@ class ActionPlanRunner:
     ) -> None:
         logging.error("Error processing action step: {}", exc)
         self._record_failure(action_step, str(exc), task_queue)
-        self._tool_registry.disable(action_step.action_consumer, f"Runtime error: {exc}")
+        if not isinstance(exc, ToolInputError):
+            self._tool_registry.disable(action_step.action_consumer, f"Runtime error: {exc}")
         self._emit_tool_result(action_step, None, error=str(exc))
         mock = get_mock_speaker()
         self._hook_manager.run_post_tool_use(action_step, mock(content=f"Tool error: {exc}"))

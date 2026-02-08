@@ -5,7 +5,10 @@ from __future__ import annotations
 import textwrap
 
 import pytest
+from meeseeks_core.classes import ActionStep
+from meeseeks_core.errors import ToolInputError
 from meeseeks_tools.aider_bridge import EditBlockApplyError, apply_search_replace_blocks
+from meeseeks_tools.integration.aider_edit_blocks import AiderEditBlockTool
 
 
 def _block(path: str, search: str, replace: str) -> str:
@@ -82,3 +85,36 @@ def test_search_miss_includes_hint(tmp_path):
         apply_search_replace_blocks(content, root=str(tmp_path), write=False)
 
     assert "Did you mean" in str(exc.value)
+
+
+def test_edit_block_tool_requires_blocks(tmp_path):
+    """Raise a tool input error when no blocks are provided."""
+    tool = AiderEditBlockTool()
+    step = ActionStep(
+        action_consumer="aider_edit_block_tool",
+        action_type="set",
+        action_argument={"content": "no edits here", "root": str(tmp_path)},
+    )
+    with pytest.raises(ToolInputError) as exc:
+        tool.set_state(step)
+    assert "SEARCH/REPLACE blocks" in str(exc.value)
+
+
+def test_edit_block_tool_wraps_apply_errors(tmp_path):
+    """Wrap apply errors with format guidance."""
+    target = tmp_path / "hello.txt"
+    target.write_text("alpha\nbeta\ngamma\ndelta\n", encoding="utf-8")
+    tool = AiderEditBlockTool()
+    step = ActionStep(
+        action_consumer="aider_edit_block_tool",
+        action_type="set",
+        action_argument={
+            "content": _block("hello.txt", "alpha\nbeta\ngamaa\ndelta\n", "there\n"),
+            "root": str(tmp_path),
+        },
+    )
+    with pytest.raises(ToolInputError) as exc:
+        tool.set_state(step)
+    message = str(exc.value)
+    assert "Did you mean" in message
+    assert "Expected format" in message
