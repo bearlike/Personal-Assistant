@@ -72,3 +72,17 @@ def test_runtime_start_async_and_cancel(tmp_path):
             break
         time.sleep(0.01)
     assert runtime.is_running(session_id) is False
+
+
+def test_runtime_list_sessions_skips_empty(tmp_path):
+    """Exclude sessions with no events from list output."""
+    store = SessionStore(root_dir=str(tmp_path))
+    runtime = SessionRuntime(session_store=store)
+    empty_session = store.create_session()
+    filled_session = store.create_session()
+    store.append_event(filled_session, {"type": "user", "payload": {"text": "hello"}})
+
+    sessions = runtime.list_sessions()
+    session_ids = {session["session_id"] for session in sessions}
+    assert filled_session in session_ids
+    assert empty_session not in session_ids

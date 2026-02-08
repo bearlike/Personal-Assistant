@@ -198,6 +198,21 @@ def test_sessions_create_list_and_events(monkeypatch, tmp_path):
     assert any(item["session_id"] == session_id for item in sessions)
 
 
+def test_sessions_list_skips_empty(monkeypatch, tmp_path):
+    """Do not list sessions without transcript events."""
+    _reset_backend(tmp_path, monkeypatch)
+    empty_session = backend.session_store.create_session()
+    client = backend.app.test_client()
+
+    listing = client.get(
+        "/api/sessions",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+    )
+    assert listing.status_code == 200
+    sessions = listing.get_json()["sessions"]
+    assert all(item["session_id"] != empty_session for item in sessions)
+
+
 def test_slash_command_terminate(monkeypatch, tmp_path):
     """Terminate a running session via slash command."""
     _reset_backend(tmp_path, monkeypatch)

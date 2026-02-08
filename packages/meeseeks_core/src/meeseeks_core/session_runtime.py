@@ -213,7 +213,13 @@ class SessionRuntime:
 
     def list_sessions(self) -> list[dict[str, object]]:
         """List sessions with summary metadata."""
-        return [self.summarize_session(sid) for sid in self._session_store.list_sessions()]
+        summaries: list[dict[str, object]] = []
+        for session_id in self._session_store.list_sessions():
+            summary = self.summarize_session(session_id)
+            if summary.get("created_at") is None and not summary.get("running"):
+                continue
+            summaries.append(summary)
+        return summaries
 
     def load_events(self, session_id: str, after: str | None = None) -> list[EventRecord]:
         """Load events for a session with optional timestamp filtering."""
