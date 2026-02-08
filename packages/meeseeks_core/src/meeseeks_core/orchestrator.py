@@ -218,7 +218,7 @@ class Orchestrator:
         task_queue: TaskQueue,
         *,
         mode: str,
-        should_cancel: Callable[[], bool] | None,
+        should_cancel: Callable[[], bool] | None = None,
     ) -> TaskQueue:
         reflector = StepReflector(self._model_name)
         allowed_tools = None
