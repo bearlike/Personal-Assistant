@@ -165,6 +165,7 @@ class SessionRuntime:
             session_id = self._session_store.create_session()
         if session_tag:
             self._session_store.tag_session(session_id, session_tag)
+        assert session_id is not None
         return session_id
 
     def append_context_event(self, session_id: str, context: dict[str, object]) -> None:
