@@ -1,6 +1,6 @@
 # Session Runtime
 
-The session runtime is a small shared facade that powers both the CLI and the REST API. It centralizes session lifecycle, async run tracking, cancellation, and event polling so interfaces stay thin and behavior stays consistent.
+The session runtime is a small shared facade that powers both the CLI and the REST API. It centralizes session lifecycle, async run tracking, and cancellation. Event polling is exposed via the API; the CLI reads events directly in-process when needed.
 
 ## What it does
 - Resolves sessions by id, tag, or fork.
@@ -18,7 +18,7 @@ These commands are supported across interfaces:
 
 The runtime only recognizes these core commands. Interface-specific commands remain in each UI layer.
 
-## Event polling model
+## Event polling model (API)
 Events are stored as JSONL records by `SessionStore`. The runtime exposes `load_events(session_id, after)` which filters by the ISO-8601 timestamp (`ts`) on each event.
 
 Typical polling flow:

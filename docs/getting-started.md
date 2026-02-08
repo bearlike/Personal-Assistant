@@ -81,7 +81,7 @@ MCP tools are auto-discovered from `configs/mcp.json`.
 - Chat UI: `uv run meeseeks-chat`
 - Home Assistant integration: install `meeseeks_ha_conversation/` as a custom component and point it at the API.
 
-API notes:
+API notes (polling is API-only; CLI uses the runtime in-process):
 - Session runtime endpoints support async runs with polling:
   - `POST /api/sessions` create session
   - `POST /api/sessions/{session_id}/query` enqueue or core commands

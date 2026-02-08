@@ -84,7 +84,7 @@ Optional features that can be installed when needed.
 - **Interactive CLI controls.** Use a model picker, MCP browser, session summary, and token budget commands.
 - **Inline approvals.** Rich-based approval prompts render with padded, dotted borders and clear after input.
 - **Unified experience.** Web, API, Home Assistant, and CLI interfaces share the same core engine to reduce duplicated maintenance.
-- **Shared session runtime.** CLI and API use the same session runtime for polling, cancellation, and summaries.
+- **Shared session runtime.** The API exposes polling endpoints; the CLI runs the same runtime in-process for sync execution, cancellation, and summaries.
 
 ## Monorepo layout
 
@@ -106,15 +106,18 @@ flowchart LR
   User --> Chat
   User --> API
   HA --> API
-  CLI --> Core
-  Chat --> Core
-  API --> Core
-  Core --> Planner
+  CLI --> Runtime
+  Chat --> Runtime
+  API --> Runtime
+  Runtime --> Core
+  Runtime --> SessionStore
+  Runtime --> Planner
   Planner --> Tools
   Tools --> LocalTools
   Tools --> MCP
   Tools --> HomeAssistant
-  Core --> SessionStore
+  Runtime --> Events["Session events (JSONL)"]
+  Events --> Polling["Event polling (API only)"]
   Core --> Langfuse
 ```
 
