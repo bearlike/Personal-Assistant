@@ -442,6 +442,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#aider-edit-blocks-local-tool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aider edit blocks (local tool)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#docker-optional" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -486,6 +497,33 @@
     
   
     Components
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Runtime
   
 
     
@@ -679,6 +717,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#aider-edit-blocks-local-tool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aider edit blocks (local tool)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#docker-optional" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -793,6 +842,31 @@
 <li>Chat UI: <code>uv run meeseeks-chat</code></li>
 <li>Home Assistant integration: install <code>meeseeks_ha_conversation/</code> as a custom component and point it at the API.</li>
 </ul>
+<p>API notes (polling is API-only; CLI uses the runtime in-process):
+- Session runtime endpoints support async runs with polling:
+  - <code>POST /api/sessions</code> create session
+  - <code>POST /api/sessions/{session_id}/query</code> enqueue or core commands
+  - <code>GET /api/sessions/{session_id}/events?after=...</code> poll events
+  - <code>GET /api/sessions</code> list sessions (defaults to non-archived, non-empty)
+  - <code>GET /api/sessions?include_archived=1</code> include archived sessions
+  - <code>POST /api/sessions/{session_id}/archive</code> archive a session
+  - <code>DELETE /api/sessions/{session_id}/archive</code> unarchive a session
+  - <code>POST /api/query</code> legacy synchronous endpoint</p>
+<h2 id="aider-edit-blocks-local-tool">Aider edit blocks (local tool)</h2>
+<p>The edit-block tool expects strict SEARCH/REPLACE blocks and returns format guidance on mismatches.</p>
+<pre><code>&lt;path&gt;
+```text
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; SEARCH
+&lt;exact text to match&gt;
+=======
+&lt;replacement text&gt;
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; REPLACE
+```
+</code></pre>
+<p>Rules:
+- Filename line immediately before the opening fence.
+- SEARCH must match exactly (including whitespace/newlines).
+- Use a line with <code>...</code> in both SEARCH and REPLACE to skip unchanged sections.</p>
 <h2 id="docker-optional">Docker (optional)</h2>
 <ul>
 <li>Build images using <code>docker/Dockerfile.api</code> and <code>docker/Dockerfile.chat</code>.</li>

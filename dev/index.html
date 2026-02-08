@@ -431,6 +431,33 @@
   
   
     <li class="md-nav__item">
+      <a href="session-runtime/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="reference/" class="md-nav__link">
         
   
@@ -584,7 +611,8 @@
 <p><strong>Repository map</strong>
 - <a href="components/">Components</a> - monorepo layout and core packages</p>
 <p><strong>Reference</strong>
-- <a href="reference/">API reference</a> - mkdocstrings reference for core modules</p>
+- <a href="reference/">API reference</a> - mkdocstrings reference for core modules
+- <a href="session-runtime/">Session runtime</a> - shared runtime used by CLI + API</p>
 <h2 id="feature-highlights-quick-view">Feature highlights (quick view)</h2>
 <ul>
 <li>Plan → act → observe loop to keep work grounded in tool results.</li>
@@ -593,8 +621,10 @@
 <li>Built-in local file and shell tools (Aider adapters) for edit blocks, read, list, and shell execution.</li>
 <li>Session transcripts with compaction for long runs and context budget awareness.</li>
 <li>Context snapshots built from recent turns plus summaries of prior activity.</li>
+<li>Session listings filter empty sessions and support archiving via the API.</li>
 <li>Step-level reflection after tool execution to validate outcomes.</li>
 <li>Permission gate with approval callbacks plus lightweight hooks around tool execution.</li>
+<li>Shared session runtime; API exposes polling endpoints while the CLI runs the runtime in-process for sync execution, cancellation, and summaries.</li>
 <li>Optional components (Langfuse, Home Assistant) auto-disable when not configured.</li>
 <li>Langfuse tracing is session-scoped when enabled, grouping multi-turn runs.</li>
 </ul>
@@ -619,15 +649,18 @@
   User --&gt; Chat
   User --&gt; API
   HA --&gt; API
-  CLI --&gt; Core
-  Chat --&gt; Core
-  API --&gt; Core
-  Core --&gt; Planner
+  CLI --&gt; Runtime
+  Chat --&gt; Runtime
+  API --&gt; Runtime
+  Runtime --&gt; Core
+  Runtime --&gt; SessionStore
+  Runtime --&gt; Planner
   Planner --&gt; Tools
   Tools --&gt; LocalTools
   Tools --&gt; MCP
   Tools --&gt; HomeAssistant
-  Core --&gt; SessionStore
+  Runtime --&gt; Events[&quot;Session events (JSONL)&quot;]
+  Events --&gt; Polling[&quot;Event polling (API only)&quot;]
   Core --&gt; Langfuse
 </code></pre>
 <h2 id="getting-started">Getting started</h2>
@@ -639,6 +672,8 @@
 <li><code>/mcp</code> list MCP servers/tools (use <code>/mcp select</code> to filter)</li>
 <li><code>/mcp init</code> scaffold an MCP config file</li>
 <li><code>/summarize</code> compact the session</li>
+<li><code>/status</code> show session status</li>
+<li><code>/terminate</code> cancel the active run</li>
 <li><code>/new</code> start a fresh session</li>
 <li><code>/automatic</code> auto-approve tool actions for the session</li>
 <li><code>/quit</code> exit the CLI</li>
