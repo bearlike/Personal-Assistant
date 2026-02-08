@@ -2,6 +2,7 @@
 
 # mypy: ignore-errors
 import json
+import time
 
 from meeseeks_api import backend
 
@@ -115,3 +116,127 @@ def test_query_fork_from(monkeypatch, tmp_path):
     payload = response.get_json()
     assert payload["session_id"] == captured["session_id"]
     assert payload["session_id"] != source_session
+
+
+def _reset_backend(tmp_path, monkeypatch):
+    backend.session_store = backend.SessionStore(root_dir=str(tmp_path))
+    backend.run_registry = backend.RunRegistry()
+
+
+def _fake_run(session_id: str, user_query: str, cancel_event):
+    backend.session_store.append_event(
+        session_id, {"type": "user", "payload": {"text": user_query}}
+    )
+    if cancel_event.is_set():
+        backend.session_store.append_event(
+            session_id,
+            {
+                "type": "completion",
+                "payload": {"done": True, "done_reason": "canceled", "task_result": None},
+            },
+        )
+        return
+    backend.session_store.append_event(
+        session_id, {"type": "assistant", "payload": {"text": "ok"}}
+    )
+    backend.session_store.append_event(
+        session_id,
+        {
+            "type": "completion",
+            "payload": {"done": True, "done_reason": "completed", "task_result": "ok"},
+        },
+    )
+
+
+def _wait_for_run(session_id: str, timeout: float = 2.0) -> None:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if not backend.run_registry.is_running(session_id):
+            return
+        time.sleep(0.01)
+    raise AssertionError("Run did not finish in time.")
+
+
+def test_sessions_create_list_and_events(monkeypatch, tmp_path):
+    _reset_backend(tmp_path, monkeypatch)
+    monkeypatch.setattr(backend, "_run_orchestration", _fake_run)
+    client = backend.app.test_client()
+
+    create = client.post(
+        "/api/sessions",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+        json={"context": {"repo": "acme/web", "branch": "main"}},
+    )
+    assert create.status_code == 200
+    session_id = create.get_json()["session_id"]
+
+    enqueue = client.post(
+        f"/api/sessions/{session_id}/query",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+        json={"query": "hello"},
+    )
+    assert enqueue.status_code == 202
+    _wait_for_run(session_id)
+
+    events = client.get(
+        f"/api/sessions/{session_id}/events",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+    )
+    payload = events.get_json()
+    assert events.status_code == 200
+    assert payload["session_id"] == session_id
+    assert payload["events"]
+    assert payload["running"] is False
+
+    listing = client.get(
+        "/api/sessions",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+    )
+    assert listing.status_code == 200
+    sessions = listing.get_json()["sessions"]
+    assert any(item["session_id"] == session_id for item in sessions)
+
+
+def test_slash_command_terminate(monkeypatch, tmp_path):
+    _reset_backend(tmp_path, monkeypatch)
+
+    def slow_run(session_id: str, user_query: str, cancel_event):
+        backend.session_store.append_event(
+            session_id, {"type": "user", "payload": {"text": user_query}}
+        )
+        while not cancel_event.is_set():
+            time.sleep(0.01)
+        backend.session_store.append_event(
+            session_id,
+            {
+                "type": "completion",
+                "payload": {"done": True, "done_reason": "canceled", "task_result": None},
+            },
+        )
+
+    monkeypatch.setattr(backend, "_run_orchestration", slow_run)
+    client = backend.app.test_client()
+    session_id = backend.session_store.create_session()
+
+    enqueue = client.post(
+        f"/api/sessions/{session_id}/query",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+        json={"query": "long running"},
+    )
+    assert enqueue.status_code == 202
+
+    terminate = client.post(
+        f"/api/sessions/{session_id}/query",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+        json={"query": "/terminate"},
+    )
+    assert terminate.status_code == 202
+    _wait_for_run(session_id)
+
+    events = client.get(
+        f"/api/sessions/{session_id}/events",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+    )
+    payload = events.get_json()
+    assert payload["events"][-1]["type"] == "completion"
+    assert payload["events"][-1]["payload"]["done_reason"] == "canceled"
