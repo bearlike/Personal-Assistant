@@ -218,9 +218,7 @@ def test_sessions_archive_and_list(monkeypatch, tmp_path):
     _reset_backend(tmp_path, monkeypatch)
     client = backend.app.test_client()
     session_id = backend.session_store.create_session()
-    backend.session_store.append_event(
-        session_id, {"type": "user", "payload": {"text": "hello"}}
-    )
+    backend.session_store.append_event(session_id, {"type": "user", "payload": {"text": "hello"}})
 
     archive = client.post(
         f"/api/sessions/{session_id}/archive",
