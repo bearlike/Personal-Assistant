@@ -44,6 +44,21 @@ Meeseeks is an AI task agent assistant built on a plan-act-observe orchestration
     </tr>
 </table>
 
+## What's next (Meeseeks Console)
+
+We are upgrading the API backend to better support a task-orchestration frontend. Next up: finalize the API shape, then polish the frontend and ship the full console experience.
+
+<table align="center">
+    <tr>
+        <th>Task detail page (coming soon)</th>
+        <th>Landing console (coming soon)</th>
+    </tr>
+    <tr>
+        <td align="center"><img src="https://github.com/user-attachments/assets/258af242-c9b0-4c7d-a2c8-fc00d59ade4d" alt="Meeseeks task detail page preview" height="512px"></td>
+        <td align="center"><img src="https://github.com/user-attachments/assets/d015c3fe-b902-42d3-819c-d4cf2fa8b2ca" alt="Meeseeks landing console preview" height="512px"></td>
+    </tr>
+</table>
+
 ## Core workflow
 - (✅) **Plan → act → observe loop:** Builds a short action plan, executes tools, and replans when needed.
 - (✅) **Step-level reflection:** Validates tool outcomes and adjusts step arguments when required.
