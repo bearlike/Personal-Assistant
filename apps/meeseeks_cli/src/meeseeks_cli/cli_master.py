@@ -757,7 +757,7 @@ def _render_results_with_registry(
         renderable: RenderableType
         if result is None:
             renderable = Text("(no result)", style="dim")
-        elif not verbose:
+        elif not verbose and not _should_force_preview(result):
             renderable = Text("(output hidden; use -v/--verbose)", style="dim")
         else:
             renderable = _format_tool_output(result, content_style)
@@ -777,6 +777,15 @@ def _render_results_with_registry(
         console.print(panels[0])
         return
     console.print(Columns(panels, expand=True))
+
+
+def _should_force_preview(result: object) -> bool:
+    if not isinstance(result, dict):
+        return False
+    kind_raw = result.get("kind")
+    kind = kind_raw if isinstance(kind_raw, str) else str(kind_raw or "")
+    kind = kind.strip().lower()
+    return kind in {"diff", "file"}
 
 
 def _format_tool_output(result: object, content_style: str | None) -> RenderableType:
