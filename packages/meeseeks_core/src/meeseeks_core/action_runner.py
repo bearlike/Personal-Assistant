@@ -204,7 +204,9 @@ class ActionPlanRunner:
     ) -> None:
         logging.error("Error processing action step: {}", exc)
         self._record_failure(action_step, str(exc), task_queue)
-        if not isinstance(exc, ToolInputError):
+        spec = self._tool_registry.get_spec(action_step.action_consumer)
+        is_mcp = spec is not None and spec.kind == "mcp"
+        if not isinstance(exc, ToolInputError) and not is_mcp:
             self._tool_registry.disable(action_step.action_consumer, f"Runtime error: {exc}")
         self._emit_tool_result(action_step, None, error=str(exc))
         mock = get_mock_speaker()

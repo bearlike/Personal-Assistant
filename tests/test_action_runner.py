@@ -274,6 +274,45 @@ def test_action_runner_preserves_tool_on_input_error():
     assert events[-1]["payload"]["success"] is False
 
 
+def test_action_runner_preserves_mcp_tool_on_runtime_error():
+    """Do not disable MCP tools on transient runtime errors."""
+    registry = ToolRegistry()
+
+    class ExplodingTool:
+        def run(self, _step):
+            raise RuntimeError("network aborted")
+
+    registry.register(
+        ToolSpec(
+            tool_id="mcp_tool",
+            name="MCP Tool",
+            description="MCP tool",
+            factory=lambda: ExplodingTool(),
+            kind="mcp",
+        )
+    )
+    runner = ActionPlanRunner(
+        tool_registry=registry,
+        permission_policy=PermissionPolicy(),
+        approval_callback=lambda _step: True,
+        hook_manager=default_hook_manager(),
+    )
+    task_queue = TaskQueue(
+        action_steps=[
+            ActionStep(
+                action_consumer="mcp_tool",
+                action_type="get",
+                action_argument="payload",
+            )
+        ]
+    )
+    task_queue = runner.run(task_queue)
+    assert task_queue.last_error
+    spec = registry.get_spec("mcp_tool")
+    assert spec is not None
+    assert spec.enabled is True
+
+
 def test_summarize_result_truncates_long_text():
     """Truncate long tool output summaries."""
     long_text = "x" * 600
