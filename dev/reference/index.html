@@ -13215,7 +13215,8 @@
 <span class="normal">493</span>
 <span class="normal">494</span>
 <span class="normal">495</span>
-<span class="normal">496</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">load_registry</span><span class="p">(</span><span class="n">manifest_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ToolRegistry</span><span class="p">:</span>
+<span class="normal">496</span>
+<span class="normal">497</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">load_registry</span><span class="p">(</span><span class="n">manifest_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ToolRegistry</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Load tool registry, auto-discovering MCP tools when configured.&quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">manifest_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">mcp_config_path</span> <span class="o">=</span> <span class="n">get_mcp_config_path</span><span class="p">()</span>
@@ -13312,6 +13313,7 @@
         <span class="n">registry</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
         <span class="n">existing_ids</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">tool_id</span><span class="p">)</span>
 
+    <span class="n">set_available_tools</span><span class="p">([</span><span class="n">spec</span><span class="o">.</span><span class="n">tool_id</span> <span class="k">for</span> <span class="n">spec</span> <span class="ow">in</span> <span class="n">registry</span><span class="o">.</span><span class="n">list_specs</span><span class="p">()])</span>
     <span class="k">return</span> <span class="n">registry</span>
 </code></pre></div></td></tr></table></div>
             </details>
