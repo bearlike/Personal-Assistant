@@ -56,8 +56,10 @@ def test_query_invalid_input(monkeypatch):
 def test_query_success(monkeypatch):
     """Return a task result payload when authorized."""
     client = backend.app.test_client()
+    captured = {}
 
     def fake_run_sync(*args, **kwargs):
+        captured["mode"] = kwargs.get("mode")
         return _make_task_queue("ok")
 
     monkeypatch.setattr(backend.runtime, "run_sync", fake_run_sync)
@@ -71,6 +73,26 @@ def test_query_success(monkeypatch):
     assert payload["task_result"] == "ok"
     assert payload["session_id"]
     assert payload["action_steps"]
+    assert captured["mode"] is None
+
+
+def test_query_with_mode(monkeypatch):
+    """Pass through orchestration mode when provided."""
+    client = backend.app.test_client()
+    captured = {}
+
+    def fake_run_sync(*args, **kwargs):
+        captured["mode"] = kwargs.get("mode")
+        return _make_task_queue("ok")
+
+    monkeypatch.setattr(backend.runtime, "run_sync", fake_run_sync)
+    response = client.post(
+        "/api/query",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+        json={"query": "hello", "mode": "plan"},
+    )
+    assert response.status_code == 200
+    assert captured["mode"] == "plan"
 
 
 def test_query_with_session_tag(monkeypatch, tmp_path):

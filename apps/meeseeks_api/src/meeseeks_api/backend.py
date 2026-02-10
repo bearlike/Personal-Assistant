@@ -122,6 +122,15 @@ def _parse_bool(value: str | None) -> bool:
     return lowered not in {"0", "false", "no", "off"}
 
 
+def _parse_mode(value: object | None) -> str | None:
+    if not isinstance(value, str):
+        return None
+    lowered = value.strip().lower()
+    if lowered in {"plan", "act"}:
+        return lowered
+    return None
+
+
 @ns.route("/sessions")
 class Sessions(Resource):
     """List and create sessions."""
@@ -179,10 +188,13 @@ class SessionQuery(Resource):
         if isinstance(context, dict):
             runtime.append_context_event(session_id, context)
 
+        mode = _parse_mode(request_data.get("mode"))
+
         started = runtime.start_async(
             session_id=session_id,
             user_query=user_query,
             approval_callback=auto_approve,
+            mode=mode,
         )
         if not started:
             return {"message": "Session is already running."}, 409
@@ -275,6 +287,10 @@ class MeeseeksQuery(Resource):
                 "session_id": fields.String(required=False, description="Existing session id"),
                 "session_tag": fields.String(required=False, description="Human-friendly tag"),
                 "fork_from": fields.String(required=False, description="Session id or tag to fork"),
+                "mode": fields.String(
+                    required=False,
+                    description="Optional orchestration mode (plan or act)",
+                ),
             },
         )
     )
@@ -290,6 +306,7 @@ class MeeseeksQuery(Resource):
         user_query = request_data.get("query")
         if not user_query:
             return {"message": "Invalid input: 'query' is required"}, 400
+        mode = _parse_mode(request_data.get("mode"))
         session_id = runtime.resolve_session(
             session_id=request_data.get("session_id"),
             session_tag=request_data.get("session_tag"),
@@ -301,6 +318,7 @@ class MeeseeksQuery(Resource):
             user_query=user_query,
             session_id=session_id,
             approval_callback=auto_approve,
+            mode=mode,
         )
         task_result = deepcopy(task_queue.task_result)
         to_return = task_queue.dict()
