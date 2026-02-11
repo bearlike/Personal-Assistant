@@ -8,7 +8,6 @@ import os
 import threading
 import uuid
 from datetime import datetime, timezone
-from typing import Any
 
 from meeseeks_core.config import get_config_value
 
@@ -28,7 +27,8 @@ class ShareStore:
         self._path = os.path.join(root_dir, filename)
         self._lock = threading.Lock()
 
-    def _load(self) -> dict[str, dict[str, Any]]:
+    def _load(self) -> dict[str, dict[str, object]]:
+        """Load share token records from disk."""
         if not os.path.exists(self._path):
             return {}
         with open(self._path, encoding="utf-8") as handle:
@@ -40,11 +40,13 @@ class ShareStore:
             return data
         return {}
 
-    def _save(self, data: dict[str, dict[str, Any]]) -> None:
+    def _save(self, data: dict[str, dict[str, object]]) -> None:
+        """Persist share token records to disk."""
         with open(self._path, "w", encoding="utf-8") as handle:
             json.dump(data, handle, indent=2)
 
-    def create(self, session_id: str) -> dict[str, Any]:
+    def create(self, session_id: str) -> dict[str, object]:
+        """Create and store a new share token."""
         token = uuid.uuid4().hex
         record = {"session_id": session_id, "created_at": _utc_now()}
         with self._lock:
@@ -53,7 +55,8 @@ class ShareStore:
             self._save(data)
         return {"token": token, **record}
 
-    def resolve(self, token: str) -> dict[str, Any] | None:
+    def resolve(self, token: str) -> dict[str, object] | None:
+        """Resolve a share token to its record."""
         if not token:
             return None
         with self._lock:
@@ -64,6 +67,7 @@ class ShareStore:
         return {"token": token, **record}
 
     def revoke(self, token: str) -> bool:
+        """Revoke a share token."""
         if not token:
             return False
         with self._lock:

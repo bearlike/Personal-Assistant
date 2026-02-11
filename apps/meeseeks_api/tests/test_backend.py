@@ -135,8 +135,7 @@ def test_api_auto_approves_permissions(monkeypatch, tmp_path):
 
 def test_query_with_session_tag(monkeypatch, tmp_path):
     """Create or reuse a tagged session and pass it into orchestration."""
-    backend.session_store = backend.SessionStore(root_dir=str(tmp_path))
-    backend.runtime = backend.SessionRuntime(session_store=backend.session_store)
+    _reset_backend(tmp_path, monkeypatch)
     client = backend.app.test_client()
     captured = {}
 
@@ -158,8 +157,7 @@ def test_query_with_session_tag(monkeypatch, tmp_path):
 
 def test_query_fork_from(monkeypatch, tmp_path):
     """Fork a session when requested and pass the fork into orchestration."""
-    backend.session_store = backend.SessionStore(root_dir=str(tmp_path))
-    backend.runtime = backend.SessionRuntime(session_store=backend.session_store)
+    _reset_backend(tmp_path, monkeypatch)
     source_session = backend.session_store.create_session()
     client = backend.app.test_client()
     captured = {}
@@ -185,6 +183,10 @@ def _reset_backend(tmp_path, monkeypatch):
     backend.runtime = backend.SessionRuntime(session_store=backend.session_store)
     backend.notification_store = backend.NotificationStore(root_dir=str(tmp_path))
     backend.share_store = backend.ShareStore(root_dir=str(tmp_path))
+    backend.notification_service = backend.NotificationService(
+        backend.notification_store,
+        backend.runtime.session_store,
+    )
 
 
 def _fake_run_sync(*, session_id: str, user_query: str, should_cancel=None, **_kwargs):

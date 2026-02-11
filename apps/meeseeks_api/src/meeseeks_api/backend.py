@@ -10,7 +10,6 @@ from copy import deepcopy
 from datetime import datetime, timezone
 import os
 import uuid
-from typing import Any
 
 from flask import Flask, request
 from werkzeug.utils import secure_filename
@@ -103,6 +102,7 @@ def log_request_info() -> None:
 
 
 def _require_api_key() -> tuple[dict, int] | None:
+    """Validate the API key header for protected routes."""
     api_token = request.headers.get("X-API-Key", None)
     if api_token is None:
         return {"message": "API token is not provided."}, 401
@@ -113,6 +113,7 @@ def _require_api_key() -> tuple[dict, int] | None:
 
 
 def _handle_slash_command(session_id: str, user_query: str) -> tuple[dict, int] | None:
+    """Handle session slash commands like /terminate and /status."""
     command = parse_core_command(user_query)
     if command == "/terminate":
         canceled = runtime.cancel(session_id)
@@ -123,6 +124,7 @@ def _handle_slash_command(session_id: str, user_query: str) -> tuple[dict, int] 
 
 
 def _parse_bool(value: str | None) -> bool:
+    """Interpret a query param or payload value as a boolean."""
     if value is None:
         return False
     lowered = value.strip().lower()
@@ -132,6 +134,7 @@ def _parse_bool(value: str | None) -> bool:
 
 
 def _parse_mode(value: object | None) -> str | None:
+    """Normalize orchestration mode values to 'plan' or 'act'."""
     if not isinstance(value, str):
         return None
     lowered = value.strip().lower()
@@ -141,11 +144,13 @@ def _parse_mode(value: object | None) -> str | None:
 
 
 def _utc_now() -> str:
+    """Return current UTC timestamp string."""
     return datetime.now(timezone.utc).isoformat()
 
 
-def _build_context_payload(request_data: dict[str, Any]) -> dict[str, Any]:
-    payload: dict[str, Any] = {}
+def _build_context_payload(request_data: dict[str, object]) -> dict[str, object]:
+    """Merge context and attachments into a single payload."""
+    payload: dict[str, object] = {}
     context = request_data.get("context")
     if isinstance(context, dict):
         payload.update(context)
@@ -155,84 +160,104 @@ def _build_context_payload(request_data: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
-def _notify(
-    *,
-    title: str,
-    message: str,
-    level: str = "info",
-    session_id: str | None = None,
-    event_type: str | None = None,
-    metadata: dict[str, Any] | None = None,
-) -> None:
-    notification_store.add(
-        title=title,
-        message=message,
-        level=level,
-        session_id=session_id,
-        event_type=event_type,
-        metadata=metadata,
-    )
+class NotificationService:
+    """Emit session lifecycle notifications for the API."""
 
+    def __init__(self, store: NotificationStore, session_store: SessionStore) -> None:
+        self._store = store
+        self._session_store = session_store
 
-def _append_session_created_event(session_id: str) -> None:
-    runtime.session_store.append_event(
-        session_id,
-        {"type": "session", "payload": {"event": "created"}},
-    )
-    _notify(
-        title="Session created",
-        message=f"Session {session_id} created.",
-        session_id=session_id,
-        event_type="created",
-    )
-
-
-def _completion_notification_exists(session_id: str, completion_ts: str) -> bool:
-    for item in notification_store.list(include_dismissed=True):
-        if item.get("session_id") != session_id:
-            continue
-        if item.get("event_type") not in {"completed", "failed"}:
-            continue
-        metadata = item.get("metadata") or {}
-        if metadata.get("completion_ts") == completion_ts:
-            return True
-    return False
-
-
-def _emit_completion_notification(session_id: str) -> None:
-    events = runtime.session_store.load_recent_events(
-        session_id,
-        limit=1,
-        include_types={"completion"},
-    )
-    if not events:
-        return
-    event = events[-1]
-    completion_ts = event.get("ts")
-    if not completion_ts or _completion_notification_exists(session_id, completion_ts):
-        return
-    payload = event.get("payload")
-    if not isinstance(payload, dict):
-        return
-    done = bool(payload.get("done"))
-    done_reason = str(payload.get("done_reason") or "")
-    if done and done_reason.lower() == "completed":
-        _notify(
-            title="Session completed",
-            message=f"Session {session_id} completed.",
+    def notify(
+        self,
+        *,
+        title: str,
+        message: str,
+        level: str = "info",
+        session_id: str | None = None,
+        event_type: str | None = None,
+        metadata: dict[str, object] | None = None,
+    ) -> None:
+        """Persist a notification record."""
+        self._store.add(
+            title=title,
+            message=message,
+            level=level,
             session_id=session_id,
-            event_type="completed",
+            event_type=event_type,
+            metadata=metadata,
+        )
+
+    def emit_session_created(self, session_id: str) -> None:
+        """Append a session-created event and notify."""
+        self._session_store.append_event(
+            session_id,
+            {"type": "session", "payload": {"event": "created"}},
+        )
+        self.notify(
+            title="Session created",
+            message=f"Session {session_id} created.",
+            session_id=session_id,
+            event_type="created",
+        )
+
+    def emit_started(self, session_id: str) -> None:
+        """Notify that a session started running."""
+        self.notify(
+            title="Session started",
+            message=f"Session {session_id} started.",
+            session_id=session_id,
+            event_type="started",
+        )
+
+    def emit_completion(self, session_id: str) -> None:
+        """Emit a completion notification based on the latest completion event."""
+        events = self._session_store.load_recent_events(
+            session_id,
+            limit=1,
+            include_types={"completion"},
+        )
+        if not events:
+            return
+        event = events[-1]
+        completion_ts = event.get("ts")
+        if not completion_ts or self._completion_exists(session_id, completion_ts):
+            return
+        payload = event.get("payload")
+        if not isinstance(payload, dict):
+            return
+        done = bool(payload.get("done"))
+        done_reason = str(payload.get("done_reason") or "")
+        if done and done_reason.lower() == "completed":
+            self.notify(
+                title="Session completed",
+                message=f"Session {session_id} completed.",
+                session_id=session_id,
+                event_type="completed",
+                metadata={"completion_ts": completion_ts, "done_reason": done_reason},
+            )
+            return
+        self.notify(
+            title="Session finished",
+            message=f"Session {session_id} finished with status '{done_reason}'.",
+            level="warning",
+            session_id=session_id,
+            event_type="failed",
             metadata={"completion_ts": completion_ts, "done_reason": done_reason},
         )
-        return
-    _notify(
-        title="Session finished",
-        message=f"Session {session_id} finished with status '{done_reason}'.",
-        level="warning",
-        session_id=session_id,
-        event_type="failed",
-        metadata={"completion_ts": completion_ts, "done_reason": done_reason},
-    )
+
+    def _completion_exists(self, session_id: str, completion_ts: str) -> bool:
+        for item in self._store.list(include_dismissed=True):
+            if item.get("session_id") != session_id:
+                continue
+            if item.get("event_type") not in {"completed", "failed"}:
+                continue
+            metadata = item.get("metadata") or {}
+            if metadata.get("completion_ts") == completion_ts:
+                return True
+        return False
+
+
+notification_service = NotificationService(notification_store, runtime.session_store)
 
 
 @ns.route("/sessions")
@@ -257,7 +282,7 @@ class Sessions(Resource):
             return auth_error
         payload = request.get_json(silent=True) or {}
         session_id = runtime.session_store.create_session()
-        _append_session_created_event(session_id)
+        notification_service.emit_session_created(session_id)
         session_tag = payload.get("session_tag")
         if session_tag:
             runtime.session_store.tag_session(session_id, session_tag)
@@ -303,12 +328,7 @@ class SessionQuery(Resource):
         )
         if not started:
             return {"message": "Session is already running."}, 409
-        _notify(
-            title="Session started",
-            message=f"Session {session_id} started.",
-            session_id=session_id,
-            event_type="started",
-        )
+        notification_service.emit_started(session_id)
         return {"session_id": session_id, "accepted": True}, 202
 
 
@@ -324,7 +344,7 @@ class SessionEvents(Resource):
             return auth_error
         after_ts = request.args.get("after")
         events = runtime.load_events(session_id, after_ts)
-        _emit_completion_notification(session_id)
+        notification_service.emit_completion(session_id)
         return {
             "session_id": session_id,
             "events": events,
@@ -382,7 +402,7 @@ class SessionAttachments(Resource):
             "attachments",
         )
         os.makedirs(attachments_dir, exist_ok=True)
-        saved: list[dict[str, Any]] = []
+        saved: list[dict[str, object]] = []
         for item in files:
             if not item or not item.filename:
                 continue
@@ -586,16 +606,11 @@ class MeeseeksQuery(Resource):
             fork_from=request_data.get("fork_from"),
         )
         if session_id not in existing_sessions:
-            _append_session_created_event(session_id)
+            notification_service.emit_session_created(session_id)
         context_payload = _build_context_payload(request_data)
         if context_payload:
             runtime.append_context_event(session_id, context_payload)
-        _notify(
-            title="Session started",
-            message=f"Session {session_id} started.",
-            session_id=session_id,
-            event_type="started",
-        )
+        notification_service.emit_started(session_id)
 
         logging.info("Received user query: {}", user_query)
         task_queue: TaskQueue = runtime.run_sync(
@@ -604,7 +619,7 @@ class MeeseeksQuery(Resource):
             approval_callback=auto_approve,
             mode=mode,
         )
-        _emit_completion_notification(session_id)
+        notification_service.emit_completion(session_id)
         task_result = deepcopy(task_queue.task_result)
         to_return = task_queue.dict()
         to_return["task_result"] = task_result

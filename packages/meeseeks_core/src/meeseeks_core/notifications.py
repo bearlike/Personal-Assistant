@@ -9,7 +9,6 @@ import threading
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any
 
 from meeseeks_core.config import get_config_value
 
@@ -20,6 +19,8 @@ def _utc_now() -> str:
 
 @dataclass(frozen=True)
 class NotificationRecord:
+    """Typed record for serialized notifications."""
+
     id: str
     title: str
     message: str
@@ -29,7 +30,7 @@ class NotificationRecord:
     session_id: str | None = None
     dismissed_at: str | None = None
     event_type: str | None = None
-    metadata: dict[str, Any] | None = None
+    metadata: dict[str, object] | None = None
 
 
 class NotificationStore:
@@ -43,7 +44,8 @@ class NotificationStore:
         self._path = os.path.join(root_dir, filename)
         self._lock = threading.Lock()
 
-    def _load(self) -> list[dict[str, Any]]:
+    def _load(self) -> list[dict[str, object]]:
+        """Load notification records from disk."""
         if not os.path.exists(self._path):
             return []
         with open(self._path, encoding="utf-8") as handle:
@@ -55,11 +57,13 @@ class NotificationStore:
             return data
         return []
 
-    def _save(self, data: list[dict[str, Any]]) -> None:
+    def _save(self, data: list[dict[str, object]]) -> None:
+        """Persist notification records to disk."""
         with open(self._path, "w", encoding="utf-8") as handle:
             json.dump(data, handle, indent=2)
 
-    def list(self, *, include_dismissed: bool = False) -> list[dict[str, Any]]:
+    def list(self, *, include_dismissed: bool = False) -> list[dict[str, object]]:
+        """Return notifications, optionally including dismissed ones."""
         with self._lock:
             data = self._load()
         if not include_dismissed:
@@ -74,8 +78,9 @@ class NotificationStore:
         level: str = "info",
         session_id: str | None = None,
         event_type: str | None = None,
-        metadata: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
+        metadata: dict[str, object] | None = None,
+    ) -> dict[str, object]:
+        """Add a new notification record and return it."""
         record = NotificationRecord(
             id=uuid.uuid4().hex,
             title=title,
@@ -96,6 +101,7 @@ class NotificationStore:
         return payload
 
     def dismiss(self, ids: list[str]) -> int:
+        """Mark notifications as dismissed."""
         if not ids:
             return 0
         dismissed_at = _utc_now()
@@ -111,6 +117,7 @@ class NotificationStore:
         return updated
 
     def clear(self, *, dismissed_only: bool = True) -> int:
+        """Clear dismissed notifications (or all when requested)."""
         with self._lock:
             data = self._load()
             if dismissed_only:
