@@ -736,6 +736,8 @@ def test_response_synthesis_helpers(monkeypatch):
         ]
     )
     assert Orchestrator._collect_tool_outputs(queue) == []
+    queue.last_error = "tool failed"
+    assert Orchestrator._collect_tool_outputs(queue) == ["ERROR: tool failed"]
     assert Orchestrator._should_synthesize_response(TaskQueue(action_steps=[])) is True
 
     def _fake_model(_inputs):
@@ -1314,6 +1316,8 @@ def test_run_action_plan_reflection_blocks_progress(monkeypatch):
         model_name="gpt-3.5-turbo",
     )
     assert task_queue.action_steps[0].result is None
+    assert task_queue.last_error is not None
+    assert "needs revision" in task_queue.last_error
 
 
 def test_orchestrate_session_auto_compact(monkeypatch, tmp_path):

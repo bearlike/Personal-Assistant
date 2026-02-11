@@ -343,7 +343,9 @@ class Orchestrator:
                 continue
             content = getattr(step.result, "content", step.result)
             outputs.append(str(content))
-        return outputs
+        if outputs or not task_queue.last_error:
+            return outputs
+        return [f"ERROR: {task_queue.last_error}"]
 
     @staticmethod
     def _should_synthesize_response(task_queue: TaskQueue) -> bool:
