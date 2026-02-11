@@ -645,7 +645,7 @@
 <li>The orchestrator builds a short action plan, runs tools, and replans if needed.</li>
 <li>Tool results and summaries are stored in a session transcript for continuity.</li>
 </ul>
-<pre><code class="language-mermaid">flowchart LR
+<pre class="mermaid"><code>flowchart LR
   User --&gt; CLI
   User --&gt; Chat
   User --&gt; API
@@ -662,10 +662,9 @@
   Tools --&gt; LocalTools
   Tools --&gt; MCP
   Tools --&gt; HomeAssistant
-  Runtime --&gt; Events[&quot;Session events (JSONL)&quot;]
-  Events --&gt; Polling[&quot;Event polling (API only)&quot;]
-  Core --&gt; Langfuse
-</code></pre>
+  Runtime --&gt; Events["Session events (JSONL)"]
+  Events --&gt; Polling["Event polling (API only)"]
+  Core --&gt; Langfuse</code></pre>
 <h2 id="getting-started">Getting started</h2>
 <p>See <a href="getting-started/">getting-started.md</a> for full setup (env, MCP, configs, and how to run each interface).</p>
 <h2 id="cli-quick-commands">CLI quick commands</h2>
@@ -736,6 +735,10 @@
     
     
       <script src="assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://unpkg.com/mermaid@10.9.0/dist/mermaid.min.js"></script>
+      
+        <script src="javascripts/mermaid-init.js"></script>
       
     
   </body>
