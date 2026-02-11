@@ -103,6 +103,12 @@ class ActionPlanRunner:
                 continue
 
             if outcome.reflection is not None and outcome.reflection.status != "ok":
+                status = outcome.reflection.status
+                reason = f"step reflection requested {status}"
+                if outcome.reflection.notes:
+                    reason = f"{reason}: {outcome.reflection.notes}"
+                self._record_reflection_failure(action_step, reason, task_queue)
+                self._emit_tool_result(action_step, None, error=reason)
                 if outcome.reflection.revised_argument:
                     action_step.action_argument = outcome.reflection.revised_argument
                 action_step.result = None
@@ -166,7 +172,7 @@ class ActionPlanRunner:
         if decision == PermissionDecision.DENY:
             mock = get_mock_speaker()
             message = (
-                "Permission denied for " f"{action_step.action_consumer}:{action_step.action_type}."
+                f"Permission denied for {action_step.action_consumer}:{action_step.action_type}."
             )
             action_step.result = mock(content=message)
             if not decision_logged:
@@ -220,6 +226,14 @@ class ActionPlanRunner:
         if step.result is None and reason:
             mock = get_mock_speaker()
             step.result = mock(content=f"ERROR: {reason}")
+
+    def _record_reflection_failure(
+        self, step: ActionStep, reason: str, task_queue: TaskQueue
+    ) -> None:
+        note = f"{step.action_consumer} ({step.action_type}) needs revision"
+        if reason:
+            note = f"{note}: {reason}"
+        task_queue.last_error = note
 
     def _emit_tool_result(
         self, action_step: ActionStep, result: str | None, *, error: str | None = None

@@ -1,6 +1,7 @@
 """Tests for the Meeseeks API backend."""
 
 # mypy: ignore-errors
+import io
 import json
 import time
 
@@ -56,8 +57,10 @@ def test_query_invalid_input(monkeypatch):
 def test_query_success(monkeypatch):
     """Return a task result payload when authorized."""
     client = backend.app.test_client()
+    captured = {}
 
     def fake_run_sync(*args, **kwargs):
+        captured["mode"] = kwargs.get("mode")
         return _make_task_queue("ok")
 
     monkeypatch.setattr(backend.runtime, "run_sync", fake_run_sync)
@@ -71,12 +74,68 @@ def test_query_success(monkeypatch):
     assert payload["task_result"] == "ok"
     assert payload["session_id"]
     assert payload["action_steps"]
+    assert captured["mode"] is None
+
+
+def test_query_with_mode(monkeypatch):
+    """Pass through orchestration mode when provided."""
+    client = backend.app.test_client()
+    captured = {}
+
+    def fake_run_sync(*args, **kwargs):
+        captured["mode"] = kwargs.get("mode")
+        return _make_task_queue("ok")
+
+    monkeypatch.setattr(backend.runtime, "run_sync", fake_run_sync)
+    response = client.post(
+        "/api/query",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+        json={"query": "hello", "mode": "plan"},
+    )
+    assert response.status_code == 200
+    assert captured["mode"] == "plan"
+
+
+def test_api_auto_approves_permissions(monkeypatch, tmp_path):
+    """API requests should always use auto-approve callback."""
+    _reset_backend(tmp_path, monkeypatch)
+    client = backend.app.test_client()
+    session_id = backend.session_store.create_session()
+
+    captured = {}
+
+    def fake_start_async(*_args, **kwargs):
+        captured["approval_callback"] = kwargs.get("approval_callback")
+        return True
+
+    monkeypatch.setattr(backend.runtime, "start_async", fake_start_async)
+    response = client.post(
+        f"/api/sessions/{session_id}/query",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+        json={"query": "hello"},
+    )
+    assert response.status_code == 202
+    assert captured["approval_callback"] is backend.auto_approve
+
+    captured.clear()
+
+    def fake_run_sync(*_args, **kwargs):
+        captured["approval_callback"] = kwargs.get("approval_callback")
+        return _make_task_queue("ok")
+
+    monkeypatch.setattr(backend.runtime, "run_sync", fake_run_sync)
+    response = client.post(
+        "/api/query",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+        json={"query": "hello"},
+    )
+    assert response.status_code == 200
+    assert captured["approval_callback"] is backend.auto_approve
 
 
 def test_query_with_session_tag(monkeypatch, tmp_path):
     """Create or reuse a tagged session and pass it into orchestration."""
-    backend.session_store = backend.SessionStore(root_dir=str(tmp_path))
-    backend.runtime = backend.SessionRuntime(session_store=backend.session_store)
+    _reset_backend(tmp_path, monkeypatch)
     client = backend.app.test_client()
     captured = {}
 
@@ -98,8 +157,7 @@ def test_query_with_session_tag(monkeypatch, tmp_path):
 
 def test_query_fork_from(monkeypatch, tmp_path):
     """Fork a session when requested and pass the fork into orchestration."""
-    backend.session_store = backend.SessionStore(root_dir=str(tmp_path))
-    backend.runtime = backend.SessionRuntime(session_store=backend.session_store)
+    _reset_backend(tmp_path, monkeypatch)
     source_session = backend.session_store.create_session()
     client = backend.app.test_client()
     captured = {}
@@ -123,6 +181,12 @@ def test_query_fork_from(monkeypatch, tmp_path):
 def _reset_backend(tmp_path, monkeypatch):
     backend.session_store = backend.SessionStore(root_dir=str(tmp_path))
     backend.runtime = backend.SessionRuntime(session_store=backend.session_store)
+    backend.notification_store = backend.NotificationStore(root_dir=str(tmp_path))
+    backend.share_store = backend.ShareStore(root_dir=str(tmp_path))
+    backend.notification_service = backend.NotificationService(
+        backend.notification_store,
+        backend.runtime.session_store,
+    )
 
 
 def _fake_run_sync(*, session_id: str, user_query: str, should_cancel=None, **_kwargs):
@@ -213,6 +277,25 @@ def test_sessions_list_skips_empty(monkeypatch, tmp_path):
     assert all(item["session_id"] != empty_session for item in sessions)
 
 
+def test_sessions_create_adds_event(monkeypatch, tmp_path):
+    """Include newly created sessions in listings even without context."""
+    _reset_backend(tmp_path, monkeypatch)
+    client = backend.app.test_client()
+    create = client.post(
+        "/api/sessions",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+        json={},
+    )
+    assert create.status_code == 200
+    session_id = create.get_json()["session_id"]
+    listing = client.get(
+        "/api/sessions",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+    )
+    sessions = listing.get_json()["sessions"]
+    assert any(item["session_id"] == session_id for item in sessions)
+
+
 def test_sessions_archive_and_list(monkeypatch, tmp_path):
     """Archive sessions and include them when requested."""
     _reset_backend(tmp_path, monkeypatch)
@@ -249,6 +332,110 @@ def test_sessions_archive_and_list(monkeypatch, tmp_path):
     )
     assert unarchive.status_code == 200
     assert unarchive.get_json()["archived"] is False
+
+
+def test_notifications_endpoints(monkeypatch, tmp_path):
+    """Create, dismiss, and clear notifications."""
+    _reset_backend(tmp_path, monkeypatch)
+    client = backend.app.test_client()
+    create = client.post(
+        "/api/sessions",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+        json={},
+    )
+    assert create.status_code == 200
+    listing = client.get(
+        "/api/notifications",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+    )
+    assert listing.status_code == 200
+    notifications = listing.get_json()["notifications"]
+    assert notifications
+    first_id = notifications[0]["id"]
+
+    dismiss = client.post(
+        "/api/notifications/dismiss",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+        json={"id": first_id},
+    )
+    assert dismiss.status_code == 200
+    assert dismiss.get_json()["dismissed"] == 1
+
+    listing = client.get(
+        "/api/notifications?include_dismissed=1",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+    )
+    notifications = listing.get_json()["notifications"]
+    dismissed = next(item for item in notifications if item["id"] == first_id)
+    assert dismissed.get("dismissed") is True
+
+    cleared = client.post(
+        "/api/notifications/clear",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+        json={},
+    )
+    assert cleared.status_code == 200
+    listing = client.get(
+        "/api/notifications?include_dismissed=1",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+    )
+    notifications = listing.get_json()["notifications"]
+    assert all(item["id"] != first_id for item in notifications)
+
+
+def test_attachments_upload(monkeypatch, tmp_path):
+    """Upload attachments and return metadata."""
+    _reset_backend(tmp_path, monkeypatch)
+    client = backend.app.test_client()
+    create = client.post(
+        "/api/sessions",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+        json={},
+    )
+    session_id = create.get_json()["session_id"]
+    data = {"file": (io.BytesIO(b"hello"), "note.txt")}
+    response = client.post(
+        f"/api/sessions/{session_id}/attachments",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+        data=data,
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 200
+    attachments = response.get_json()["attachments"]
+    assert attachments
+    stored_name = attachments[0]["stored_name"]
+    path = tmp_path / session_id / "attachments" / stored_name
+    assert path.exists()
+
+
+def test_share_and_export(monkeypatch, tmp_path):
+    """Create share tokens and export session transcripts."""
+    _reset_backend(tmp_path, monkeypatch)
+    client = backend.app.test_client()
+    create = client.post(
+        "/api/sessions",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+        json={},
+    )
+    session_id = create.get_json()["session_id"]
+    share = client.post(
+        f"/api/sessions/{session_id}/share",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+    )
+    assert share.status_code == 200
+    token = share.get_json()["token"]
+
+    export = client.get(
+        f"/api/sessions/{session_id}/export",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+    )
+    assert export.status_code == 200
+    assert export.get_json()["session_id"] == session_id
+
+    shared = client.get(f"/api/share/{token}")
+    assert shared.status_code == 200
+    payload = shared.get_json()
+    assert payload["session_id"] == session_id
 
 
 def test_slash_command_terminate(monkeypatch, tmp_path):

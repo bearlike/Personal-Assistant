@@ -36,22 +36,13 @@ class Counter:
 
 
 def _edit_block(path: str, search: str, replace: str) -> str:
-    return (
-        f"{path}\n"
-        "```text\n"
-        "<<<<<<< SEARCH\n"
-        f"{search}=======\n"
-        f"{replace}>>>>>>> REPLACE\n"
-        "```\n"
-    )
+    return f"{path}\n```text\n<<<<<<< SEARCH\n{search}=======\n{replace}>>>>>>> REPLACE\n```\n"
 
 
 def _types_in_order(events, expected):
     indices = []
     for value in expected:
-        indices.append(
-            next(i for i, event in enumerate(events) if event["type"] == value)
-        )
+        indices.append(next(i for i, event in enumerate(events) if event["type"] == value))
     assert indices == sorted(indices)
 
 
@@ -378,6 +369,37 @@ def test_orchestrate_session_plan_mode_no_replan(monkeypatch, tmp_path):
     assert generate_calls.count == 1
     assert state.done is True
     assert state.done_reason in {"blocked", "incomplete"}
+    events = session_store.load_transcript(session_id)
+    completion = next(event for event in events if event["type"] == "completion")
+    assert completion["payload"].get("error") == "tool not allowed in plan mode"
+
+
+def test_orchestrate_session_emits_completion_on_exception(monkeypatch, tmp_path):
+    """Always emit completion when orchestration raises."""
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
+
+    def fake_run(_self, *_args, **_kwargs):
+        raise RuntimeError("boom")
+
+    def fake_generate(_self, *_args, **_kwargs):
+        return TaskQueue(action_steps=[])
+
+    monkeypatch.setattr(Orchestrator, "_run_action_plan", fake_run)
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+
+    task_queue = task_master.orchestrate_session(
+        "trigger error",
+        max_iters=1,
+        session_id=session_id,
+        session_store=session_store,
+    )
+
+    assert task_queue.last_error == "boom"
+    events = session_store.load_transcript(session_id)
+    completion = next(event for event in events if event["type"] == "completion")
+    assert completion["payload"]["done_reason"] == "error"
+    assert completion["payload"]["error"] == "boom"
 
 
 def test_orchestrate_session_schema_replan_and_context(monkeypatch, tmp_path):
@@ -714,6 +736,8 @@ def test_response_synthesis_helpers(monkeypatch):
         ]
     )
     assert Orchestrator._collect_tool_outputs(queue) == []
+    queue.last_error = "tool failed"
+    assert Orchestrator._collect_tool_outputs(queue) == ["ERROR: tool failed"]
     assert Orchestrator._should_synthesize_response(TaskQueue(action_steps=[])) is True
 
     def _fake_model(_inputs):
@@ -1000,6 +1024,67 @@ def test_orchestrate_session_max_iters(monkeypatch, tmp_path):
     assert state.done_reason == "incomplete"
     assert generate_calls.count == 1
     assert run_calls.count == 1
+
+
+def test_orchestrate_session_reflection_failure_synthesizes(monkeypatch, tmp_path):
+    """Synthesize a graceful response when reflection blocks progress."""
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
+
+    class DummyTool:
+        def run(self, _step):
+            return get_mock_speaker()(content="tool output")
+
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="dummy_tool",
+            name="Dummy",
+            description="Dummy tool",
+            factory=lambda: DummyTool(),
+        )
+    )
+
+    def fake_generate(*_args, **_kwargs):
+        step = ActionStep(
+            action_consumer="dummy_tool",
+            action_type="get",
+            action_argument="query",
+            objective="Need a verified price and timestamp.",
+        )
+        return TaskQueue(action_steps=[step])
+
+    class DummyReflection:
+        status = "retry"
+        notes = "Missing timestamp"
+        revised_argument = None
+
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(
+        StepReflector,
+        "reflect",
+        lambda *_args, **_kwargs: DummyReflection(),
+    )
+    monkeypatch.setattr(ResponseSynthesizer, "synthesize", lambda *_a, **_k: "graceful fail")
+
+    task_queue, state = task_master.orchestrate_session(
+        "get price",
+        max_iters=1,
+        return_state=True,
+        session_id=session_id,
+        session_store=session_store,
+        tool_registry=registry,
+    )
+
+    assert state.done is True
+    assert state.done_reason == "incomplete"
+    assert task_queue.last_error is not None
+    assert task_queue.task_result == "graceful fail"
+    events = session_store.load_transcript(session_id)
+    assert any(
+        event.get("type") == "assistant" and event.get("payload", {}).get("text") == "graceful fail"
+        for event in events
+    )
 
 
 def test_orchestrator_max_iters_zero_marks_limit(tmp_path):
@@ -1292,6 +1377,8 @@ def test_run_action_plan_reflection_blocks_progress(monkeypatch):
         model_name="gpt-3.5-turbo",
     )
     assert task_queue.action_steps[0].result is None
+    assert task_queue.last_error is not None
+    assert "needs revision" in task_queue.last_error
 
 
 def test_orchestrate_session_auto_compact(monkeypatch, tmp_path):

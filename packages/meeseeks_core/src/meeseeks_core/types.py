@@ -68,6 +68,8 @@ class CompletionPayload(TypedDict):
     done: bool
     done_reason: str | None
     task_result: str | None
+    error: NotRequired[str]
+    last_error: NotRequired[str]
 
 
 EventPayload = (
