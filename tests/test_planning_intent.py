@@ -63,6 +63,18 @@ def test_filter_specs_by_intent_includes_shell_tool():
     assert tool_ids == {"aider_shell_tool"}
 
 
+def test_filter_specs_by_intent_includes_deepwiki_tool():
+    """Include DeepWiki tools when explicitly requested."""
+    planner = Planner(ToolRegistry())
+    specs = [
+        _spec("mcp_utils_deepwiki_oss_ask_question", kind="mcp"),
+        _spec("aider_read_file_tool", kind="local"),
+    ]
+    filtered = planner._filter_specs_by_intent(specs, "Use DeepWiki to summarize bearlike/Assistant")
+    tool_ids = {spec.tool_id for spec in filtered}
+    assert tool_ids == {"mcp_utils_deepwiki_oss_ask_question"}
+
+
 def test_spec_capabilities_prefers_metadata():
     """Prefer explicit capability metadata when provided."""
     planner = Planner(ToolRegistry())
@@ -81,3 +93,10 @@ def test_spec_capabilities_infers_web_read():
     planner = Planner(ToolRegistry())
     spec = _spec("mcp_utils_internet_search_web_url_read", kind="mcp")
     assert "web_read" in planner._spec_capabilities(spec)
+
+
+def test_spec_capabilities_infers_deepwiki():
+    """Infer deepwiki tools as web_search capable."""
+    planner = Planner(ToolRegistry())
+    spec = _spec("mcp_utils_deepwiki_oss_ask_question", kind="mcp")
+    assert "web_search" in planner._spec_capabilities(spec)
