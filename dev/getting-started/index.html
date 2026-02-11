@@ -851,7 +851,15 @@
   - <code>GET /api/sessions?include_archived=1</code> include archived sessions
   - <code>POST /api/sessions/{session_id}/archive</code> archive a session
   - <code>DELETE /api/sessions/{session_id}/archive</code> unarchive a session
-  - <code>POST /api/query</code> legacy synchronous endpoint</p>
+  - <code>POST /api/query</code> synchronous endpoint (simple/CLI-compatible)
+  - <code>GET /api/tools</code> list tool registry entries
+  - <code>GET /api/notifications</code> list notifications
+  - <code>POST /api/notifications/dismiss</code> dismiss notifications
+  - <code>POST /api/notifications/clear</code> clear notifications
+  - <code>POST /api/sessions/{session_id}/attachments</code> upload attachments
+  - <code>POST /api/sessions/{session_id}/share</code> create share link
+  - <code>POST /api/sessions/{session_id}/export</code> export session payload
+  - <code>GET /api/share/{token}</code> fetch shared session data</p>
 <h2 id="aider-edit-blocks-local-tool">Aider edit blocks (local tool)</h2>
 <p>The edit-block tool expects strict SEARCH/REPLACE blocks and returns format guidance on mismatches.</p>
 <pre><code>&lt;path&gt;

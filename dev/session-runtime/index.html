@@ -604,6 +604,9 @@
 1. Create a session.
 2. Start an async run.
 3. Poll <code>/events</code> with <code>after</code> to receive only new records.</p>
+<p>Event payload notes:
+- <code>action_plan</code> payloads include <code>steps: [{title, description}]</code>.
+- Tool activity uses <code>tool_id</code>, <code>operation</code>, and <code>tool_input</code> in <code>tool_result</code> and <code>permission</code> events.</p>
 <h2 id="minimal-usage-python">Minimal usage (Python)</h2>
 <pre><code class="language-python">from meeseeks_core.session_runtime import SessionRuntime
 from meeseeks_core.session_store import SessionStore

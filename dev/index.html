@@ -615,16 +615,17 @@
 - <a href="session-runtime/">Session runtime</a> - shared runtime used by CLI + API</p>
 <h2 id="feature-highlights-quick-view">Feature highlights (quick view)</h2>
 <ul>
-<li>Plan → act → observe loop to keep work grounded in tool results.</li>
+<li>Plan → tool selection → step execution loop to keep work grounded in tool results.</li>
 <li>Multiple interfaces (chat UI, REST API, Home Assistant, terminal CLI) backed by one core engine.</li>
 <li>Tool registry for local tools plus optional MCP tools.</li>
 <li>Built-in local file and shell tools (Aider adapters) for edit blocks, read, list, and shell execution.</li>
 <li>Session transcripts with compaction for long runs and context budget awareness.</li>
 <li>Context snapshots built from recent turns plus summaries of prior activity.</li>
 <li>Session listings filter empty sessions and support archiving via the API.</li>
-<li>Step-level reflection after tool execution to validate outcomes.</li>
+<li>Step-level reflection after tool execution to validate outcomes and adjust tool inputs.</li>
 <li>Permission gate with approval callbacks plus lightweight hooks around tool execution.</li>
 <li>Shared session runtime; API exposes polling endpoints while the CLI runs the runtime in-process for sync execution, cancellation, and summaries.</li>
+<li>Event payloads: <code>action_plan</code> steps are <code>{title, description}</code>, tool events use <code>tool_id</code>, <code>operation</code>, and <code>tool_input</code>.</li>
 <li>Optional components (Langfuse, Home Assistant) auto-disable when not configured.</li>
 <li>Langfuse tracing is session-scoped when enabled, grouping multi-turn runs.</li>
 </ul>
@@ -655,7 +656,9 @@
   Runtime --&gt; Core
   Runtime --&gt; SessionStore
   Runtime --&gt; Planner
-  Planner --&gt; Tools
+  Planner --&gt; ToolSelector
+  ToolSelector --&gt; StepExecutor
+  StepExecutor --&gt; Tools
   Tools --&gt; LocalTools
   Tools --&gt; MCP
   Tools --&gt; HomeAssistant
