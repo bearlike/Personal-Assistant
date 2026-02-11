@@ -182,7 +182,11 @@ class Orchestrator:
                     )
                     break
 
-            if state.done and resolved_mode != "plan" and self._should_synthesize_response(task_queue):
+            if (
+                state.done
+                and resolved_mode != "plan"
+                and self._should_synthesize_response(task_queue)
+            ):
                 tool_outputs = self._collect_tool_outputs(task_queue)
                 response = self._synthesizer.synthesize(
                     user_query=user_query,

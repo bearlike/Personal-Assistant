@@ -6,13 +6,12 @@ Single-user REST API with session-based orchestration and event polling.
 
 from __future__ import annotations
 
-from copy import deepcopy
-from datetime import datetime, timezone
 import os
 import uuid
+from copy import deepcopy
+from datetime import datetime, timezone
 
 from flask import Flask, request
-from werkzeug.utils import secure_filename
 from flask_restx import Api, Resource, fields
 from meeseeks_core.classes import TaskQueue
 from meeseeks_core.common import get_logger
@@ -23,6 +22,7 @@ from meeseeks_core.session_runtime import SessionRuntime, parse_core_command
 from meeseeks_core.session_store import SessionStore
 from meeseeks_core.share_store import ShareStore
 from meeseeks_core.tool_registry import load_registry
+from werkzeug.utils import secure_filename
 
 # Get the API token from app config
 MASTER_API_TOKEN = get_config_value("api", "master_token", default="msk-strong-password")
@@ -164,6 +164,7 @@ class NotificationService:
     """Emit session lifecycle notifications for the API."""
 
     def __init__(self, store: NotificationStore, session_store: SessionStore) -> None:
+        """Initialize with notification and session stores."""
         self._store = store
         self._session_store = session_store
 
@@ -511,8 +512,9 @@ class NotificationDismiss(Resource):
             return auth_error
         payload = request.get_json(silent=True) or {}
         ids: list[str] = []
-        if isinstance(payload.get("ids"), list):
-            ids = [str(item) for item in payload.get("ids") if item]
+        ids_payload = payload.get("ids")
+        if isinstance(ids_payload, list):
+            ids = [str(item) for item in ids_payload if item]
         elif payload.get("id"):
             ids = [str(payload.get("id"))]
         dismissed = notification_store.dismiss(ids)

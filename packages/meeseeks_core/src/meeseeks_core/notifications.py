@@ -7,6 +7,7 @@ import json
 import os
 import threading
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -37,6 +38,7 @@ class NotificationStore:
     """JSON-backed notification store for single-user UI."""
 
     def __init__(self, root_dir: str | None = None, filename: str = "notifications.json") -> None:
+        """Initialize the notification store location."""
         if root_dir is None:
             root_dir = get_config_value("runtime", "session_dir", default="./data/sessions")
         root_dir = os.path.abspath(root_dir)
@@ -68,7 +70,11 @@ class NotificationStore:
             data = self._load()
         if not include_dismissed:
             data = [item for item in data if not item.get("dismissed")]
-        return sorted(data, key=lambda item: item.get("created_at", ""), reverse=True)
+        return sorted(
+            data,
+            key=lambda item: str(item.get("created_at", "")),
+            reverse=True,
+        )
 
     def add(
         self,
@@ -100,7 +106,7 @@ class NotificationStore:
             self._save(data)
         return payload
 
-    def dismiss(self, ids: list[str]) -> int:
+    def dismiss(self, ids: Sequence[str]) -> int:
         """Mark notifications as dismissed."""
         if not ids:
             return 0

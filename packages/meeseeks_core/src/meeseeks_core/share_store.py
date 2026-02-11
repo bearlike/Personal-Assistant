@@ -20,6 +20,7 @@ class ShareStore:
     """JSON-backed share token store for session exports."""
 
     def __init__(self, root_dir: str | None = None, filename: str = "shares.json") -> None:
+        """Initialize the share token store location."""
         if root_dir is None:
             root_dir = get_config_value("runtime", "session_dir", default="./data/sessions")
         root_dir = os.path.abspath(root_dir)
@@ -48,7 +49,7 @@ class ShareStore:
     def create(self, session_id: str) -> dict[str, object]:
         """Create and store a new share token."""
         token = uuid.uuid4().hex
-        record = {"session_id": session_id, "created_at": _utc_now()}
+        record: dict[str, object] = {"session_id": session_id, "created_at": _utc_now()}
         with self._lock:
             data = self._load()
             data[token] = record
