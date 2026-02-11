@@ -96,6 +96,43 @@ def test_query_with_mode(monkeypatch):
     assert captured["mode"] == "plan"
 
 
+def test_api_auto_approves_permissions(monkeypatch, tmp_path):
+    """API requests should always use auto-approve callback."""
+    _reset_backend(tmp_path, monkeypatch)
+    client = backend.app.test_client()
+    session_id = backend.session_store.create_session()
+
+    captured = {}
+
+    def fake_start_async(*_args, **kwargs):
+        captured["approval_callback"] = kwargs.get("approval_callback")
+        return True
+
+    monkeypatch.setattr(backend.runtime, "start_async", fake_start_async)
+    response = client.post(
+        f"/api/sessions/{session_id}/query",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+        json={"query": "hello"},
+    )
+    assert response.status_code == 202
+    assert captured["approval_callback"] is backend.auto_approve
+
+    captured.clear()
+
+    def fake_run_sync(*_args, **kwargs):
+        captured["approval_callback"] = kwargs.get("approval_callback")
+        return _make_task_queue("ok")
+
+    monkeypatch.setattr(backend.runtime, "run_sync", fake_run_sync)
+    response = client.post(
+        "/api/query",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+        json={"query": "hello"},
+    )
+    assert response.status_code == 200
+    assert captured["approval_callback"] is backend.auto_approve
+
+
 def test_query_with_session_tag(monkeypatch, tmp_path):
     """Create or reuse a tagged session and pass it into orchestration."""
     backend.session_store = backend.SessionStore(root_dir=str(tmp_path))
