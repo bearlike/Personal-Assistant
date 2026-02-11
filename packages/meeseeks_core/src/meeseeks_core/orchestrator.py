@@ -130,9 +130,7 @@ class Orchestrator:
                 state.summary = summary
                 state.done = True
                 state.done_reason = "compacted"
-                task_queue = self._build_direct_response(
-                    f"Compaction complete. Summary: {summary}"
-                )
+                task_queue = self._build_direct_response(f"Compaction complete. Summary: {summary}")
                 return (task_queue, state) if return_state else task_queue
 
             context = self._context_builder.build(
@@ -205,9 +203,7 @@ class Orchestrator:
                     elif decision_type == "tool":
                         tool_id = str(decision.tool_id or "").strip()
                         if not tool_id or tool_id not in allowed_tool_ids:
-                            last_error = (
-                                f"Tool '{tool_id or 'unknown'}' not allowed for this step."
-                            )
+                            last_error = f"Tool '{tool_id or 'unknown'}' not allowed for this step."
                             tool_outputs.append(f"ERROR: {last_error}")
                         else:
                             args = decision.args
@@ -220,9 +216,7 @@ class Orchestrator:
                                 tool_id,
                                 args,
                             )
-                            run_queue = TaskQueue(
-                                plan_steps=plan.steps, action_steps=[action_step]
-                            )
+                            run_queue = TaskQueue(plan_steps=plan.steps, action_steps=[action_step])
                             run_queue = self._run_action_plan(
                                 session_id,
                                 run_queue,
@@ -261,9 +255,7 @@ class Orchestrator:
                         state.done_reason = "max_steps_reached"
                     elif last_error:
                         state.done_reason = (
-                            "blocked"
-                            if "permission denied" in last_error.lower()
-                            else "incomplete"
+                            "blocked" if "permission denied" in last_error.lower() else "incomplete"
                         )
                     else:
                         state.done_reason = "completed"

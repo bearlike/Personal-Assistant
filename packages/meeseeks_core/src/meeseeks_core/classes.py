@@ -54,9 +54,7 @@ class ActionStep(BaseModel):
             "Use only tool IDs listed under Available tools."
         )
     )
-    action_type: str = Field(
-        description="Specify the execution type (legacy get/set or execute)."
-    )
+    action_type: str = Field(description="Specify the execution type (legacy get/set or execute).")
     action_argument: ActionArgument = Field(
         description=(
             "Provide details for the action. If 'task', specify the task to perform. "

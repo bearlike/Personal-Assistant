@@ -513,9 +513,7 @@ class PlanUpdater:
         """Return updated remaining steps."""
         parser = PydanticOutputParser(pydantic_object=PlanUpdate)  # type: ignore[type-var]
         system_prompt = get_system_prompt("plan-updater")
-        remaining_lines = [
-            f"- {step.title}: {step.description}" for step in remaining_steps
-        ]
+        remaining_lines = [f"- {step.title}: {step.description}" for step in remaining_steps]
         remaining_text = "\n".join(remaining_lines) or "(none)"
         prompt = ChatPromptTemplate(
             messages=[

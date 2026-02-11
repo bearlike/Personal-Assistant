@@ -512,9 +512,7 @@ class Notifications(Resource):
             return auth_error
         include_dismissed = _parse_bool(request.args.get("include_dismissed"))
         return {
-            "notifications": notification_store.list(
-                include_dismissed=include_dismissed
-            ),
+            "notifications": notification_store.list(include_dismissed=include_dismissed),
         }, 200
 
 

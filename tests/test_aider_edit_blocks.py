@@ -19,14 +19,7 @@ from meeseeks_tools.integration.aider_edit_blocks import (
 
 
 def _block(path: str, search: str, replace: str) -> str:
-    return (
-        f"{path}\n"
-        "```text\n"
-        "<<<<<<< SEARCH\n"
-        f"{search}=======\n"
-        f"{replace}>>>>>>> REPLACE\n"
-        "```\n"
-    )
+    return f"{path}\n```text\n<<<<<<< SEARCH\n{search}=======\n{replace}>>>>>>> REPLACE\n```\n"
 
 
 def test_apply_search_replace_block(tmp_path):
@@ -212,9 +205,6 @@ def test_edit_block_tool_uses_cwd_for_string_argument(monkeypatch, tmp_path):
     assert target.read_text(encoding="utf-8") == "hello\nthere\n"
 
 
- 
-
-
 def test_edit_block_tool_input_error_guidance_when_blank():
     """Return guidance when no message is provided."""
     message = _format_tool_input_error("")
@@ -257,14 +247,7 @@ def test_apply_search_replace_block_missing_leading_whitespace(tmp_path):
 )
 def test_parse_search_replace_blocks_filename_variants(header, expected):
     """Normalize filename markers before SEARCH blocks."""
-    content = (
-        f"{header}\n"
-        "<<<<<<< SEARCH\n"
-        "old\n"
-        "=======\n"
-        "new\n"
-        ">>>>>>> REPLACE\n"
-    )
+    content = f"{header}\n<<<<<<< SEARCH\nold\n=======\nnew\n>>>>>>> REPLACE\n"
     edits, shell_blocks = parse_search_replace_blocks(content, valid_fnames=None)
     assert not shell_blocks
     assert edits[0].path == expected
@@ -272,13 +255,6 @@ def test_parse_search_replace_blocks_filename_variants(header, expected):
 
 def test_parse_search_replace_blocks_prefers_valid_fnames():
     """Prefer close matches from valid filename list."""
-    content = (
-        "file.txt\n"
-        "<<<<<<< SEARCH\n"
-        "old\n"
-        "=======\n"
-        "new\n"
-        ">>>>>>> REPLACE\n"
-    )
+    content = "file.txt\n<<<<<<< SEARCH\nold\n=======\nnew\n>>>>>>> REPLACE\n"
     edits, _ = parse_search_replace_blocks(content, valid_fnames=["a/file.txt"])
     assert edits[0].path == "a/file.txt"
