@@ -427,15 +427,15 @@ class ToolSelector:
                 openai_api_base=get_config_value("llm", "api_base"),
                 api_key=get_config_value("llm", "api_key"),
             )
-        except ImportError as exc:
+            selection = (prompt | model | parser).invoke({"user_query": user_query.strip()})
+            return selection
+        except Exception as exc:  # pragma: no cover - defensive fallback
             logging.warning("Tool selector unavailable, falling back to all tools: {}", exc)
             return ToolSelection(
                 tool_required=bool(tool_specs),
                 tool_ids=[spec.tool_id for spec in tool_specs],
                 rationale="fallback",
             )
-        selection = (prompt | model | parser).invoke({"user_query": user_query.strip()})
-        return selection
 
 
 class StepExecutor:

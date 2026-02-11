@@ -7,7 +7,7 @@ from collections.abc import Callable
 
 from meeseeks_core.action_runner import ActionPlanRunner
 from meeseeks_core.classes import ActionStep, OrchestrationState, Plan, PlanStep, TaskQueue
-from meeseeks_core.common import get_logger
+from meeseeks_core.common import get_logger, session_log_context
 from meeseeks_core.compaction import should_compact, summarize_events
 from meeseeks_core.components import langfuse_session_context
 from meeseeks_core.config import get_config_value
@@ -79,16 +79,17 @@ class Orchestrator:
         if session_id is None:
             session_id = self._session_store.create_session()
 
-        with langfuse_session_context(session_id):
-            return self._run_with_session_context(
-                user_query,
-                max_iters=max_iters,
-                initial_plan=initial_plan,
-                return_state=return_state,
-                session_id=session_id,
-                mode=mode,
-                should_cancel=should_cancel,
-            )
+        with session_log_context(session_id):
+            with langfuse_session_context(session_id):
+                return self._run_with_session_context(
+                    user_query,
+                    max_iters=max_iters,
+                    initial_plan=initial_plan,
+                    return_state=return_state,
+                    session_id=session_id,
+                    mode=mode,
+                    should_cancel=should_cancel,
+                )
 
     def _run_with_session_context(
         self,

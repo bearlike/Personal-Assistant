@@ -5,8 +5,10 @@ from __future__ import annotations
 
 import json
 import logging as logging_real
+import os
 import sys
 import time
+from contextlib import contextmanager
 from importlib import resources
 from typing import NamedTuple
 
@@ -29,6 +31,7 @@ def get_mock_speaker() -> type[MockSpeaker]:
 
 
 _LOG_CONFIGURED = False
+_SESSION_SINKS: dict[str, dict[str, int]] = {}
 
 
 def _resolve_log_level() -> str:
@@ -74,6 +77,55 @@ def _configure_logging() -> None:
         format_str = "{time:YYYY-MM-DD HH:mm:ss} [{extra[name]}] <level>{level}</level> {message}"
     loguru_logger.add(sys.stderr, level=log_level, format=format_str, colorize=colorize)
     _LOG_CONFIGURED = True
+
+
+def _resolve_session_log_dir() -> str:
+    cache_dir = get_config_value("runtime", "cache_dir", default=".cache")
+    cache_dir = str(cache_dir or ".cache")
+    return os.path.join(cache_dir, "session-logs")
+
+
+def _session_log_format() -> str:
+    return "{time:YYYY-MM-DD HH:mm:ss} [{extra[name]}] {level} {message}"
+
+
+def _ensure_session_log_sink(session_id: str, log_dir: str | None = None) -> None:
+    _configure_logging()
+    if session_id in _SESSION_SINKS:
+        _SESSION_SINKS[session_id]["count"] += 1
+        return
+    target_dir = log_dir or _resolve_session_log_dir()
+    os.makedirs(target_dir, exist_ok=True)
+    log_path = os.path.join(target_dir, f"{session_id}.log")
+    sink_id = loguru_logger.add(
+        log_path,
+        level=_resolve_log_level(),
+        format=_session_log_format(),
+        colorize=False,
+        filter=lambda record: record["extra"].get("session_id") == session_id,
+    )
+    _SESSION_SINKS[session_id] = {"id": sink_id, "count": 1}
+
+
+def _release_session_log_sink(session_id: str) -> None:
+    entry = _SESSION_SINKS.get(session_id)
+    if not entry:
+        return
+    entry["count"] -= 1
+    if entry["count"] <= 0:
+        loguru_logger.remove(entry["id"])
+        _SESSION_SINKS.pop(session_id, None)
+
+
+@contextmanager
+def session_log_context(session_id: str, log_dir: str | None = None):
+    """Context manager that logs all session output to a session log file."""
+    _ensure_session_log_sink(session_id, log_dir=log_dir)
+    try:
+        with loguru_logger.contextualize(session_id=session_id):
+            yield
+    finally:
+        _release_session_log_sink(session_id)
 
 
 def get_logger(name: str | None = None):
