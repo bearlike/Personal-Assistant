@@ -25,4 +25,4 @@ Action arguments (JSON):
 - root: optional project root to resolve file paths (defaults to current working directory).
 - files: optional list of file paths to validate fuzzy filename matches.
 
-Use action_type "set" to apply changes and "get" to validate without writing.
+Provide the arguments required to apply edits or validate without writing.

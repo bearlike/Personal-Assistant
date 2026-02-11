@@ -160,6 +160,23 @@ ns = api.namespace("api", description="Meeseeks operations")
 task_queue_model = api.model(
     "TaskQueue",
     {
+        "plan_steps": fields.List(
+            fields.Nested(
+                api.model(
+                    "PlanStep",
+                    {
+                        "title": fields.String(
+                            required=True,
+                            description="Short title for the plan step",
+                        ),
+                        "description": fields.String(
+                            required=True,
+                            description="Brief description of the step",
+                        ),
+                    },
+                )
+            )
+        ),
         "session_id": fields.String(
             required=False, description="Session identifier for transcript storage"
         ),
@@ -180,8 +197,8 @@ task_queue_model = api.model(
                             required=True,
                             description="The type of action to be performed (get/set)",
                         ),
-                        "action_argument": fields.String(
-                            required=True, description="The specific argument for the action"
+                        "action_argument": fields.Raw(
+                            required=True, description="Arguments for the tool invocation"
                         ),
                         "result": fields.String(description="The result of the executed action"),
                     },

@@ -11,8 +11,21 @@ JsonValue = str | int | float | bool | None | list[object] | dict[str, object]
 ActionArgument = str | dict[str, object]
 
 
+class PlanStepPayload(TypedDict):
+    """Payload describing a single plan step."""
+
+    title: str
+    description: str
+
+
+class ActionPlanPayload(TypedDict):
+    """Payload describing an action plan."""
+
+    steps: list[PlanStepPayload]
+
+
 class ActionStepPayload(TypedDict):
-    """Serialized action step data sent to/from orchestration."""
+    """Serialized tool call data sent to/from execution."""
 
     action_consumer: str
     action_type: str
@@ -21,12 +34,6 @@ class ActionStepPayload(TypedDict):
     objective: NotRequired[str]
     execution_checklist: NotRequired[list[str]]
     expected_output: NotRequired[str]
-
-
-class ActionPlanPayload(TypedDict):
-    """Payload describing an action plan."""
-
-    steps: list[ActionStepPayload]
 
 
 class PermissionPayload(TypedDict):

@@ -73,11 +73,15 @@ class StepReflector:
             partial_variables={"format_instructions": parser.get_format_instructions()},
             input_variables=["title", "objective", "checklist", "expected", "result"],
         )
-        model = build_chat_model(
-            model_name=reflection_model,
-            openai_api_base=get_config_value("llm", "api_base"),
-            api_key=get_config_value("llm", "api_key"),
-        )
+        try:
+            model = build_chat_model(
+                model_name=reflection_model,
+                openai_api_base=get_config_value("llm", "api_base"),
+                api_key=get_config_value("llm", "api_key"),
+            )
+        except Exception as exc:
+            logging.warning("Step reflection unavailable: {}", exc)
+            return None
         handler = build_langfuse_handler(
             user_id="meeseeks-reflection",
             session_id=f"reflection-{os.getpid()}-{os.urandom(4).hex()}",

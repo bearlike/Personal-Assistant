@@ -2,7 +2,7 @@
 
 from langchain_core.messages import AIMessage, HumanMessage
 from meeseeks_core import planning as planning_module
-from meeseeks_core.classes import TaskQueue
+from meeseeks_core.classes import Plan
 from meeseeks_core.planning import Planner
 from meeseeks_core.tool_registry import ToolRegistry, ToolSpec
 
@@ -60,7 +60,7 @@ def test_planner_includes_langfuse_callbacks(monkeypatch):
 
         def invoke(self, *_args, **kwargs):
             captured["config"] = kwargs.get("config")
-            return TaskQueue(action_steps=[])
+            return Plan(steps=[])
 
     class DummyPrompt:
         def __init__(self, *args, **kwargs):

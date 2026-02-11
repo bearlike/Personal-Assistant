@@ -7,4 +7,4 @@ Action arguments (JSON):
 - root: optional project root to resolve file paths (defaults to current working directory).
 - max_entries: optional integer limit for number of entries returned.
 
-Use action_type "get" to list entries.
+Provide the arguments required to list entries.

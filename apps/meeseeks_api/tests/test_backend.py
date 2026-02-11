@@ -14,6 +14,12 @@ class DummyQueue:
     def __init__(self, result: str) -> None:
         """Initialize the dummy queue with a single action result."""
         self.task_result = result
+        self.plan_steps = [
+            {
+                "title": "Say hello",
+                "description": "Respond to the user.",
+            }
+        ]
         self.action_steps = [
             {
                 "action_consumer": "home_assistant_tool",
@@ -27,6 +33,7 @@ class DummyQueue:
         """Return a serialized representation of the queue."""
         return {
             "task_result": self.task_result,
+            "plan_steps": list(self.plan_steps),
             "action_steps": list(self.action_steps),
         }
 
@@ -73,6 +80,7 @@ def test_query_success(monkeypatch):
     payload = response.get_json()
     assert payload["task_result"] == "ok"
     assert payload["session_id"]
+    assert payload["plan_steps"]
     assert payload["action_steps"]
     assert captured["mode"] is None
 

@@ -8,7 +8,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from meeseeks_core.classes import TaskQueue
+from meeseeks_core.classes import Plan, TaskQueue
 from meeseeks_core.session_store import SessionStore
 from meeseeks_core.task_master import orchestrate_session
 from meeseeks_core.types import EventRecord
@@ -236,7 +236,7 @@ class SessionRuntime:
         user_query: str,
         model_name: str | None = None,
         max_iters: int = 3,
-        initial_task_queue: TaskQueue | None = None,
+        initial_plan: Plan | None = None,
         tool_registry=None,
         permission_policy=None,
         approval_callback=None,
@@ -251,7 +251,7 @@ class SessionRuntime:
                 session_id=session_id,
                 model_name=model_name,
                 max_iters=max_iters,
-                initial_task_queue=initial_task_queue,
+                initial_plan=initial_plan,
                 tool_registry=tool_registry,
                 permission_policy=permission_policy,
                 approval_callback=approval_callback,
@@ -269,7 +269,7 @@ class SessionRuntime:
         session_id: str,
         model_name: str | None = None,
         max_iters: int = 3,
-        initial_task_queue: TaskQueue | None = None,
+        initial_plan: Plan | None = None,
         tool_registry=None,
         permission_policy=None,
         approval_callback=None,
@@ -282,7 +282,7 @@ class SessionRuntime:
             user_query=user_query,
             model_name=model_name,
             max_iters=max_iters,
-            initial_task_queue=initial_task_queue,
+            initial_plan=initial_plan,
             session_id=session_id,
             session_store=self._session_store,
             tool_registry=tool_registry,

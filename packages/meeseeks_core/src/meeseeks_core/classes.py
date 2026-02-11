@@ -55,7 +55,7 @@ class ActionStep(BaseModel):
         )
     )
     action_type: str = Field(
-        description="Specify either 'get' or 'set' to indicate the action type."
+        description="Specify the execution type (legacy get/set or execute)."
     )
     action_argument: ActionArgument = Field(
         description=(
@@ -63,21 +63,45 @@ class ActionStep(BaseModel):
             "If 'talk', include the message to speak to the user."
         )
     )
-    result: MockSpeaker | None = Field(
+    result: object | None = Field(
         alias="_result",
         default=None,
         description="Private field to persist the action status and other data.",
     )
 
+    class Config:
+        """Allow both alias and field-name population."""
+
+        allow_population_by_field_name = True
+
+
+class PlanStep(BaseModel):
+    """High-level plan step produced by the planner."""
+
+    title: str = Field(description="Short title for the step.")
+    description: str = Field(description="One-paragraph description of the step.")
+
+
+class Plan(BaseModel):
+    """Plan with human-readable steps."""
+
+    human_message: str | None = Field(
+        alias="_human_message",
+        default=None,
+        description="Human message associated with the plan.",
+    )
+    steps: list[PlanStep] = Field(default_factory=list)
+
 
 class TaskQueue(BaseModel):
-    """Queue of action steps and results."""
+    """Queue of executed tool steps and results."""
 
     human_message: str | None = Field(
         alias="_human_message",
         default=None,
         description="Human message associated with the task queue.",
     )
+    plan_steps: list[PlanStep] = Field(default_factory=list)
     action_steps: list[ActionStep] = Field(default_factory=list)
     task_result: str | None = Field(
         alias="_task_result", default=None, description="Store the result for the entire task queue"
@@ -102,7 +126,7 @@ class TaskQueue(BaseModel):
                     f"`{action.action_consumer}` is not a valid Assistant consumer."
                 )
 
-            if action.action_type not in ["get", "set"]:
+            if action.action_type not in ["get", "set", "execute"]:
                 error_msg = f"`{action.action_type}` is not a valid action type."
                 error_msg_list.append(error_msg)
 
@@ -124,7 +148,7 @@ class OrchestrationState(BaseModel):
 
     goal: str
     session_id: str | None = None
-    plan: list[ActionStep] = Field(default_factory=list)
+    plan: list[PlanStep] = Field(default_factory=list)
     tool_results: list[str] = Field(default_factory=list)
     open_questions: list[str] = Field(default_factory=list)
     done: bool = False
@@ -229,63 +253,51 @@ def create_task_queue(
     if action_data is None:
         raise ValueError("Action data cannot be None.")
 
-    # Convert the input data to ActionStep objects
     action_steps = [ActionStep(**action) for action in action_data]
-    # Create a TaskQueue object with the action steps
     task_queue = TaskQueue(action_steps=action_steps)
     if is_example:
         del task_queue.human_message
     return task_queue
 
 
+def create_plan(
+    step_data: list[dict[str, str]] | None = None,
+    is_example: bool = True,
+) -> Plan:
+    """Create a Plan from serialized step data."""
+    if step_data is None:
+        raise ValueError("Step data cannot be None.")
+    steps = [PlanStep(**step) for step in step_data]
+    plan = Plan(steps=steps)
+    if is_example:
+        del plan.human_message
+    return plan
+
+
 def get_task_master_examples(
     example_id: int = 0,
     available_tools: Sequence[str] | None = None,
 ) -> str:
-    """Return serialized example task queue data."""
+    """Return serialized example plan data."""
     if available_tools is None:
         available_tools = AVAILABLE_TOOLS
     include_home_assistant = "home_assistant_tool" in available_tools
     if include_home_assistant:
-        examples: list[list[ActionStepPayload]] = [
+        examples: list[list[dict[str, str]]] = [
             [
                 {
                     "title": "Turn on strip lights",
-                    "objective": "Activate the strip lights via Home Assistant.",
-                    "execution_checklist": [
-                        "Use Home Assistant set action",
-                        "Target strip lights",
-                    ],
-                    "expected_output": "Strip lights are powered on.",
-                    "action_consumer": "home_assistant_tool",
-                    "action_type": "set",
-                    "action_argument": "Power on the strip lights.",
+                    "description": "Use Home Assistant to switch on the strip lights.",
                 },
                 {
                     "title": "Turn on heater",
-                    "objective": "Activate the heater via Home Assistant.",
-                    "execution_checklist": [
-                        "Use Home Assistant set action",
-                        "Target heater",
-                    ],
-                    "expected_output": "Heater is powered on.",
-                    "action_consumer": "home_assistant_tool",
-                    "action_type": "set",
-                    "action_argument": "Power on the Heater.",
+                    "description": "Use Home Assistant to switch on the heater.",
                 },
             ],
             [
                 {
                     "title": "Check weather",
-                    "objective": "Retrieve today's weather from Home Assistant.",
-                    "execution_checklist": [
-                        "Use Home Assistant get action",
-                        "Ask for today's weather",
-                    ],
-                    "expected_output": "Weather details are returned.",
-                    "action_consumer": "home_assistant_tool",
-                    "action_type": "get",
-                    "action_argument": "Get today's weather.",
+                    "description": "Use Home Assistant to retrieve today's weather details.",
                 },
             ],
         ]
@@ -294,4 +306,4 @@ def get_task_master_examples(
     if example_id not in range(0, len(examples)):
         raise ValueError(f"Invalid example ID: {example_id}")
 
-    return create_task_queue(action_data=examples[example_id], is_example=True).json()
+    return create_plan(step_data=examples[example_id], is_example=True).json()

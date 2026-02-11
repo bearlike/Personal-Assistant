@@ -7,4 +7,4 @@ Action arguments (JSON):
 - root: optional project root to resolve file paths (defaults to current working directory).
 - max_bytes: optional integer limit for truncating large files.
 
-Use action_type "get" to read the file.
+Provide the arguments required to read the file.
