@@ -2,6 +2,7 @@
 
 import pytest
 from langchain_core.runnables import RunnableLambda
+
 from meeseeks_core import planning
 from meeseeks_core.classes import PlanStep
 from meeseeks_core.planning import PlanUpdater, Planner, StepExecutor, ToolSelector
