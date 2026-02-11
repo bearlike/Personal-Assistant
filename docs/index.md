@@ -18,16 +18,17 @@ Meeseeks is an AI task agent assistant that breaks a request into small actions,
 - [Session runtime](session-runtime.md) - shared runtime used by CLI + API
 
 ## Feature highlights (quick view)
-- Plan → act → observe loop to keep work grounded in tool results.
+- Plan → tool selection → step execution loop to keep work grounded in tool results.
 - Multiple interfaces (chat UI, REST API, Home Assistant, terminal CLI) backed by one core engine.
 - Tool registry for local tools plus optional MCP tools.
 - Built-in local file and shell tools (Aider adapters) for edit blocks, read, list, and shell execution.
 - Session transcripts with compaction for long runs and context budget awareness.
 - Context snapshots built from recent turns plus summaries of prior activity.
 - Session listings filter empty sessions and support archiving via the API.
-- Step-level reflection after tool execution to validate outcomes.
+- Step-level reflection after tool execution to validate outcomes and adjust tool inputs.
 - Permission gate with approval callbacks plus lightweight hooks around tool execution.
 - Shared session runtime; API exposes polling endpoints while the CLI runs the runtime in-process for sync execution, cancellation, and summaries.
+- Event payloads: `action_plan` steps are `{title, description}`, tool events use `tool_id`, `operation`, and `tool_input`.
 - Optional components (Langfuse, Home Assistant) auto-disable when not configured.
 - Langfuse tracing is session-scoped when enabled, grouping multi-turn runs.
 
@@ -58,7 +59,9 @@ flowchart LR
   Runtime --> Core
   Runtime --> SessionStore
   Runtime --> Planner
-  Planner --> Tools
+  Planner --> ToolSelector
+  ToolSelector --> StepExecutor
+  StepExecutor --> Tools
   Tools --> LocalTools
   Tools --> MCP
   Tools --> HomeAssistant

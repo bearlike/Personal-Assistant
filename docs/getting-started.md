@@ -90,7 +90,15 @@ API notes (polling is API-only; CLI uses the runtime in-process):
   - `GET /api/sessions?include_archived=1` include archived sessions
   - `POST /api/sessions/{session_id}/archive` archive a session
   - `DELETE /api/sessions/{session_id}/archive` unarchive a session
-  - `POST /api/query` legacy synchronous endpoint
+  - `POST /api/query` synchronous endpoint (simple/CLI-compatible)
+  - `GET /api/tools` list tool registry entries
+  - `GET /api/notifications` list notifications
+  - `POST /api/notifications/dismiss` dismiss notifications
+  - `POST /api/notifications/clear` clear notifications
+  - `POST /api/sessions/{session_id}/attachments` upload attachments
+  - `POST /api/sessions/{session_id}/share` create share link
+  - `POST /api/sessions/{session_id}/export` export session payload
+  - `GET /api/share/{token}` fetch shared session data
 
 ## Aider edit blocks (local tool)
 The edit-block tool expects strict SEARCH/REPLACE blocks and returns format guidance on mismatches.
