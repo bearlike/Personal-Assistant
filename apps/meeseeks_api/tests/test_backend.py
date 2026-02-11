@@ -285,17 +285,27 @@ def test_sessions_list_skips_empty(monkeypatch, tmp_path):
     assert all(item["session_id"] != empty_session for item in sessions)
 
 
-def test_sessions_create_adds_event(monkeypatch, tmp_path):
-    """Include newly created sessions in listings even without context."""
+def test_sessions_create_hidden_until_user_event(monkeypatch, tmp_path):
+    """Hide sessions that only contain session-created events."""
     _reset_backend(tmp_path, monkeypatch)
     client = backend.app.test_client()
     create = client.post(
         "/api/sessions",
         headers={"X-API-KEY": backend.MASTER_API_TOKEN},
-        json={},
+        json={"context": {"repo": "acme/web"}},
     )
     assert create.status_code == 200
     session_id = create.get_json()["session_id"]
+    listing = client.get(
+        "/api/sessions",
+        headers={"X-API-KEY": backend.MASTER_API_TOKEN},
+    )
+    sessions = listing.get_json()["sessions"]
+    assert all(item["session_id"] != session_id for item in sessions)
+
+    backend.session_store.append_event(
+        session_id, {"type": "user", "payload": {"text": "hello"}}
+    )
     listing = client.get(
         "/api/sessions",
         headers={"X-API-KEY": backend.MASTER_API_TOKEN},

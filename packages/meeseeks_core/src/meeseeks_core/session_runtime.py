@@ -174,9 +174,15 @@ class SessionRuntime:
             return
         self._session_store.append_event(session_id, {"type": "context", "payload": context})
 
-    def summarize_session(self, session_id: str) -> dict[str, object]:
+    def summarize_session(
+        self,
+        session_id: str,
+        *,
+        events: list[EventRecord] | None = None,
+    ) -> dict[str, object]:
         """Return a summarized view of a session."""
-        events = self._session_store.load_transcript(session_id)
+        if events is None:
+            events = self._session_store.load_transcript(session_id)
         created_at = events[0]["ts"] if events else None
         title = None
         status = "idle"
@@ -220,7 +226,13 @@ class SessionRuntime:
         """List sessions with summary metadata."""
         summaries: list[dict[str, object]] = []
         for session_id in self._session_store.list_sessions():
-            summary = self.summarize_session(session_id)
+            events = self._session_store.load_transcript(session_id)
+            summary = self.summarize_session(session_id, events=events)
+            has_visible_event = any(
+                event.get("type") not in {"session", "context"} for event in events
+            )
+            if not has_visible_event and not summary.get("running"):
+                continue
             if summary.get("created_at") is None and not summary.get("running"):
                 continue
             if not include_archived and summary.get("archived"):
