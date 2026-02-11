@@ -24,6 +24,105 @@ from meeseeks_core.share_store import ShareStore
 from meeseeks_core.tool_registry import load_registry
 from werkzeug.utils import secure_filename
 
+
+class NotificationService:
+    """Emit session lifecycle notifications for the API."""
+
+    def __init__(self, store: NotificationStore, session_store: SessionStore) -> None:
+        """Initialize with notification and session stores."""
+        self._store = store
+        self._session_store = session_store
+
+    def notify(
+        self,
+        *,
+        title: str,
+        message: str,
+        level: str = "info",
+        session_id: str | None = None,
+        event_type: str | None = None,
+        metadata: dict[str, object] | None = None,
+    ) -> None:
+        """Persist a notification record."""
+        self._store.add(
+            title=title,
+            message=message,
+            level=level,
+            session_id=session_id,
+            event_type=event_type,
+            metadata=metadata,
+        )
+
+    def emit_session_created(self, session_id: str) -> None:
+        """Append a session-created event and notify."""
+        self._session_store.append_event(
+            session_id,
+            {"type": "session", "payload": {"event": "created"}},
+        )
+        self.notify(
+            title="Session created",
+            message=f"Session {session_id} created.",
+            session_id=session_id,
+            event_type="created",
+        )
+
+    def emit_started(self, session_id: str) -> None:
+        """Notify that a session started running."""
+        self.notify(
+            title="Session started",
+            message=f"Session {session_id} started.",
+            session_id=session_id,
+            event_type="started",
+        )
+
+    def emit_completion(self, session_id: str) -> None:
+        """Emit a completion notification based on the latest completion event."""
+        events = self._session_store.load_recent_events(
+            session_id,
+            limit=1,
+            include_types={"completion"},
+        )
+        if not events:
+            return
+        event = events[-1]
+        completion_ts = event.get("ts")
+        if not completion_ts or self._completion_exists(session_id, completion_ts):
+            return
+        payload = event.get("payload")
+        if not isinstance(payload, dict):
+            return
+        done = bool(payload.get("done"))
+        done_reason = str(payload.get("done_reason") or "")
+        if done and done_reason.lower() == "completed":
+            self.notify(
+                title="Session completed",
+                message=f"Session {session_id} completed.",
+                session_id=session_id,
+                event_type="completed",
+                metadata={"completion_ts": completion_ts, "done_reason": done_reason},
+            )
+            return
+        self.notify(
+            title="Session finished",
+            message=f"Session {session_id} finished with status '{done_reason}'.",
+            level="warning",
+            session_id=session_id,
+            event_type="failed",
+            metadata={"completion_ts": completion_ts, "done_reason": done_reason},
+        )
+
+    def _completion_exists(self, session_id: str, completion_ts: str) -> bool:
+        for item in self._store.list(include_dismissed=True):
+            if item.get("session_id") != session_id:
+                continue
+            if item.get("event_type") not in {"completed", "failed"}:
+                continue
+            metadata = item.get("metadata") or {}
+            if metadata.get("completion_ts") == completion_ts:
+                return True
+        return False
+
+
 # Get the API token from app config
 MASTER_API_TOKEN = get_config_value("api", "master_token", default="msk-strong-password")
 
@@ -158,104 +257,6 @@ def _build_context_payload(request_data: dict[str, object]) -> dict[str, object]
     if isinstance(attachments, list):
         payload["attachments"] = attachments
     return payload
-
-
-class NotificationService:
-    """Emit session lifecycle notifications for the API."""
-
-    def __init__(self, store: NotificationStore, session_store: SessionStore) -> None:
-        """Initialize with notification and session stores."""
-        self._store = store
-        self._session_store = session_store
-
-    def notify(
-        self,
-        *,
-        title: str,
-        message: str,
-        level: str = "info",
-        session_id: str | None = None,
-        event_type: str | None = None,
-        metadata: dict[str, object] | None = None,
-    ) -> None:
-        """Persist a notification record."""
-        self._store.add(
-            title=title,
-            message=message,
-            level=level,
-            session_id=session_id,
-            event_type=event_type,
-            metadata=metadata,
-        )
-
-    def emit_session_created(self, session_id: str) -> None:
-        """Append a session-created event and notify."""
-        self._session_store.append_event(
-            session_id,
-            {"type": "session", "payload": {"event": "created"}},
-        )
-        self.notify(
-            title="Session created",
-            message=f"Session {session_id} created.",
-            session_id=session_id,
-            event_type="created",
-        )
-
-    def emit_started(self, session_id: str) -> None:
-        """Notify that a session started running."""
-        self.notify(
-            title="Session started",
-            message=f"Session {session_id} started.",
-            session_id=session_id,
-            event_type="started",
-        )
-
-    def emit_completion(self, session_id: str) -> None:
-        """Emit a completion notification based on the latest completion event."""
-        events = self._session_store.load_recent_events(
-            session_id,
-            limit=1,
-            include_types={"completion"},
-        )
-        if not events:
-            return
-        event = events[-1]
-        completion_ts = event.get("ts")
-        if not completion_ts or self._completion_exists(session_id, completion_ts):
-            return
-        payload = event.get("payload")
-        if not isinstance(payload, dict):
-            return
-        done = bool(payload.get("done"))
-        done_reason = str(payload.get("done_reason") or "")
-        if done and done_reason.lower() == "completed":
-            self.notify(
-                title="Session completed",
-                message=f"Session {session_id} completed.",
-                session_id=session_id,
-                event_type="completed",
-                metadata={"completion_ts": completion_ts, "done_reason": done_reason},
-            )
-            return
-        self.notify(
-            title="Session finished",
-            message=f"Session {session_id} finished with status '{done_reason}'.",
-            level="warning",
-            session_id=session_id,
-            event_type="failed",
-            metadata={"completion_ts": completion_ts, "done_reason": done_reason},
-        )
-
-    def _completion_exists(self, session_id: str, completion_ts: str) -> bool:
-        for item in self._store.list(include_dismissed=True):
-            if item.get("session_id") != session_id:
-                continue
-            if item.get("event_type") not in {"completed", "failed"}:
-                continue
-            metadata = item.get("metadata") or {}
-            if metadata.get("completion_ts") == completion_ts:
-                return True
-        return False
 
 
 notification_service = NotificationService(notification_store, runtime.session_store)
