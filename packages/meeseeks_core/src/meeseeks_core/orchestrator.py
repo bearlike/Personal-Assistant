@@ -542,12 +542,6 @@ class Orchestrator:
         return bool(Orchestrator._collect_tool_outputs(task_queue))
 
     @staticmethod
-    def _action_steps_complete(task_queue: TaskQueue) -> bool:
-        if task_queue.last_error:
-            return False
-        return all(step.result is not None for step in task_queue.action_steps)
-
-    @staticmethod
     def _build_revised_query(user_query: str, task_queue: TaskQueue) -> str:
         failure_note = (
             f"Last tool failure: {task_queue.last_error}\n" if task_queue.last_error else ""
