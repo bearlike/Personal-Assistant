@@ -121,9 +121,7 @@ class TaskQueue(BaseModel):
             error_msg_list = []
 
             if action.tool_id not in AVAILABLE_TOOLS:
-                error_msg_list.append(
-                    f"`{action.tool_id}` is not a valid Assistant tool."
-                )
+                error_msg_list.append(f"`{action.tool_id}` is not a valid Assistant tool.")
 
             if action.operation not in ["get", "set", "execute"]:
                 error_msg = f"`{action.operation}` is not a valid operation."

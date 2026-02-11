@@ -170,9 +170,7 @@ class ActionPlanRunner:
             decision_logged = True
         if decision == PermissionDecision.DENY:
             mock = get_mock_speaker()
-            message = (
-                f"Permission denied for {action_step.tool_id}:{action_step.operation}."
-            )
+            message = f"Permission denied for {action_step.tool_id}:{action_step.operation}."
             action_step.result = mock(content=message)
             if not decision_logged:
                 self._emit_event(

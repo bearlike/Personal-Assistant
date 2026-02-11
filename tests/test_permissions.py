@@ -181,18 +181,12 @@ def test_approval_callback_from_config(monkeypatch):
     set_config_override({"permissions": {"approval_mode": "allow"}})
     callback = approval_callback_from_config()
     assert callback is not None
-    assert callback(
-        ActionStep(tool_id="home_assistant_tool", operation="get", tool_input="x")
-    )
+    assert callback(ActionStep(tool_id="home_assistant_tool", operation="get", tool_input="x"))
     set_config_override({"permissions": {"approval_mode": "deny"}})
     callback = approval_callback_from_config()
     assert callback is not None
     assert (
-        callback(
-            ActionStep(
-                tool_id="home_assistant_tool", operation="get", tool_input="x"
-            )
-        )
+        callback(ActionStep(tool_id="home_assistant_tool", operation="get", tool_input="x"))
         is False
     )
     set_config_override({"permissions": {"approval_mode": "maybe"}})
