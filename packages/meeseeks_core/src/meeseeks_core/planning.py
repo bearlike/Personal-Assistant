@@ -30,8 +30,6 @@ EXAMPLE_TAG_CLOSE = "</example>"
 TOOL_DETAIL_MAX = 10
 INTENT_KEYWORDS: dict[str, set[str]] = {
     "web": {
-        "deepwiki",
-        "wiki",
         "latest",
         "current",
         "today",
@@ -330,8 +328,6 @@ class Planner:
 
         tool_id = spec.tool_id.lower()
         inferred: set[str] = set()
-        if "deepwiki" in tool_id:
-            inferred.add("web_search")
         if "internet_search" in tool_id or "web_search" in tool_id or "searxng" in tool_id:
             inferred.add("web_search")
         if "web_url_read" in tool_id or "web_url" in tool_id:
