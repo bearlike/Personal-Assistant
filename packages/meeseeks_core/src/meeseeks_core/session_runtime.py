@@ -182,12 +182,14 @@ class SessionRuntime:
         status = "idle"
         done_reason = None
         context: dict[str, object] | None = None
+        has_user_event = False
         for event in events:
             if event.get("type") == "context":
                 payload = event.get("payload")
                 if isinstance(payload, dict):
                     context = payload
             if title is None and event.get("type") == "user":
+                has_user_event = True
                 payload = event.get("payload", {})
                 if isinstance(payload, dict):
                     title = payload.get("text")
@@ -199,6 +201,8 @@ class SessionRuntime:
         running = self.is_running(session_id)
         if running:
             status = "running"
+        if not has_user_event and not running:
+            created_at = None
         if not title:
             title = f"Session {session_id[:8]}"
         return {
