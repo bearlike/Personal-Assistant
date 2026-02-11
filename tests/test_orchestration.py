@@ -1176,9 +1176,7 @@ def test_orchestrate_session_adds_web_tools_for_verify_steps(monkeypatch, tmp_pa
     captured = {}
 
     def fake_generate(*_args, **_kwargs):
-        return Plan(
-            steps=[PlanStep(title="Open and verify sources", description="Read sources")]
-        )
+        return Plan(steps=[PlanStep(title="Open and verify sources", description="Read sources")])
 
     def fake_select(*_args, **_kwargs):
         return planning.ToolSelection(

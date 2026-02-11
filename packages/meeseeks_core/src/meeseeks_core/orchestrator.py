@@ -154,9 +154,7 @@ class Orchestrator:
                         context=context,
                     )
                     if selection.tool_required and selection.tool_ids:
-                        selected_ids = self._expand_tool_ids(
-                            set(selection.tool_ids), tool_specs
-                        )
+                        selected_ids = self._expand_tool_ids(set(selection.tool_ids), tool_specs)
                         tool_specs = [spec for spec in tool_specs if spec.tool_id in selected_ids]
                 plan = self._planner.generate(
                     user_query,
@@ -281,11 +279,7 @@ class Orchestrator:
             task_queue.last_error = last_error
             state.tool_results.extend(tool_outputs)
 
-            if (
-                direct_response is not None
-                and resolved_mode != "plan"
-                and state.done
-            ):
+            if direct_response is not None and resolved_mode != "plan" and state.done:
                 task_queue.task_result = direct_response
                 self._session_store.append_event(
                     session_id, {"type": "assistant", "payload": {"text": direct_response}}

@@ -1,6 +1,8 @@
 """Tests for intent-based tool scoping in the planner."""
 
-from meeseeks_core.planning import Planner
+from langchain_core.runnables import RunnableLambda
+from meeseeks_core import planning
+from meeseeks_core.planning import Planner, ToolSelector
 from meeseeks_core.tool_registry import ToolRegistry, ToolSpec
 
 
@@ -81,3 +83,28 @@ def test_spec_capabilities_infers_web_read():
     planner = Planner(ToolRegistry())
     spec = _spec("mcp_utils_internet_search_web_url_read", kind="mcp")
     assert "web_read" in planner._spec_capabilities(spec)
+
+
+def test_tool_selector_includes_web_read_for_search(monkeypatch):
+    """Include web_url_read tool when web_search is selected."""
+    selector = ToolSelector(ToolRegistry())
+    specs = [
+        _spec("mcp_utils_internet_search_searxng_web_search", kind="mcp"),
+        _spec("mcp_utils_internet_search_web_url_read", kind="mcp"),
+    ]
+
+    def _fake_model(_inputs):
+        return (
+            '{"tool_required": true, '
+            '"tool_ids": ["mcp_utils_internet_search_searxng_web_search"], '
+            '"rationale": "search"}'
+        )
+
+    monkeypatch.setattr(
+        planning,
+        "build_chat_model",
+        lambda **_kwargs: RunnableLambda(_fake_model),
+    )
+
+    selection = selector.select("Find recent news", "gpt-5.2", tool_specs=specs)
+    assert "mcp_utils_internet_search_web_url_read" in selection.tool_ids
