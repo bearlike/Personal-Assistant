@@ -7,15 +7,22 @@ Single-user REST API with session-based orchestration and event polling.
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import datetime, timezone
+import os
+import uuid
+from typing import Any
 
 from flask import Flask, request
+from werkzeug.utils import secure_filename
 from flask_restx import Api, Resource, fields
 from meeseeks_core.classes import TaskQueue
 from meeseeks_core.common import get_logger
 from meeseeks_core.config import get_config, get_config_value, start_preflight
+from meeseeks_core.notifications import NotificationStore
 from meeseeks_core.permissions import auto_approve
 from meeseeks_core.session_runtime import SessionRuntime, parse_core_command
 from meeseeks_core.session_store import SessionStore
+from meeseeks_core.share_store import ShareStore
 from meeseeks_core.tool_registry import load_registry
 
 # Get the API token from app config
@@ -35,6 +42,8 @@ if _config.runtime.preflight_enabled:
 app = Flask(__name__)
 session_store = SessionStore()
 runtime = SessionRuntime(session_store=session_store)
+notification_store = NotificationStore(root_dir=session_store.root_dir)
+share_store = ShareStore(root_dir=session_store.root_dir)
 
 authorizations = {"apikey": {"type": "apiKey", "in": "header", "name": "X-API-KEY"}}
 VERSION = get_config_value("runtime", "version", default="(Dev)")
@@ -131,6 +140,101 @@ def _parse_mode(value: object | None) -> str | None:
     return None
 
 
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _build_context_payload(request_data: dict[str, Any]) -> dict[str, Any]:
+    payload: dict[str, Any] = {}
+    context = request_data.get("context")
+    if isinstance(context, dict):
+        payload.update(context)
+    attachments = request_data.get("attachments")
+    if isinstance(attachments, list):
+        payload["attachments"] = attachments
+    return payload
+
+
+def _notify(
+    *,
+    title: str,
+    message: str,
+    level: str = "info",
+    session_id: str | None = None,
+    event_type: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> None:
+    notification_store.add(
+        title=title,
+        message=message,
+        level=level,
+        session_id=session_id,
+        event_type=event_type,
+        metadata=metadata,
+    )
+
+
+def _append_session_created_event(session_id: str) -> None:
+    runtime.session_store.append_event(
+        session_id,
+        {"type": "session", "payload": {"event": "created"}},
+    )
+    _notify(
+        title="Session created",
+        message=f"Session {session_id} created.",
+        session_id=session_id,
+        event_type="created",
+    )
+
+
+def _completion_notification_exists(session_id: str, completion_ts: str) -> bool:
+    for item in notification_store.list(include_dismissed=True):
+        if item.get("session_id") != session_id:
+            continue
+        if item.get("event_type") not in {"completed", "failed"}:
+            continue
+        metadata = item.get("metadata") or {}
+        if metadata.get("completion_ts") == completion_ts:
+            return True
+    return False
+
+
+def _emit_completion_notification(session_id: str) -> None:
+    events = runtime.session_store.load_recent_events(
+        session_id,
+        limit=1,
+        include_types={"completion"},
+    )
+    if not events:
+        return
+    event = events[-1]
+    completion_ts = event.get("ts")
+    if not completion_ts or _completion_notification_exists(session_id, completion_ts):
+        return
+    payload = event.get("payload")
+    if not isinstance(payload, dict):
+        return
+    done = bool(payload.get("done"))
+    done_reason = str(payload.get("done_reason") or "")
+    if done and done_reason.lower() == "completed":
+        _notify(
+            title="Session completed",
+            message=f"Session {session_id} completed.",
+            session_id=session_id,
+            event_type="completed",
+            metadata={"completion_ts": completion_ts, "done_reason": done_reason},
+        )
+        return
+    _notify(
+        title="Session finished",
+        message=f"Session {session_id} finished with status '{done_reason}'.",
+        level="warning",
+        session_id=session_id,
+        event_type="failed",
+        metadata={"completion_ts": completion_ts, "done_reason": done_reason},
+    )
+
+
 @ns.route("/sessions")
 class Sessions(Resource):
     """List and create sessions."""
@@ -153,12 +257,13 @@ class Sessions(Resource):
             return auth_error
         payload = request.get_json(silent=True) or {}
         session_id = runtime.session_store.create_session()
+        _append_session_created_event(session_id)
         session_tag = payload.get("session_tag")
         if session_tag:
             runtime.session_store.tag_session(session_id, session_tag)
-        context = payload.get("context")
-        if isinstance(context, dict):
-            runtime.append_context_event(session_id, context)
+        context_payload = _build_context_payload(payload)
+        if context_payload:
+            runtime.append_context_event(session_id, context_payload)
         return {"session_id": session_id}, 200
 
 
@@ -184,9 +289,9 @@ class SessionQuery(Resource):
         if runtime.is_running(session_id):
             return {"message": "Session is already running."}, 409
 
-        context = request_data.get("context")
-        if isinstance(context, dict):
-            runtime.append_context_event(session_id, context)
+        context_payload = _build_context_payload(request_data)
+        if context_payload:
+            runtime.append_context_event(session_id, context_payload)
 
         mode = _parse_mode(request_data.get("mode"))
 
@@ -198,6 +303,12 @@ class SessionQuery(Resource):
         )
         if not started:
             return {"message": "Session is already running."}, 409
+        _notify(
+            title="Session started",
+            message=f"Session {session_id} started.",
+            session_id=session_id,
+            event_type="started",
+        )
         return {"session_id": session_id, "accepted": True}, 202
 
 
@@ -213,6 +324,7 @@ class SessionEvents(Resource):
             return auth_error
         after_ts = request.args.get("after")
         events = runtime.load_events(session_id, after_ts)
+        _emit_completion_notification(session_id)
         return {
             "session_id": session_id,
             "events": events,
@@ -245,6 +357,166 @@ class SessionArchive(Resource):
             return {"message": "Session not found."}, 404
         runtime.session_store.unarchive_session(session_id)
         return {"session_id": session_id, "archived": False}, 200
+
+
+@ns.route("/sessions/<string:session_id>/attachments")
+class SessionAttachments(Resource):
+    """Upload attachments for a session."""
+
+    @api.doc(security="apikey")
+    def post(self, session_id: str) -> tuple[dict, int]:
+        """Upload one or more files for a session."""
+        auth_error = _require_api_key()
+        if auth_error:
+            return auth_error
+        if session_id not in runtime.session_store.list_sessions():
+            return {"message": "Session not found."}, 404
+        files = request.files.getlist("files")
+        if not files and "file" in request.files:
+            files = [request.files["file"]]
+        if not files:
+            return {"message": "No files uploaded."}, 400
+        attachments_dir = os.path.join(
+            runtime.session_store.root_dir,
+            session_id,
+            "attachments",
+        )
+        os.makedirs(attachments_dir, exist_ok=True)
+        saved: list[dict[str, Any]] = []
+        for item in files:
+            if not item or not item.filename:
+                continue
+            attachment_id = uuid.uuid4().hex
+            safe_name = secure_filename(item.filename)
+            stored_name = f"{attachment_id}_{safe_name}" if safe_name else attachment_id
+            path = os.path.join(attachments_dir, stored_name)
+            item.save(path)
+            size_bytes = os.path.getsize(path)
+            saved.append(
+                {
+                    "id": attachment_id,
+                    "filename": item.filename,
+                    "stored_name": stored_name,
+                    "content_type": item.mimetype,
+                    "size_bytes": size_bytes,
+                    "uploaded_at": _utc_now(),
+                }
+            )
+        if not saved:
+            return {"message": "No valid files uploaded."}, 400
+        return {"attachments": saved}, 200
+
+
+@ns.route("/sessions/<string:session_id>/share")
+class SessionShare(Resource):
+    """Create a share token for a session."""
+
+    @api.doc(security="apikey")
+    def post(self, session_id: str) -> tuple[dict, int]:
+        """Create a share token for the session."""
+        auth_error = _require_api_key()
+        if auth_error:
+            return auth_error
+        if session_id not in runtime.session_store.list_sessions():
+            return {"message": "Session not found."}, 404
+        record = share_store.create(session_id)
+        return record, 200
+
+
+@ns.route("/sessions/<string:session_id>/export")
+class SessionExport(Resource):
+    """Export transcript data for a session."""
+
+    @api.doc(security="apikey")
+    def get(self, session_id: str) -> tuple[dict, int]:
+        """Return transcript and summary for a session."""
+        auth_error = _require_api_key()
+        if auth_error:
+            return auth_error
+        if session_id not in runtime.session_store.list_sessions():
+            return {"message": "Session not found."}, 404
+        return {
+            "session_id": session_id,
+            "events": runtime.session_store.load_transcript(session_id),
+            "summary": runtime.session_store.load_summary(session_id),
+        }, 200
+
+
+@ns.route("/share/<string:token>")
+class ShareLookup(Resource):
+    """Resolve a share token to a session export."""
+
+    def get(self, token: str) -> tuple[dict, int]:
+        """Return transcript and summary for a share token."""
+        record = share_store.resolve(token)
+        if not record:
+            return {"message": "Share token not found."}, 404
+        session_id = record["session_id"]
+        return {
+            "token": token,
+            "session_id": session_id,
+            "created_at": record.get("created_at"),
+            "events": runtime.session_store.load_transcript(session_id),
+            "summary": runtime.session_store.load_summary(session_id),
+        }, 200
+
+
+@ns.route("/notifications")
+class Notifications(Resource):
+    """List notifications."""
+
+    @api.doc(security="apikey")
+    def get(self) -> tuple[dict, int]:
+        """Return notifications for the UI."""
+        auth_error = _require_api_key()
+        if auth_error:
+            return auth_error
+        include_dismissed = _parse_bool(request.args.get("include_dismissed"))
+        return {
+            "notifications": notification_store.list(
+                include_dismissed=include_dismissed
+            ),
+        }, 200
+
+
+@ns.route("/notifications/dismiss")
+class NotificationDismiss(Resource):
+    """Dismiss notifications."""
+
+    @api.doc(security="apikey")
+    def post(self) -> tuple[dict, int]:
+        """Dismiss a notification or list of notifications."""
+        auth_error = _require_api_key()
+        if auth_error:
+            return auth_error
+        payload = request.get_json(silent=True) or {}
+        ids: list[str] = []
+        if isinstance(payload.get("ids"), list):
+            ids = [str(item) for item in payload.get("ids") if item]
+        elif payload.get("id"):
+            ids = [str(payload.get("id"))]
+        dismissed = notification_store.dismiss(ids)
+        return {"dismissed": dismissed}, 200
+
+
+@ns.route("/notifications/clear")
+class NotificationClear(Resource):
+    """Clear notifications."""
+
+    @api.doc(security="apikey")
+    def post(self) -> tuple[dict, int]:
+        """Clear dismissed notifications (or all when clear_all is true)."""
+        auth_error = _require_api_key()
+        if auth_error:
+            return auth_error
+        payload = request.get_json(silent=True) or {}
+        clear_all = payload.get("clear_all")
+        if isinstance(clear_all, str):
+            clear_all = _parse_bool(clear_all)
+        else:
+            clear_all = bool(clear_all)
+        cleared = notification_store.clear(dismissed_only=not clear_all)
+        return {"cleared": cleared}, 200
 
 
 @ns.route("/tools")
@@ -307,10 +579,22 @@ class MeeseeksQuery(Resource):
         if not user_query:
             return {"message": "Invalid input: 'query' is required"}, 400
         mode = _parse_mode(request_data.get("mode"))
+        existing_sessions = set(runtime.session_store.list_sessions())
         session_id = runtime.resolve_session(
             session_id=request_data.get("session_id"),
             session_tag=request_data.get("session_tag"),
             fork_from=request_data.get("fork_from"),
+        )
+        if session_id not in existing_sessions:
+            _append_session_created_event(session_id)
+        context_payload = _build_context_payload(request_data)
+        if context_payload:
+            runtime.append_context_event(session_id, context_payload)
+        _notify(
+            title="Session started",
+            message=f"Session {session_id} started.",
+            session_id=session_id,
+            event_type="started",
         )
 
         logging.info("Received user query: {}", user_query)
@@ -320,6 +604,7 @@ class MeeseeksQuery(Resource):
             approval_callback=auto_approve,
             mode=mode,
         )
+        _emit_completion_notification(session_id)
         task_result = deepcopy(task_queue.task_result)
         to_return = task_queue.dict()
         to_return["task_result"] = task_result
