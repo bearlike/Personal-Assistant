@@ -36,22 +36,13 @@ class Counter:
 
 
 def _edit_block(path: str, search: str, replace: str) -> str:
-    return (
-        f"{path}\n"
-        "```text\n"
-        "<<<<<<< SEARCH\n"
-        f"{search}=======\n"
-        f"{replace}>>>>>>> REPLACE\n"
-        "```\n"
-    )
+    return f"{path}\n```text\n<<<<<<< SEARCH\n{search}=======\n{replace}>>>>>>> REPLACE\n```\n"
 
 
 def _types_in_order(events, expected):
     indices = []
     for value in expected:
-        indices.append(
-            next(i for i, event in enumerate(events) if event["type"] == value)
-        )
+        indices.append(next(i for i, event in enumerate(events) if event["type"] == value))
     assert indices == sorted(indices)
 
 
@@ -378,6 +369,37 @@ def test_orchestrate_session_plan_mode_no_replan(monkeypatch, tmp_path):
     assert generate_calls.count == 1
     assert state.done is True
     assert state.done_reason in {"blocked", "incomplete"}
+    events = session_store.load_transcript(session_id)
+    completion = next(event for event in events if event["type"] == "completion")
+    assert completion["payload"].get("error") == "tool not allowed in plan mode"
+
+
+def test_orchestrate_session_emits_completion_on_exception(monkeypatch, tmp_path):
+    """Always emit completion when orchestration raises."""
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
+
+    def fake_run(_self, *_args, **_kwargs):
+        raise RuntimeError("boom")
+
+    def fake_generate(_self, *_args, **_kwargs):
+        return TaskQueue(action_steps=[])
+
+    monkeypatch.setattr(Orchestrator, "_run_action_plan", fake_run)
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+
+    task_queue = task_master.orchestrate_session(
+        "trigger error",
+        max_iters=1,
+        session_id=session_id,
+        session_store=session_store,
+    )
+
+    assert task_queue.last_error == "boom"
+    events = session_store.load_transcript(session_id)
+    completion = next(event for event in events if event["type"] == "completion")
+    assert completion["payload"]["done_reason"] == "error"
+    assert completion["payload"]["error"] == "boom"
 
 
 def test_orchestrate_session_schema_replan_and_context(monkeypatch, tmp_path):

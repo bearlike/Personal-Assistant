@@ -99,118 +99,144 @@ class Orchestrator:
         state.summary = self._session_store.load_summary(session_id)
         state.tool_results = state.tool_results or []
         state.open_questions = state.open_questions or []
+        task_queue: TaskQueue | None = None
 
-        self._session_store.append_event(
-            session_id, {"type": "user", "payload": {"text": user_query}}
-        )
-
-        if self._should_update_summary(user_query):
-            state.summary = self._update_summary_with_memory(
-                session_id,
-                user_query.strip(),
-            )
-
-        updated_summary = self._maybe_auto_compact(session_id)
-        if updated_summary:
-            state.summary = updated_summary
-
-        if user_query.strip() == "/compact":
-            summary = summarize_events(self._session_store.load_transcript(session_id))
-            self._session_store.save_summary(session_id, summary)
-            state.summary = summary
-            state.done = True
-            state.done_reason = "compacted"
-            task_queue = self._build_direct_response(f"Compaction complete. Summary: {summary}")
-            return (task_queue, state) if return_state else task_queue
-
-        context = self._context_builder.build(
-            session_id=session_id,
-            user_query=user_query,
-            model_name=self._model_name,
-        )
-        task_queue = initial_task_queue or self._planner.generate(
-            user_query, self._model_name, context=context, mode=resolved_mode
-        )
-        state.plan = task_queue.action_steps
-        self._append_action_plan(session_id, task_queue.action_steps)
-
-        for iteration in range(max_iters):
-            if should_cancel is not None and should_cancel():
-                state.done = True
-                state.done_reason = "canceled"
-                break
-            task_queue = self._run_action_plan(
-                session_id,
-                task_queue,
-                mode=resolved_mode,
-                should_cancel=should_cancel,
-            )
-            state.tool_results.append(task_queue.task_result or "")
-            if should_cancel is not None and should_cancel():
-                state.done = True
-                state.done_reason = "canceled"
-                break
-
-            if self._action_steps_complete(task_queue):
-                state.done = True
-                state.done_reason = "completed"
-                break
-
-            if self._should_replan(task_queue, iteration, max_iters, mode=resolved_mode):
-                revised_query = self._build_revised_query(user_query, task_queue)
-                context = self._context_builder.build(
-                    session_id=session_id,
-                    user_query=revised_query,
-                    model_name=self._model_name,
-                )
-                task_queue = self._planner.generate(
-                    revised_query, self._model_name, context=context, mode=resolved_mode
-                )
-                state.plan = task_queue.action_steps
-                self._append_action_plan(session_id, task_queue.action_steps)
-            else:
-                state.done = True
-                state.done_reason = (
-                    "blocked"
-                    if task_queue.last_error
-                    and "permission denied" in task_queue.last_error.lower()
-                    else "incomplete"
-                )
-                break
-
-        if state.done and resolved_mode != "plan" and self._should_synthesize_response(task_queue):
-            tool_outputs = self._collect_tool_outputs(task_queue)
-            response = self._synthesizer.synthesize(
-                user_query=user_query,
-                tool_outputs=tool_outputs,
-                model_name=self._model_name,
-                context=context,
-            )
-            task_queue.task_result = response
+        try:
             self._session_store.append_event(
-                session_id, {"type": "assistant", "payload": {"text": response}}
+                session_id, {"type": "user", "payload": {"text": user_query}}
             )
 
-        if not state.done:
-            state.done_reason = "max_iterations_reached"
+            if self._should_update_summary(user_query):
+                state.summary = self._update_summary_with_memory(
+                    session_id,
+                    user_query.strip(),
+                )
 
-        self._session_store.append_event(
-            session_id,
-            {
-                "type": "completion",
-                "payload": {
-                    "done": state.done,
-                    "done_reason": state.done_reason,
-                    "task_result": task_queue.task_result,
+            updated_summary = self._maybe_auto_compact(session_id)
+            if updated_summary:
+                state.summary = updated_summary
+
+            if user_query.strip() == "/compact":
+                summary = summarize_events(self._session_store.load_transcript(session_id))
+                self._session_store.save_summary(session_id, summary)
+                state.summary = summary
+                state.done = True
+                state.done_reason = "compacted"
+                task_queue = self._build_direct_response(
+                    f"Compaction complete. Summary: {summary}"
+                )
+                return (task_queue, state) if return_state else task_queue
+
+            context = self._context_builder.build(
+                session_id=session_id,
+                user_query=user_query,
+                model_name=self._model_name,
+            )
+            task_queue = initial_task_queue or self._planner.generate(
+                user_query, self._model_name, context=context, mode=resolved_mode
+            )
+            state.plan = task_queue.action_steps
+            self._append_action_plan(session_id, task_queue.action_steps)
+
+            for iteration in range(max_iters):
+                if should_cancel is not None and should_cancel():
+                    state.done = True
+                    state.done_reason = "canceled"
+                    break
+                task_queue = self._run_action_plan(
+                    session_id,
+                    task_queue,
+                    mode=resolved_mode,
+                    should_cancel=should_cancel,
+                )
+                state.tool_results.append(task_queue.task_result or "")
+                if should_cancel is not None and should_cancel():
+                    state.done = True
+                    state.done_reason = "canceled"
+                    break
+
+                if self._action_steps_complete(task_queue):
+                    state.done = True
+                    state.done_reason = "completed"
+                    break
+
+                if self._should_replan(task_queue, iteration, max_iters, mode=resolved_mode):
+                    revised_query = self._build_revised_query(user_query, task_queue)
+                    context = self._context_builder.build(
+                        session_id=session_id,
+                        user_query=revised_query,
+                        model_name=self._model_name,
+                    )
+                    task_queue = self._planner.generate(
+                        revised_query, self._model_name, context=context, mode=resolved_mode
+                    )
+                    state.plan = task_queue.action_steps
+                    self._append_action_plan(session_id, task_queue.action_steps)
+                else:
+                    state.done = True
+                    state.done_reason = (
+                        "blocked"
+                        if task_queue.last_error
+                        and "permission denied" in task_queue.last_error.lower()
+                        else "incomplete"
+                    )
+                    break
+
+            if state.done and resolved_mode != "plan" and self._should_synthesize_response(task_queue):
+                tool_outputs = self._collect_tool_outputs(task_queue)
+                response = self._synthesizer.synthesize(
+                    user_query=user_query,
+                    tool_outputs=tool_outputs,
+                    model_name=self._model_name,
+                    context=context,
+                )
+                task_queue.task_result = response
+                self._session_store.append_event(
+                    session_id, {"type": "assistant", "payload": {"text": response}}
+                )
+
+            if not state.done:
+                state.done_reason = "max_iterations_reached"
+
+            completion_payload = {
+                "done": state.done,
+                "done_reason": state.done_reason,
+                "task_result": task_queue.task_result,
+            }
+            if task_queue.last_error:
+                completion_payload["error"] = task_queue.last_error
+                completion_payload["last_error"] = task_queue.last_error
+            self._session_store.append_event(
+                session_id,
+                {"type": "completion", "payload": completion_payload},
+            )
+
+            updated_summary = self._maybe_auto_compact(session_id)
+            if updated_summary:
+                state.summary = updated_summary
+
+            return (task_queue, state) if return_state else task_queue
+        except Exception as exc:
+            logging.exception("Orchestration failed for session {}", session_id)
+            if task_queue is None:
+                task_queue = TaskQueue(_human_message=user_query, action_steps=[])
+            task_queue.last_error = str(exc)
+            state.done = True
+            state.done_reason = "error"
+            self._session_store.append_event(
+                session_id,
+                {
+                    "type": "completion",
+                    "payload": {
+                        "done": True,
+                        "done_reason": state.done_reason,
+                        "task_result": task_queue.task_result,
+                        "error": str(exc),
+                        "last_error": str(exc),
+                    },
                 },
-            },
-        )
-
-        updated_summary = self._maybe_auto_compact(session_id)
-        if updated_summary:
-            state.summary = updated_summary
-
-        return (task_queue, state) if return_state else task_queue
+            )
+            return (task_queue, state) if return_state else task_queue
 
     def _run_action_plan(
         self,
