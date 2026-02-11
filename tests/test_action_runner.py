@@ -19,9 +19,9 @@ def test_execute_step_raises_when_tool_missing():
         hook_manager=default_hook_manager(),
     )
     step = ActionStep(
-        action_consumer="missing_tool",
-        action_type="get",
-        action_argument="ping",
+        tool_id="missing_tool",
+        operation="get",
+        tool_input="ping",
     )
     with pytest.raises(RuntimeError):
         runner._execute_step(step)
@@ -50,9 +50,9 @@ def test_execute_step_content_fallback():
         hook_manager=default_hook_manager(),
     )
     step = ActionStep(
-        action_consumer="dummy_tool",
-        action_type="get",
-        action_argument="ping",
+        tool_id="dummy_tool",
+        operation="get",
+        tool_input="ping",
     )
     outcome = runner._execute_step(step)
     assert outcome.content == ""
@@ -89,9 +89,9 @@ def test_action_runner_blocks_tools_in_plan_mode():
     task_queue = TaskQueue(
         action_steps=[
             ActionStep(
-                action_consumer="unsafe_tool",
-                action_type="set",
-                action_argument="payload",
+                tool_id="unsafe_tool",
+                operation="set",
+                tool_input="payload",
             )
         ]
     )
@@ -135,9 +135,9 @@ def test_action_runner_allows_set_when_approved():
     task_queue = TaskQueue(
         action_steps=[
             ActionStep(
-                action_consumer="dummy_tool",
-                action_type="set",
-                action_argument="payload",
+                tool_id="dummy_tool",
+                operation="set",
+                tool_input="payload",
             )
         ]
     )
@@ -179,9 +179,9 @@ def test_action_runner_denies_set_without_approval():
     task_queue = TaskQueue(
         action_steps=[
             ActionStep(
-                action_consumer="dummy_tool",
-                action_type="set",
-                action_argument="payload",
+                tool_id="dummy_tool",
+                operation="set",
+                tool_input="payload",
             )
         ]
     )
@@ -219,9 +219,9 @@ def test_action_runner_records_tool_errors_in_task_result():
     task_queue = TaskQueue(
         action_steps=[
             ActionStep(
-                action_consumer="exploding_tool",
-                action_type="get",
-                action_argument="payload",
+                tool_id="exploding_tool",
+                operation="get",
+                tool_input="payload",
             )
         ]
     )
@@ -258,9 +258,9 @@ def test_action_runner_preserves_tool_on_input_error():
     task_queue = TaskQueue(
         action_steps=[
             ActionStep(
-                action_consumer="input_error_tool",
-                action_type="get",
-                action_argument="payload",
+                tool_id="input_error_tool",
+                operation="get",
+                tool_input="payload",
             )
         ]
     )
@@ -300,9 +300,9 @@ def test_action_runner_preserves_mcp_tool_on_runtime_error():
     task_queue = TaskQueue(
         action_steps=[
             ActionStep(
-                action_consumer="mcp_tool",
-                action_type="get",
-                action_argument="payload",
+                tool_id="mcp_tool",
+                operation="get",
+                tool_input="payload",
             )
         ]
     )
@@ -324,9 +324,9 @@ def test_summarize_result_truncates_long_text():
 def test_format_step_summary_skips_empty_result():
     """Skip summaries when tool output is empty."""
     step = ActionStep(
-        action_consumer="dummy",
-        action_type="get",
-        action_argument="payload",
+        tool_id="dummy",
+        operation="get",
+        tool_input="payload",
     )
     step.result = get_mock_speaker()(content="")
     assert ActionPlanRunner._format_step_summary(step) == ""
@@ -375,9 +375,9 @@ def test_action_runner_preserves_output_on_reflection():
     task_queue = TaskQueue(
         action_steps=[
             ActionStep(
-                action_consumer="dummy_tool",
-                action_type="get",
-                action_argument="payload",
+                tool_id="dummy_tool",
+                operation="get",
+                tool_input="payload",
             )
         ]
     )

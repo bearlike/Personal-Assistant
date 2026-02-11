@@ -49,9 +49,9 @@ def test_run_action_plan_helper(monkeypatch, tmp_path):
         queue = _make_task_queue(
             [
                 ActionStep(
-                    action_consumer="home_assistant_tool",
-                    action_type="get",
-                    action_argument="hello",
+                    tool_id="home_assistant_tool",
+                    operation="get",
+                    tool_input="hello",
                     result=type("Result", (), {"content": "ok"})(),
                 )
             ]

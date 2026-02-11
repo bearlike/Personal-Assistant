@@ -166,11 +166,11 @@ def get_system_prompt(name: str = "action-planner") -> str:
     return system_prompt.strip()
 
 
-def format_action_argument(argument: object) -> str:
-    """Format an action argument for logs and prompts."""
-    if isinstance(argument, dict):
-        return json.dumps(argument, ensure_ascii=True)
-    return str(argument)
+def format_tool_input(tool_input: object) -> str:
+    """Format a tool input for logs and prompts."""
+    if isinstance(tool_input, dict):
+        return json.dumps(tool_input, ensure_ascii=True)
+    return str(tool_input)
 
 
 def ha_render_system_prompt(

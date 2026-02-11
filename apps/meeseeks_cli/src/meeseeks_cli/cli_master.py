@@ -68,7 +68,7 @@ def _bootstrap_cli_logging_env(argv: list[str]) -> None:
 _bootstrap_cli_logging_env(sys.argv)
 
 from meeseeks_core.classes import ActionStep, Plan, PlanStep, TaskQueue
-from meeseeks_core.common import MockSpeaker, format_action_argument, get_logger
+from meeseeks_core.common import MockSpeaker, format_tool_input, get_logger
 from meeseeks_core.components import resolve_langfuse_status
 from meeseeks_core.config import (
     AppConfig,
@@ -726,8 +726,8 @@ def _render_results_with_registry(
     steps = task_queue.action_steps
     last_index = len(steps) - 1
     for index, step in enumerate(steps):
-        spec = specs.get(step.action_consumer)
-        label = step.action_consumer
+        spec = specs.get(step.tool_id)
+        label = step.tool_id
         if spec is not None and getattr(spec, "kind", "") == "mcp":
             label = f"{label} (MCP)"
         label = f":wrench: {label}"
@@ -853,8 +853,8 @@ def _build_cli_hook_manager(
     specs = _tool_specs_by_id(tool_registry)
 
     def _start_spinner(action_step: ActionStep) -> ActionStep:
-        spec = specs.get(action_step.action_consumer)
-        label = action_step.action_consumer
+        spec = specs.get(action_step.tool_id)
+        label = action_step.tool_id
         if spec is not None and getattr(spec, "kind", "") == "mcp":
             label = f"{label} (MCP)"
         status = console.status(f"Running {label}...", spinner="dots")
@@ -899,7 +899,7 @@ def _build_approval_callback(
     specs_by_id = _tool_specs_by_id(tool_registry)
 
     def _approve(action_step: ActionStep) -> bool:
-        spec = specs_by_id.get(action_step.action_consumer)
+        spec = specs_by_id.get(action_step.tool_id)
         is_mcp = spec is not None and getattr(spec, "kind", "") == "mcp"
         server_name = None
         tool_name = None
@@ -916,8 +916,8 @@ def _build_approval_callback(
                     pass
 
         subject = (
-            f"{action_step.action_consumer}:{action_step.action_type} "
-            f"({format_action_argument(action_step.action_argument)})"
+            f"{action_step.tool_id}:{action_step.operation} "
+            f"({format_tool_input(action_step.tool_input)})"
         )
         if approval_style in {"aider", "inline", "rich"}:
             rich_decision = _confirm_rich_panel(

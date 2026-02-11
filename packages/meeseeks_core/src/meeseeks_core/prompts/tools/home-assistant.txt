@@ -1,4 +1,4 @@
-Tool: Home Assistant (action_consumer="home_assistant_tool")
+Tool: Home Assistant (tool_id="home_assistant_tool")
 - This API manages smart home devices by calling services within domains like "light" or "switch".
 - For example, the "turn_on" service in the "light" domain can turn on a specified light by passing its ID as service_data.
 - The API also provides scenes to automate tasks and returns a list of states that changed during the service execution.

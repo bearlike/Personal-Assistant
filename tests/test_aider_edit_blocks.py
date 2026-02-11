@@ -88,7 +88,7 @@ def test_search_miss_includes_hint(tmp_path):
 
 
 @pytest.mark.parametrize(
-    ("action_type", "content", "files", "expected"),
+    ("operation", "content", "files", "expected"),
     [
         ("set", "no edits here", None, "SEARCH/REPLACE blocks"),
         ("get", "no edits here", None, "SEARCH/REPLACE blocks"),
@@ -97,16 +97,16 @@ def test_search_miss_includes_hint(tmp_path):
         ("set", _block("hello.txt", "world\n", "there\n"), "hello.txt", "files must be a list"),
     ],
 )
-def test_edit_block_tool_rejects_invalid_inputs(tmp_path, action_type, content, files, expected):
+def test_edit_block_tool_rejects_invalid_inputs(tmp_path, operation, content, files, expected):
     """Reject invalid tool inputs with guidance."""
     tool = AiderEditBlockTool()
     argument = {"content": content, "root": str(tmp_path)}
     if files is not None:
         argument["files"] = files
     step = ActionStep(
-        action_consumer="aider_edit_block_tool",
-        action_type=action_type,
-        action_argument=argument,
+        tool_id="aider_edit_block_tool",
+        operation=operation,
+        tool_input=argument,
     )
     with pytest.raises(ToolInputError) as exc:
         tool.run(step)
@@ -119,9 +119,9 @@ def test_edit_block_tool_wraps_apply_errors(tmp_path):
     target.write_text("alpha\nbeta\ngamma\ndelta\n", encoding="utf-8")
     tool = AiderEditBlockTool()
     step = ActionStep(
-        action_consumer="aider_edit_block_tool",
-        action_type="set",
-        action_argument={
+        tool_id="aider_edit_block_tool",
+        operation="set",
+        tool_input={
             "content": _block("hello.txt", "alpha\nbeta\ngamaa\ndelta\n", "there\n"),
             "root": str(tmp_path),
         },
@@ -139,9 +139,9 @@ def test_edit_block_tool_set_state_returns_diff(tmp_path):
     target.write_text("hello\nworld\n", encoding="utf-8")
     tool = AiderEditBlockTool()
     step = ActionStep(
-        action_consumer="aider_edit_block_tool",
-        action_type="set",
-        action_argument={
+        tool_id="aider_edit_block_tool",
+        operation="set",
+        tool_input={
             "content": _block("hello.txt", "world\n", "there\n"),
             "root": str(tmp_path),
         },
@@ -160,9 +160,9 @@ def test_edit_block_tool_set_state_summary_when_no_diff(tmp_path):
     target.write_text("hello\nworld\n", encoding="utf-8")
     tool = AiderEditBlockTool()
     step = ActionStep(
-        action_consumer="aider_edit_block_tool",
-        action_type="set",
-        action_argument={
+        tool_id="aider_edit_block_tool",
+        operation="set",
+        tool_input={
             "content": _block("hello.txt", "world\n", "world\n"),
             "root": str(tmp_path),
         },
@@ -178,9 +178,9 @@ def test_edit_block_tool_get_state_summary(tmp_path):
     target.write_text("hello\nworld\n", encoding="utf-8")
     tool = AiderEditBlockTool()
     step = ActionStep(
-        action_consumer="aider_edit_block_tool",
-        action_type="get",
-        action_argument={
+        tool_id="aider_edit_block_tool",
+        operation="get",
+        tool_input={
             "content": _block("hello.txt", "world\n", "there\n"),
             "root": str(tmp_path),
         },
@@ -197,9 +197,9 @@ def test_edit_block_tool_uses_cwd_for_string_argument(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     tool = AiderEditBlockTool()
     step = ActionStep(
-        action_consumer="aider_edit_block_tool",
-        action_type="set",
-        action_argument=_block("hello.txt", "world\n", "there\n"),
+        tool_id="aider_edit_block_tool",
+        operation="set",
+        tool_input=_block("hello.txt", "world\n", "there\n"),
     )
     tool.set_state(step)
     assert target.read_text(encoding="utf-8") == "hello\nthere\n"

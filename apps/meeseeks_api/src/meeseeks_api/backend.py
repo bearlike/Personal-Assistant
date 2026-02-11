@@ -189,15 +189,15 @@ task_queue_model = api.model(
                 api.model(
                     "ActionStep",
                     {
-                        "action_consumer": fields.String(
+                        "tool_id": fields.String(
                             required=True,
                             description="The tool responsible for executing the action",
                         ),
-                        "action_type": fields.String(
+                        "operation": fields.String(
                             required=True,
                             description="The type of action to be performed (get/set)",
                         ),
-                        "action_argument": fields.Raw(
+                        "tool_input": fields.Raw(
                             required=True, description="Arguments for the tool invocation"
                         ),
                         "result": fields.String(description="The result of the executed action"),

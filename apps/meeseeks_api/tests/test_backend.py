@@ -22,9 +22,9 @@ class DummyQueue:
         ]
         self.action_steps = [
             {
-                "action_consumer": "home_assistant_tool",
-                "action_type": "get",
-                "action_argument": "say",
+                "tool_id": "home_assistant_tool",
+                "operation": "get",
+                "tool_input": "say",
                 "result": result,
             }
         ]

@@ -61,9 +61,9 @@ def make_task_queue(message: str) -> TaskQueue:
     """Build a minimal task queue with a single action step."""
     set_available_tools(["home_assistant_tool"])
     step = ActionStep(
-        action_consumer="home_assistant_tool",
-        action_type="get",
-        action_argument=message,
+        tool_id="home_assistant_tool",
+        operation="get",
+        tool_input=message,
     )
     return TaskQueue(action_steps=[step])
 
@@ -360,7 +360,7 @@ def test_orchestrate_session_edit_block_success_records_events(monkeypatch, tmp_
     events = session_store.load_transcript(session_id)
     _types_in_order(events, ["user", "action_plan", "tool_result", "completion"])
     tool_event = next(event for event in events if event["type"] == "tool_result")
-    assert tool_event["payload"]["action_consumer"] == "aider_edit_block_tool"
+    assert tool_event["payload"]["tool_id"] == "aider_edit_block_tool"
     assert tool_event["payload"]["success"] is True
     assert "kind': 'diff'" in tool_event["payload"]["result"]
 
@@ -539,7 +539,7 @@ def test_orchestrate_session_mcp_missing_required_marks_incomplete(monkeypatch, 
 
     policy = PermissionPolicy(
         rules=[],
-        default_by_action={"get": PermissionDecision.ALLOW, "set": PermissionDecision.ALLOW},
+        default_by_operation={"get": PermissionDecision.ALLOW, "set": PermissionDecision.ALLOW},
         default_decision=PermissionDecision.ALLOW,
     )
 
@@ -576,9 +576,9 @@ def test_run_action_plan_records_last_error():
         )
     )
     step = ActionStep(
-        action_consumer="boom_tool",
-        action_type="get",
-        action_argument="go",
+        tool_id="boom_tool",
+        operation="get",
+        tool_input="go",
     )
     queue = TaskQueue(action_steps=[step])
     task_master.run_action_plan(queue, tool_registry=registry)
@@ -590,9 +590,9 @@ def test_run_action_plan_missing_tool_records_last_error():
     """Capture failures when a tool is missing from the registry."""
     registry = ToolRegistry()
     step = ActionStep(
-        action_consumer="missing_tool",
-        action_type="get",
-        action_argument="payload",
+        tool_id="missing_tool",
+        operation="get",
+        tool_input="payload",
     )
     queue = TaskQueue(action_steps=[step])
     task_master.run_action_plan(queue, tool_registry=registry)
@@ -606,7 +606,7 @@ def test_run_action_plan_coerces_mcp_string_payload():
 
     class DummyTool:
         def run(self, step):
-            captured.append(step.action_argument)
+            captured.append(step.tool_input)
             return get_mock_speaker()(content="ok")
 
     registry = ToolRegistry()
@@ -657,26 +657,26 @@ def test_run_action_plan_coerces_mcp_string_payload():
     )
     steps = [
         ActionStep(
-            action_consumer="mcp_array_tool",
-            action_type="get",
-            action_argument={"foo": "value"},
+            tool_id="mcp_array_tool",
+            operation="get",
+            tool_input={"foo": "value"},
         ),
         ActionStep(
-            action_consumer="mcp_string_tool",
-            action_type="get",
-            action_argument={"foo": ["value"]},
+            tool_id="mcp_string_tool",
+            operation="get",
+            tool_input={"foo": ["value"]},
         ),
         ActionStep.construct(
-            action_consumer="mcp_bad_tool",
-            action_type="get",
-            action_argument=["bad"],
+            tool_id="mcp_bad_tool",
+            operation="get",
+            tool_input=["bad"],
         ),
     ]
     queue = TaskQueue(action_steps=steps)
     task_master.run_action_plan(queue, tool_registry=registry)
     assert captured == [{"query": ["value"]}, {"query": "value"}]
     assert queue.last_error is not None
-    assert "Unsupported action_argument type" in queue.last_error
+    assert "Unsupported tool_input type" in queue.last_error
 
 
 def test_orchestrate_session_passes_summary(monkeypatch, tmp_path):
@@ -709,9 +709,9 @@ def test_response_synthesis_helpers(monkeypatch):
     queue = TaskQueue(
         action_steps=[
             ActionStep(
-                action_consumer="tool",
-                action_type="get",
-                action_argument="x",
+                tool_id="tool",
+                operation="get",
+                tool_input="x",
                 result=None,
             )
         ]
@@ -803,7 +803,7 @@ def test_orchestrate_session_records_mcp_tool_result(monkeypatch, tmp_path):
 
     class FakeMCPTool:
         def run(self, step):
-            return get_mock_speaker()(content=f"fake:{step.action_argument}")
+            return get_mock_speaker()(content=f"fake:{step.tool_input}")
 
     registry = ToolRegistry()
     registry.register(
@@ -849,8 +849,8 @@ def test_orchestrate_session_records_mcp_tool_result(monkeypatch, tmp_path):
     tool_events = [event for event in events if event.get("type") == "tool_result"]
     assert tool_events
     payload = tool_events[-1]["payload"]
-    assert payload["action_consumer"] == "mcp_fake_search"
-    assert payload["action_argument"] == {"query": "Who is Krishnakanth?"}
+    assert payload["tool_id"] == "mcp_fake_search"
+    assert payload["tool_input"] == {"query": "Who is Krishnakanth?"}
     assert payload["result"] == "fake:{'query': 'Who is Krishnakanth?'}"
 
 
@@ -1390,9 +1390,9 @@ class DummyTool:
 
     def run(self, action_step):
         """Return a mocked tool response."""
-        self.called_with = action_step.action_argument
+        self.called_with = action_step.tool_input
         MockSpeaker = get_mock_speaker()
-        return MockSpeaker(content=f"ok:{action_step.action_argument}")
+        return MockSpeaker(content=f"ok:{action_step.tool_input}")
 
 
 def test_run_action_plan_permission_denied():
@@ -1411,19 +1411,19 @@ def test_run_action_plan_permission_denied():
         rules=[
             PermissionRule(
                 tool_id="dummy_tool",
-                action_type="set",
+                operation="set",
                 decision=PermissionDecision.DENY,
             )
         ],
-        default_by_action={"get": PermissionDecision.ALLOW, "set": PermissionDecision.ASK},
+        default_by_operation={"get": PermissionDecision.ALLOW, "set": PermissionDecision.ASK},
         default_decision=PermissionDecision.ASK,
     )
     task_queue = TaskQueue(
         action_steps=[
             ActionStep(
-                action_consumer="dummy_tool",
-                action_type="set",
-                action_argument="payload",
+                tool_id="dummy_tool",
+                operation="set",
+                tool_input="payload",
             )
         ]
     )
@@ -1438,7 +1438,7 @@ def test_run_action_plan_permission_denied():
 
 
 def test_run_action_plan_hooks_modify_input():
-    """Allow hooks to modify action arguments."""
+    """Allow hooks to modify tool inputs."""
     registry = ToolRegistry()
     dummy_tool = DummyTool()
     registry.register(
@@ -1451,25 +1451,25 @@ def test_run_action_plan_hooks_modify_input():
     )
     policy = PermissionPolicy(
         rules=[],
-        default_by_action={"get": PermissionDecision.ALLOW, "set": PermissionDecision.ALLOW},
+        default_by_operation={"get": PermissionDecision.ALLOW, "set": PermissionDecision.ALLOW},
         default_decision=PermissionDecision.ALLOW,
     )
 
     def pre_hook(step):
-        step.action_argument = "updated"
+        step.tool_input = "updated"
         return step
 
     def post_hook(step, result):
         MockSpeaker = get_mock_speaker()
-        return MockSpeaker(content=f"post:{step.action_argument}")
+        return MockSpeaker(content=f"post:{step.tool_input}")
 
     hooks = HookManager(pre_tool_use=[pre_hook], post_tool_use=[post_hook])
     task_queue = TaskQueue(
         action_steps=[
             ActionStep(
-                action_consumer="dummy_tool",
-                action_type="get",
-                action_argument="original",
+                tool_id="dummy_tool",
+                operation="get",
+                tool_input="original",
             )
         ]
     )
@@ -1502,9 +1502,9 @@ def test_run_action_plan_disables_tool_on_error():
     task_queue = TaskQueue(
         action_steps=[
             ActionStep(
-                action_consumer="boom_tool",
-                action_type="set",
-                action_argument="go",
+                tool_id="boom_tool",
+                operation="set",
+                tool_input="go",
             )
         ]
     )
@@ -1548,9 +1548,9 @@ def test_run_action_plan_reflection_blocks_progress(monkeypatch):
     task_queue = TaskQueue(
         action_steps=[
             ActionStep(
-                action_consumer="dummy_tool",
-                action_type="set",
-                action_argument="original",
+                tool_id="dummy_tool",
+                operation="set",
+                tool_input="original",
             )
         ]
     )

@@ -17,7 +17,7 @@ from meeseeks_core.common import MockSpeaker, get_logger, get_mock_speaker, get_
 from meeseeks_core.components import build_langfuse_handler
 from meeseeks_core.config import get_config_value
 from meeseeks_core.llm import build_chat_model
-from meeseeks_core.types import ActionArgument, ActionStepPayload
+from meeseeks_core.types import ActionStepPayload, ToolInput
 
 logging = get_logger(name="core.classes")
 AVAILABLE_TOOLS: list[str] = ["home_assistant_tool"]
@@ -48,14 +48,14 @@ class ActionStep(BaseModel):
         default=None,
         description="Optional description of what success looks like.",
     )
-    action_consumer: str = Field(
+    tool_id: str = Field(
         description=(
             "Specify the tool_id that should execute the action. "
             "Use only tool IDs listed under Available tools."
         )
     )
-    action_type: str = Field(description="Specify the execution type (legacy get/set or execute).")
-    action_argument: ActionArgument = Field(
+    operation: str = Field(description="Specify the execution type (get/set or execute).")
+    tool_input: ToolInput = Field(
         description=(
             "Provide details for the action. If 'task', specify the task to perform. "
             "If 'talk', include the message to speak to the user."
@@ -71,6 +71,7 @@ class ActionStep(BaseModel):
         """Allow both alias and field-name population."""
 
         allow_population_by_field_name = True
+        extra = "forbid"
 
 
 class PlanStep(BaseModel):
@@ -115,21 +116,21 @@ class TaskQueue(BaseModel):
     def validate_actions(cls, field: list[ActionStep]) -> list[ActionStep]:
         """Normalize and validate action steps."""
         for action in field:
-            action.action_consumer = action.action_consumer.lower()
-            action.action_type = action.action_type.lower()
+            action.tool_id = action.tool_id.lower()
+            action.operation = action.operation.lower()
             error_msg_list = []
 
-            if action.action_consumer not in AVAILABLE_TOOLS:
+            if action.tool_id not in AVAILABLE_TOOLS:
                 error_msg_list.append(
-                    f"`{action.action_consumer}` is not a valid Assistant consumer."
+                    f"`{action.tool_id}` is not a valid Assistant tool."
                 )
 
-            if action.action_type not in ["get", "set", "execute"]:
-                error_msg = f"`{action.action_type}` is not a valid action type."
+            if action.operation not in ["get", "set", "execute"]:
+                error_msg = f"`{action.operation}` is not a valid operation."
                 error_msg_list.append(error_msg)
 
-            if action.action_argument is None:
-                error_msg_list.append("Action argument cannot be None.")
+            if action.tool_input is None:
+                error_msg_list.append("Tool input cannot be None.")
 
             if error_msg_list:
                 for msg in error_msg_list:
@@ -138,7 +139,7 @@ class TaskQueue(BaseModel):
         return field
 
 
-ActionStep.update_forward_refs(ActionArgument=ActionArgument)
+ActionStep.update_forward_refs(ToolInput=ToolInput)
 
 
 class OrchestrationState(BaseModel):
@@ -235,12 +236,12 @@ class AbstractTool(abc.ABC):
         return MockSpeaker(content="Not implemented yet.")
 
     def run(self, action_step: ActionStep) -> MockSpeaker:
-        """Execute the action based on the action type."""
-        if action_step.action_type == "set":
+        """Execute the action based on the operation."""
+        if action_step.operation == "set":
             return self.set_state(action_step)
-        if action_step.action_type == "get":
+        if action_step.operation == "get":
             return self.get_state(action_step)
-        raise ValueError(f"Invalid action type: {action_step.action_type}")
+        raise ValueError(f"Invalid operation: {action_step.operation}")
 
 
 def create_task_queue(

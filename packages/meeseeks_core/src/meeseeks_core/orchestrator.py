@@ -398,17 +398,17 @@ class Orchestrator:
         tool_id: str,
         args: object | None,
     ) -> ActionStep:
-        action_type = self._infer_action_type(tool_id)
+        operation = self._infer_operation(tool_id)
         return ActionStep(
             title=plan_step.title,
             objective=plan_step.description,
-            action_consumer=tool_id,
-            action_type=action_type,
-            action_argument=args if args is not None else "",
+            tool_id=tool_id,
+            operation=operation,
+            tool_input=args if args is not None else "",
         )
 
     @staticmethod
-    def _infer_action_type(tool_id: str) -> str:
+    def _infer_operation(tool_id: str) -> str:
         lowered = tool_id.lower()
         write_keywords = [
             "set",
