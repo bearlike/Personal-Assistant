@@ -301,7 +301,7 @@ class Orchestrator:
                     session_id, {"type": "assistant", "payload": {"text": response}}
                 )
 
-            if not state.done:
+            if not state.done:  # pragma: no cover - defensive guard
                 state.done_reason = "max_iterations_reached"
 
             completion_payload = {

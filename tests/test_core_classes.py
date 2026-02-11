@@ -101,6 +101,12 @@ def test_create_task_queue_requires_data():
         create_task_queue(action_data=None)
 
 
+def test_create_plan_requires_data():
+    """Raise when plan data is missing."""
+    with pytest.raises(ValueError):
+        classes.create_plan(step_data=None)
+
+
 def test_examples_skip_home_assistant_when_unavailable():
     """Ensure examples omit disabled tools."""
     examples = classes.get_task_master_examples(0, available_tools=[])

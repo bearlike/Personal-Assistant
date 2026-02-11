@@ -77,3 +77,16 @@ def test_shell_tool_requires_command(tmp_path):
     result = tool.set_state(step)
     assert isinstance(result.content, str)
     assert "command is required" in result.content
+
+
+def test_shell_tool_rejects_invalid_payload_type():
+    """Reject invalid tool input types."""
+    tool = AiderShellTool()
+    step = ActionStep.construct(
+        tool_id="aider_shell_tool",
+        operation="set",
+        tool_input=123,
+    )
+    result = tool.set_state(step)
+    assert isinstance(result.content, str)
+    assert "Tool input must be a string command" in result.content

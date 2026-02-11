@@ -92,6 +92,19 @@ def test_aider_read_file_invalid_argument_type():
     assert "path is required" in result.content
 
 
+def test_aider_read_file_rejects_non_string_payload():
+    """Reject invalid tool input types."""
+    tool = AiderReadFileTool()
+    step = ActionStep.construct(
+        tool_id="aider_read_file_tool",
+        operation="get",
+        tool_input=123,
+    )
+    result = tool.get_state(step)
+    assert isinstance(result.content, str)
+    assert "Tool input must be a string path" in result.content
+
+
 def test_aider_list_dir_limits_entries(tmp_path):
     """Stop listing when max_entries is reached."""
     (tmp_path / "a").mkdir()
@@ -124,3 +137,16 @@ def test_aider_list_dir_defaults_to_root(tmp_path):
     payload = result.content
     assert isinstance(payload, dict)
     assert payload.get("kind") == "dir"
+
+
+def test_aider_list_dir_rejects_invalid_payload_type():
+    """Reject invalid tool input types."""
+    tool = AiderListDirTool()
+    step = ActionStep.construct(
+        tool_id="aider_list_dir_tool",
+        operation="get",
+        tool_input=123,
+    )
+    result = tool.get_state(step)
+    assert isinstance(result.content, str)
+    assert "Tool input must be a string path" in result.content

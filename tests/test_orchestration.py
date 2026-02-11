@@ -447,6 +447,295 @@ def test_orchestrate_session_plan_mode_no_replan(monkeypatch, tmp_path):
     assert completion["payload"].get("done_reason") == "planned"
 
 
+def test_orchestrate_session_cancels_before_step(monkeypatch, tmp_path):
+    """Cancel before running the first step."""
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="dummy_tool",
+            name="Dummy Tool",
+            description="Test tool",
+            factory=lambda: None,
+        )
+    )
+
+    def fake_generate(*_args, **_kwargs):
+        return make_plan("Do work")
+
+    def fake_decide(*_args, **_kwargs):
+        raise AssertionError("step executor should not run on cancel")
+
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(StepExecutor, "decide", fake_decide)
+    monkeypatch.setattr(Orchestrator, "_should_synthesize_response", lambda *_a, **_k: False)
+
+    task_queue, state = task_master.orchestrate_session(
+        "cancel",
+        max_iters=1,
+        session_id=session_id,
+        session_store=session_store,
+        tool_registry=registry,
+        should_cancel=lambda: True,
+        return_state=True,
+    )
+
+    assert task_queue is not None
+    assert state.done_reason == "canceled"
+    events = session_store.load_transcript(session_id)
+    completion = next(event for event in events if event["type"] == "completion")
+    assert completion["payload"]["done_reason"] == "canceled"
+
+
+def test_orchestrate_session_empty_response_marks_incomplete(monkeypatch, tmp_path):
+    """Handle respond decisions that omit a response."""
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
+
+    def fake_generate(*_args, **_kwargs):
+        return make_plan("Respond")
+
+    def fake_decide(*_args, **_kwargs):
+        return types.SimpleNamespace(decision="respond", tool_id=None, args=None, response=None)
+
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(StepExecutor, "decide", fake_decide)
+    monkeypatch.setattr(Orchestrator, "_should_synthesize_response", lambda *_a, **_k: False)
+
+    task_queue, state = task_master.orchestrate_session(
+        "hello",
+        max_iters=1,
+        session_id=session_id,
+        session_store=session_store,
+        return_state=True,
+    )
+
+    assert state.done_reason == "incomplete"
+    assert "empty response" in (task_queue.task_result or "")
+
+
+def test_orchestrate_session_invalid_tool_id(monkeypatch, tmp_path):
+    """Mark incomplete when step executor returns a disallowed tool."""
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="allowed_tool",
+            name="Allowed Tool",
+            description="Allowed tool",
+            factory=lambda: None,
+        )
+    )
+
+    def fake_generate(*_args, **_kwargs):
+        return make_plan("Run tool")
+
+    def fake_decide(*_args, **_kwargs):
+        return types.SimpleNamespace(
+            decision="tool",
+            tool_id="missing_tool",
+            args="payload",
+            response=None,
+        )
+
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(StepExecutor, "decide", fake_decide)
+    monkeypatch.setattr(Orchestrator, "_should_synthesize_response", lambda *_a, **_k: False)
+
+    task_queue, state = task_master.orchestrate_session(
+        "hello",
+        max_iters=1,
+        session_id=session_id,
+        session_store=session_store,
+        tool_registry=registry,
+        return_state=True,
+    )
+
+    assert state.done_reason == "incomplete"
+    assert "not allowed" in (task_queue.task_result or "")
+
+
+def test_orchestrate_session_coerces_tool_args(monkeypatch, tmp_path):
+    """Normalize missing and non-string args before tool execution."""
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="dummy_tool",
+            name="Dummy Tool",
+            description="Test tool",
+            factory=lambda: None,
+        )
+    )
+
+    def fake_generate(*_args, **_kwargs):
+        return Plan(
+            steps=[
+                PlanStep(title="Step 1", description="First"),
+                PlanStep(title="Step 2", description="Second"),
+            ]
+        )
+
+    decisions = iter(
+        [
+            types.SimpleNamespace(
+                decision="tool",
+                tool_id="dummy_tool",
+                args=None,
+                response=None,
+            ),
+            types.SimpleNamespace(
+                decision="tool",
+                tool_id="dummy_tool",
+                args=["a", "b"],
+                response=None,
+            ),
+        ]
+    )
+
+    def fake_decide(*_args, **_kwargs):
+        return next(decisions)
+
+    captured = []
+
+    def fake_run(_self, _session_id, task_queue, *_args, **_kwargs):
+        captured.append(task_queue.action_steps[0].tool_input)
+        task_queue.task_result = "ok"
+        return task_queue
+
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(StepExecutor, "decide", fake_decide)
+    monkeypatch.setattr(Orchestrator, "_run_action_plan", fake_run)
+
+    def fake_update(*_args, **kwargs):
+        return kwargs.get("remaining_steps", [])
+
+    monkeypatch.setattr(PlanUpdater, "update", fake_update)
+    monkeypatch.setattr(Orchestrator, "_should_synthesize_response", lambda *_a, **_k: False)
+
+    task_master.orchestrate_session(
+        "hello",
+        max_iters=2,
+        session_id=session_id,
+        session_store=session_store,
+        tool_registry=registry,
+    )
+
+    assert captured == ["", "['a', 'b']"]
+
+
+def test_orchestrate_session_invalid_decision(monkeypatch, tmp_path):
+    """Surface invalid step decisions as errors."""
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
+
+    def fake_generate(*_args, **_kwargs):
+        return make_plan("Do it")
+
+    def fake_decide(*_args, **_kwargs):
+        return types.SimpleNamespace(decision="unknown", tool_id=None, args=None, response=None)
+
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(StepExecutor, "decide", fake_decide)
+    monkeypatch.setattr(Orchestrator, "_should_synthesize_response", lambda *_a, **_k: False)
+
+    task_queue, state = task_master.orchestrate_session(
+        "hello",
+        max_iters=1,
+        session_id=session_id,
+        session_store=session_store,
+        return_state=True,
+    )
+
+    assert state.done_reason == "incomplete"
+    assert "Invalid step decision" in (task_queue.task_result or "")
+
+
+def test_orchestrate_session_cancels_after_step(monkeypatch, tmp_path):
+    """Cancel after completing a step."""
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="dummy_tool",
+            name="Dummy Tool",
+            description="Test tool",
+            factory=lambda: None,
+        )
+    )
+
+    def fake_generate(*_args, **_kwargs):
+        return make_plan("Run tool")
+
+    def fake_decide(*_args, **_kwargs):
+        return types.SimpleNamespace(
+            decision="tool",
+            tool_id="dummy_tool",
+            args="payload",
+            response=None,
+        )
+
+    def fake_run(_self, _session_id, task_queue, *_args, **_kwargs):
+        task_queue.task_result = "ok"
+        return task_queue
+
+    cancel_calls = {"count": 0}
+
+    def should_cancel():
+        cancel_calls["count"] += 1
+        return cancel_calls["count"] > 1
+
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(StepExecutor, "decide", fake_decide)
+    monkeypatch.setattr(Orchestrator, "_run_action_plan", fake_run)
+    monkeypatch.setattr(Orchestrator, "_should_synthesize_response", lambda *_a, **_k: False)
+
+    task_queue, state = task_master.orchestrate_session(
+        "hello",
+        max_iters=1,
+        session_id=session_id,
+        session_store=session_store,
+        tool_registry=registry,
+        should_cancel=should_cancel,
+        return_state=True,
+    )
+
+    assert task_queue.task_result == "ok"
+    assert state.done_reason == "canceled"
+
+
+def test_orchestrate_session_exception_before_task_queue(monkeypatch, tmp_path):
+    """Create a fallback task queue when orchestration fails early."""
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
+
+    def fake_generate(*_args, **_kwargs):
+        raise RuntimeError("planner boom")
+
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+
+    task_queue = task_master.orchestrate_session(
+        "hello",
+        max_iters=1,
+        session_id=session_id,
+        session_store=session_store,
+    )
+
+    assert task_queue.last_error == "planner boom"
+    events = session_store.load_transcript(session_id)
+    completion = next(event for event in events if event["type"] == "completion")
+    assert completion["payload"]["done_reason"] == "error"
+
+
+def test_expand_tool_ids_returns_empty_set():
+    """Keep empty tool selections unchanged."""
+    assert Orchestrator._expand_tool_ids(set(), []) == set()
+
+
 def test_orchestrate_session_emits_completion_on_exception(monkeypatch, tmp_path):
     """Always emit completion when orchestration raises."""
     session_store = SessionStore(root_dir=str(tmp_path))

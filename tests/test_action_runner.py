@@ -338,6 +338,31 @@ def test_summarize_result_none_returns_empty():
     assert summary == ""
 
 
+def test_action_runner_coerces_json_string_payload():
+    """Parse JSON string tool_input into a structured payload."""
+    step = ActionStep(
+        tool_id="mcp_json_tool",
+        operation="get",
+        tool_input='{"query": "hello"}',
+    )
+    spec = ToolSpec(
+        tool_id="mcp_json_tool",
+        name="JSON tool",
+        description="MCP tool",
+        factory=lambda: object(),
+        kind="mcp",
+        metadata={
+            "schema": {
+                "required": ["query"],
+                "properties": {"query": {"type": "string"}},
+            }
+        },
+    )
+    error = ActionPlanRunner._coerce_mcp_tool_input(step, spec)
+    assert error is None
+    assert step.tool_input == {"query": "hello"}
+
+
 def test_action_runner_preserves_output_on_reflection():
     """Keep tool output in tool_result payload when reflection requests retry/revise."""
     registry = ToolRegistry()
