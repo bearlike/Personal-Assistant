@@ -103,7 +103,10 @@ class ActionPlanRunner:
                 continue
 
             if outcome.reflection is not None and outcome.reflection.status != "ok":
-                reason = outcome.reflection.notes or f"Reflection requested: {outcome.reflection.status}"
+                status = outcome.reflection.status
+                reason = f"step reflection requested {status}"
+                if outcome.reflection.notes:
+                    reason = f"{reason}: {outcome.reflection.notes}"
                 self._record_reflection_failure(action_step, reason, task_queue)
                 self._emit_tool_result(action_step, None, error=reason)
                 if outcome.reflection.revised_argument:

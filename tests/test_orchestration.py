@@ -1026,6 +1026,67 @@ def test_orchestrate_session_max_iters(monkeypatch, tmp_path):
     assert run_calls.count == 1
 
 
+def test_orchestrate_session_reflection_failure_synthesizes(monkeypatch, tmp_path):
+    """Synthesize a graceful response when reflection blocks progress."""
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
+
+    class DummyTool:
+        def run(self, _step):
+            return get_mock_speaker()(content="tool output")
+
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="dummy_tool",
+            name="Dummy",
+            description="Dummy tool",
+            factory=lambda: DummyTool(),
+        )
+    )
+
+    def fake_generate(*_args, **_kwargs):
+        step = ActionStep(
+            action_consumer="dummy_tool",
+            action_type="get",
+            action_argument="query",
+            objective="Need a verified price and timestamp.",
+        )
+        return TaskQueue(action_steps=[step])
+
+    class DummyReflection:
+        status = "retry"
+        notes = "Missing timestamp"
+        revised_argument = None
+
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(
+        StepReflector,
+        "reflect",
+        lambda *_args, **_kwargs: DummyReflection(),
+    )
+    monkeypatch.setattr(ResponseSynthesizer, "synthesize", lambda *_a, **_k: "graceful fail")
+
+    task_queue, state = task_master.orchestrate_session(
+        "get price",
+        max_iters=1,
+        return_state=True,
+        session_id=session_id,
+        session_store=session_store,
+        tool_registry=registry,
+    )
+
+    assert state.done is True
+    assert state.done_reason == "incomplete"
+    assert task_queue.last_error is not None
+    assert task_queue.task_result == "graceful fail"
+    events = session_store.load_transcript(session_id)
+    assert any(
+        event.get("type") == "assistant" and event.get("payload", {}).get("text") == "graceful fail"
+        for event in events
+    )
+
+
 def test_orchestrator_max_iters_zero_marks_limit(tmp_path):
     """Mark completion reason when max_iters is zero."""
     session_store = SessionStore(root_dir=str(tmp_path))

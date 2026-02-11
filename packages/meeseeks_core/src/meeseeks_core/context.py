@@ -81,7 +81,15 @@ class ContextBuilder:
         events = self._session_store.load_transcript(session_id)
         summary = self._session_store.load_summary(session_id)
         context_events = [
-            event for event in events if event.get("type") in {"user", "assistant", "tool_result"}
+            event
+            for event in events
+            if event.get("type")
+            in {
+                "user",
+                "assistant",
+                "tool_result",
+                "step_reflection",
+            }
         ]
         recent_limit = int(get_config_value("context", "recent_event_limit", default=8))
         recent_events = context_events[-recent_limit:] if recent_limit > 0 else []
