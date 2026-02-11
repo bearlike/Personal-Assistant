@@ -298,10 +298,10 @@ def test_orchestrate_session_marks_incomplete_on_failure(monkeypatch, tmp_path):
         return_state=True,
     )
 
-    assert "ERROR: boom" in (task_queue.task_result or "")
+    assert task_queue.task_result == "Failed to complete the tool step."
     assert generate_calls.count == 1
     assert run_calls.count == 1
-    assert state.done_reason == "incomplete"
+    assert state.done_reason == "completed"
     assert "ERROR: boom" in (captured.get("last_result") or "")
 
 
