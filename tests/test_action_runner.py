@@ -336,3 +336,56 @@ def test_summarize_result_none_returns_empty():
     """Return empty summaries for None results."""
     summary = ActionPlanRunner._summarize_result(None, None)
     assert summary == ""
+
+
+def test_action_runner_preserves_output_on_reflection():
+    """Keep tool output in tool_result payload when reflection requests retry/revise."""
+    registry = ToolRegistry()
+    events = []
+
+    class DummyTool:
+        def run(self, _step):
+            return get_mock_speaker()(content="raw output")
+
+    class DummyReflector:
+        def reflect(self, *_args, **_kwargs):
+            class DummyReflection:
+                status = "retry"
+                notes = "needs more"
+                revised_argument = None
+
+            return DummyReflection()
+
+    registry.register(
+        ToolSpec(
+            tool_id="dummy_tool",
+            name="Dummy",
+            description="Dummy tool",
+            factory=lambda: DummyTool(),
+        )
+    )
+    runner = ActionPlanRunner(
+        tool_registry=registry,
+        permission_policy=PermissionPolicy(),
+        approval_callback=lambda _step: True,
+        hook_manager=default_hook_manager(),
+        event_logger=events.append,
+        reflector=DummyReflector(),
+    )
+    task_queue = TaskQueue(
+        action_steps=[
+            ActionStep(
+                action_consumer="dummy_tool",
+                action_type="get",
+                action_argument="payload",
+            )
+        ]
+    )
+    task_queue = runner.run(task_queue)
+    tool_events = [event for event in events if event.get("type") == "tool_result"]
+    assert tool_events
+    payload = tool_events[-1]["payload"]
+    assert payload.get("success") is False
+    assert payload.get("error")
+    assert payload.get("result") == "raw output"
+    assert task_queue.action_steps[0].result is not None

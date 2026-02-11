@@ -28,7 +28,7 @@ from meeseeks_core.planning import (
 from meeseeks_core.reflection import StepReflector
 from meeseeks_core.session_store import SessionStore
 from meeseeks_core.token_budget import get_token_budget
-from meeseeks_core.tool_registry import ToolRegistry, load_registry
+from meeseeks_core.tool_registry import ToolRegistry, ToolSpec, load_registry
 
 logging = get_logger(name="core.orchestrator")
 
@@ -140,8 +140,10 @@ class Orchestrator:
                 model_name=self._model_name,
             )
             plan = initial_plan
-            tool_specs = self._tool_registry.list_specs_for_mode(
-                "plan" if resolved_mode == "plan" else "act"
+            tool_specs = (
+                self._tool_registry.list_specs()
+                if resolved_mode == "plan"
+                else self._tool_registry.list_specs_for_mode("act")
             )
             if plan is None:
                 if resolved_mode != "plan":
@@ -152,17 +154,21 @@ class Orchestrator:
                         context=context,
                     )
                     if selection.tool_required and selection.tool_ids:
-                        tool_specs = [
-                            spec for spec in tool_specs if spec.tool_id in selection.tool_ids
-                        ]
-                    elif not selection.tool_required:
-                        tool_specs = []
+                        selected_ids = self._expand_tool_ids(
+                            set(selection.tool_ids), tool_specs
+                        )
+                        tool_specs = [spec for spec in tool_specs if spec.tool_id in selected_ids]
                 plan = self._planner.generate(
                     user_query,
                     self._model_name,
                     context=context,
                     tool_specs=tool_specs,
                     mode=resolved_mode,
+                )
+            if resolved_mode != "plan" and plan and self._plan_needs_verification(plan):
+                tool_specs = self._ensure_web_verification_tools(
+                    tool_specs,
+                    self._tool_registry.list_specs_for_mode("act"),
                 )
             state.plan = plan.steps
             self._append_action_plan(session_id, plan.steps)
@@ -173,6 +179,7 @@ class Orchestrator:
             completed_steps: list[PlanStep] = []
             remaining_steps: list[PlanStep] = list(plan.steps)
             last_error: str | None = None
+            direct_response: str | None = None
 
             if resolved_mode == "plan":
                 state.done = True
@@ -197,10 +204,16 @@ class Orchestrator:
                     decision_type = (decision.decision or "").strip().lower()
                     if decision_type == "respond":
                         if decision.response:
+                            direct_response = decision.response
                             tool_outputs.append(decision.response)
                         else:
                             last_error = "Step executor returned an empty response."
                             tool_outputs.append(f"ERROR: {last_error}")
+                        completed_steps.append(current_step)
+                        steps_run += 1
+                        state.done = True
+                        state.done_reason = "completed" if direct_response else "incomplete"
+                        break
                     elif decision_type == "tool":
                         tool_id = str(decision.tool_id or "").strip()
                         if not tool_id or tool_id not in allowed_tool_ids:
@@ -269,6 +282,15 @@ class Orchestrator:
             state.tool_results.extend(tool_outputs)
 
             if (
+                direct_response is not None
+                and resolved_mode != "plan"
+                and state.done
+            ):
+                task_queue.task_result = direct_response
+                self._session_store.append_event(
+                    session_id, {"type": "assistant", "payload": {"text": direct_response}}
+                )
+            elif (
                 state.done
                 and resolved_mode != "plan"
                 and self._should_synthesize_response(task_queue)
@@ -428,6 +450,54 @@ class Orchestrator:
         if any(keyword in lowered for keyword in read_keywords):
             return "get"
         return "get"
+
+    @staticmethod
+    def _expand_tool_ids(selected_ids: set[str], tool_specs: list[ToolSpec]) -> set[str]:
+        if not selected_ids:
+            return selected_ids
+        lowered_selected = {tool_id.lower() for tool_id in selected_ids}
+        has_web_search = any(
+            key in tool_id
+            for tool_id in lowered_selected
+            for key in ("internet_search", "web_search", "searxng")
+        )
+        if has_web_search:
+            for spec in tool_specs:
+                tool_id = spec.tool_id.lower()
+                if "web_url_read" in tool_id or "web_url" in tool_id or "web_read" in tool_id:
+                    selected_ids.add(spec.tool_id)
+        return selected_ids
+
+    @staticmethod
+    def _plan_needs_verification(plan: Plan) -> bool:
+        keywords = ("open", "verify", "read", "source", "citation", "citations")
+        for step in plan.steps:
+            combined = f"{step.title} {step.description}".lower()
+            if any(keyword in combined for keyword in keywords):
+                return True
+        return False
+
+    @staticmethod
+    def _ensure_web_verification_tools(
+        selected: list[ToolSpec],
+        all_specs: list[ToolSpec],
+    ) -> list[ToolSpec]:
+        existing = {spec.tool_id for spec in selected}
+        needed = []
+        for spec in all_specs:
+            if spec.tool_id in existing:
+                continue
+            tool_id = spec.tool_id.lower()
+            if (
+                "internet_search" in tool_id
+                or "web_search" in tool_id
+                or "searxng" in tool_id
+                or "web_url_read" in tool_id
+                or "web_url" in tool_id
+                or "web_read" in tool_id
+            ):
+                needed.append(spec)
+        return selected + needed
 
     @staticmethod
     def _should_update_summary(text: str) -> bool:

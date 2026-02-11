@@ -108,10 +108,9 @@ class ActionPlanRunner:
                 if outcome.reflection.notes:
                     reason = f"{reason}: {outcome.reflection.notes}"
                 self._record_reflection_failure(action_step, reason, task_queue)
-                self._emit_tool_result(action_step, None, error=reason)
+                self._emit_tool_result(action_step, outcome.content, error=reason)
                 if outcome.reflection.revised_argument:
                     action_step.action_argument = outcome.reflection.revised_argument
-                action_step.result = None
                 self._emit_event(
                     {
                         "type": "step_reflection",

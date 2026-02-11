@@ -269,7 +269,12 @@ class Planner:
         )
         parser = PydanticOutputParser(pydantic_object=Plan)
         component_status = self._resolve_component_status()
-        specs = tool_specs or self._tool_registry.list_specs_for_mode(mode)
+        if tool_specs is not None:
+            specs = tool_specs
+        elif mode == "plan":
+            specs = self._tool_registry.list_specs()
+        else:
+            specs = self._tool_registry.list_specs_for_mode(mode)
         if mode == "act" and tool_specs is None:
             specs = self._filter_specs_by_intent(specs, user_query)
         available_tool_ids = [spec.tool_id for spec in specs]
@@ -428,6 +433,18 @@ class ToolSelector:
                 api_key=get_config_value("llm", "api_key"),
             )
             selection = (prompt | model | parser).invoke({"user_query": user_query.strip()})
+            if selection.tool_required and selection.tool_ids:
+                specs_by_id = {spec.tool_id: spec for spec in tool_specs}
+                selected_caps: set[str] = set()
+                for tool_id in selection.tool_ids:
+                    spec = specs_by_id.get(tool_id)
+                    if spec is not None:
+                        selected_caps |= Planner._spec_capabilities(spec)
+                if "web_search" in selected_caps:
+                    for spec in tool_specs:
+                        if "web_read" in Planner._spec_capabilities(spec):
+                            if spec.tool_id not in selection.tool_ids:
+                                selection.tool_ids.append(spec.tool_id)
             return selection
         except Exception as exc:  # pragma: no cover - defensive fallback
             logging.warning("Tool selector unavailable, falling back to all tools: {}", exc)

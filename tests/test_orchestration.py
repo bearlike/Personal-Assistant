@@ -183,8 +183,8 @@ def test_generate_action_plan_omits_disabled_tools(monkeypatch):
     assert plan.steps == []
 
 
-def test_generate_action_plan_plan_mode_filters_tools(monkeypatch):
-    """Expose only plan-safe tools and avoid extra guidance in plan mode."""
+def test_generate_action_plan_plan_mode_includes_all_tools(monkeypatch):
+    """Expose all tools and avoid extra guidance in plan mode."""
     registry = ToolRegistry()
     registry.register(
         ToolSpec(
@@ -211,7 +211,7 @@ def test_generate_action_plan_plan_mode_filters_tools(monkeypatch):
             message.content for message in messages if getattr(message, "content", None)
         )
         assert "plan_tool" in combined
-        assert "mut_tool" not in combined
+        assert "mut_tool" in combined
         assert "Tool guidance:" not in combined
         return json.dumps({"steps": []})
 
@@ -1005,6 +1005,209 @@ def test_orchestrate_session_max_iters(monkeypatch, tmp_path):
     assert run_calls.count == 1
 
 
+def test_orchestrate_session_direct_response_short_circuits(monkeypatch, tmp_path):
+    """Stop execution and skip plan updates when a step responds directly."""
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
+    plan = Plan(
+        steps=[
+            PlanStep(title="Step 1", description="Ask for context"),
+            PlanStep(title="Step 2", description="Use tools"),
+        ]
+    )
+    called = {"update": False, "synth": False}
+
+    def fake_decide(_self, *_args, **_kwargs):
+        return planning.StepDecision(decision="respond", response="Need more context.")
+
+    def fake_update(*_args, **_kwargs):
+        called["update"] = True
+        return []
+
+    def fake_synthesize(*_args, **_kwargs):
+        called["synth"] = True
+        return "synthesized"
+
+    monkeypatch.setattr(StepExecutor, "decide", fake_decide)
+    monkeypatch.setattr(PlanUpdater, "update", fake_update)
+    monkeypatch.setattr(ResponseSynthesizer, "synthesize", fake_synthesize)
+
+    task_queue, state = task_master.orchestrate_session(
+        "hello",
+        max_iters=3,
+        return_state=True,
+        session_id=session_id,
+        session_store=session_store,
+        tool_registry=ToolRegistry(),
+        initial_plan=plan,
+    )
+
+    assert state.done is True
+    assert task_queue.task_result == "Need more context."
+    assert called["update"] is False
+    assert called["synth"] is False
+
+
+def test_orchestrate_session_keeps_tools_when_selector_false(monkeypatch, tmp_path):
+    """Keep tool visibility when the selector says no tools are required."""
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="dummy_tool",
+            name="Dummy",
+            description="Dummy tool",
+            factory=lambda: None,
+        )
+    )
+    plan = Plan(steps=[PlanStep(title="Step 1", description="Fetch info")])
+    captured = {}
+
+    def fake_generate(*_args, **_kwargs):
+        return plan
+
+    def fake_select(*_args, **_kwargs):
+        return planning.ToolSelection(tool_required=False, tool_ids=[], rationale="none")
+
+    def fake_decide(_self, *_args, **kwargs):
+        captured["allowed"] = kwargs.get("allowed_tools")
+        return planning.StepDecision(decision="respond", response="ok")
+
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(planning.ToolSelector, "select", fake_select)
+    monkeypatch.setattr(StepExecutor, "decide", fake_decide)
+
+    task_master.orchestrate_session(
+        "hello",
+        max_iters=1,
+        session_id=session_id,
+        session_store=session_store,
+        tool_registry=registry,
+    )
+
+    assert captured.get("allowed")
+
+
+def test_orchestrate_session_expands_web_read(monkeypatch, tmp_path):
+    """Include web_url_read when web_search is selected."""
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="mcp_utils_internet_search_searxng_web_search",
+            name="Web Search",
+            description="Search the web.",
+            factory=lambda: None,
+        )
+    )
+    registry.register(
+        ToolSpec(
+            tool_id="mcp_utils_internet_search_web_url_read",
+            name="Web Read",
+            description="Read a web URL.",
+            factory=lambda: None,
+        )
+    )
+    captured = {}
+
+    def fake_generate(*_args, **_kwargs):
+        return Plan(steps=[PlanStep(title="Search", description="Find sources")])
+
+    def fake_select(*_args, **_kwargs):
+        return planning.ToolSelection(
+            tool_required=True,
+            tool_ids=["mcp_utils_internet_search_searxng_web_search"],
+            rationale="search first",
+        )
+
+    def fake_decide(_self, *_args, **kwargs):
+        captured["allowed"] = kwargs.get("allowed_tools")
+        return planning.StepDecision(decision="respond", response="ok")
+
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(planning.ToolSelector, "select", fake_select)
+    monkeypatch.setattr(StepExecutor, "decide", fake_decide)
+
+    task_master.orchestrate_session(
+        "hello",
+        max_iters=1,
+        session_id=session_id,
+        session_store=session_store,
+        tool_registry=registry,
+    )
+
+    assert any(
+        spec.tool_id == "mcp_utils_internet_search_web_url_read"
+        for spec in captured.get("allowed", [])
+    )
+
+
+def test_orchestrate_session_adds_web_tools_for_verify_steps(monkeypatch, tmp_path):
+    """Add web search/read tools when plan requires open/verify steps."""
+    session_store = SessionStore(root_dir=str(tmp_path))
+    session_id = session_store.create_session()
+    registry = ToolRegistry()
+    registry.register(
+        ToolSpec(
+            tool_id="dummy_tool",
+            name="Dummy",
+            description="Dummy tool",
+            factory=lambda: None,
+        )
+    )
+    registry.register(
+        ToolSpec(
+            tool_id="mcp_utils_internet_search_web_url_read",
+            name="Web Read",
+            description="Read a web URL.",
+            factory=lambda: None,
+        )
+    )
+    registry.register(
+        ToolSpec(
+            tool_id="mcp_utils_internet_search_searxng_web_search",
+            name="Web Search",
+            description="Search the web.",
+            factory=lambda: None,
+        )
+    )
+    captured = {}
+
+    def fake_generate(*_args, **_kwargs):
+        return Plan(
+            steps=[PlanStep(title="Open and verify sources", description="Read sources")]
+        )
+
+    def fake_select(*_args, **_kwargs):
+        return planning.ToolSelection(
+            tool_required=True,
+            tool_ids=["dummy_tool"],
+            rationale="narrow",
+        )
+
+    def fake_decide(_self, *_args, **kwargs):
+        captured["allowed"] = kwargs.get("allowed_tools")
+        return planning.StepDecision(decision="respond", response="ok")
+
+    monkeypatch.setattr(Planner, "generate", fake_generate)
+    monkeypatch.setattr(planning.ToolSelector, "select", fake_select)
+    monkeypatch.setattr(StepExecutor, "decide", fake_decide)
+
+    task_master.orchestrate_session(
+        "hello",
+        max_iters=1,
+        session_id=session_id,
+        session_store=session_store,
+        tool_registry=registry,
+    )
+
+    allowed_ids = {spec.tool_id for spec in captured.get("allowed", [])}
+    assert "mcp_utils_internet_search_web_url_read" in allowed_ids
+    assert "mcp_utils_internet_search_searxng_web_search" in allowed_ids
+
+
 def test_orchestrate_session_reflection_failure_synthesizes(monkeypatch, tmp_path):
     """Synthesize a graceful response when reflection blocks progress."""
     session_store = SessionStore(root_dir=str(tmp_path))
@@ -1359,7 +1562,8 @@ def test_run_action_plan_reflection_blocks_progress(monkeypatch):
         approval_callback=lambda _: True,
         model_name="gpt-3.5-turbo",
     )
-    assert task_queue.action_steps[0].result is None
+    assert task_queue.action_steps[0].result is not None
+    assert task_queue.action_steps[0].result.content == "ok:original"
     assert task_queue.last_error is not None
     assert "needs revision" in task_queue.last_error
 

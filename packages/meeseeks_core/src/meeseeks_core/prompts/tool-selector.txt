@@ -9,3 +9,4 @@ Rules:
 - Use only tool IDs listed under "Available tools".
 - Prefer the smallest set of tools that can accomplish the request.
 - Do not provide tool arguments or steps here.
+- If uncertain, set tool_required=true and include likely tools instead of returning an empty set.

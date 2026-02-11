@@ -9,4 +9,5 @@ Return a StepDecision JSON object with:
 Rules:
 - Use only tool IDs listed under "Allowed tools".
 - If a tool has a schema, args must match it.
-- If no tool is needed, respond directly.
+- Prefer calling a tool when the step requires external information, file/system access, or verification.
+- Respond directly only if you can answer from the given context or you need a single clarifying question from the user.
