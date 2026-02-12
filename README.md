@@ -14,7 +14,10 @@
 
 
 
-https://github.com/user-attachments/assets/78754e8f-828a-4c54-9e97-29cbeacbc3bc
+<video controls preload="metadata" width="960">
+  <source src="docs/meeseeks-cli-01-video.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
 > Meeseeks runs right in your terminal, browser, or hosted as an API.
 
 # Intro
@@ -55,8 +58,8 @@ We are upgrading the API backend to better support a task-orchestration frontend
         <th>Landing console (coming soon)</th>
     </tr>
     <tr>
-        <td align="center"><img src="https://github.com/user-attachments/assets/258af242-c9b0-4c7d-a2c8-fc00d59ade4d" alt="Meeseeks task detail page preview" height="512px"></td>
-        <td align="center"><img src="https://github.com/user-attachments/assets/d015c3fe-b902-42d3-819c-d4cf2fa8b2ca" alt="Meeseeks landing console preview" height="512px"></td>
+        <td align="center"><img src="docs/meeseeks-console-02-tasks.jpg" alt="Meeseeks task detail page preview" height="512px"></td>
+        <td align="center"><img src="docs/meeseeks-console-01-front.jpg" alt="Meeseeks landing console preview" height="512px"></td>
     </tr>
 </table>
 
