@@ -442,18 +442,11 @@
     <p>Meeseeks is an AI task agent assistant that breaks a request into small actions, runs the right tools, and replies with a clean summary. This landing page mirrors the README feature highlights so the overview stays consistent. Update both when core positioning changes.</p>
 <h2 id="documentation-map">Documentation map</h2>
 <p><strong>Overview</strong>
-- <a href="https://github.com/bearlike/Assistant/blob/main/README.md">README</a> - high-level product overview and feature highlights
-- <a href="core-orchestration/">Core orchestration</a> - execution flow and core features</p>
+- <a href="https://github.com/bearlike/Assistant/blob/main/README.md">README</a> - high-level product overview and feature highlights</p>
 <p><strong>Setup and configuration</strong>
-- <a href="getting-started/">Getting started</a> - environment setup, MCP config, and run commands
-- <a href="llm-setup/">LLM core setup</a> - minimum LLM config and LiteLLM notes</p>
-<p><strong>Clients</strong>
-- <a href="clients-cli/">CLI</a> - terminal interface
-- <a href="clients-web-api/">Web + API</a> - Streamlit chat UI and REST API
-- <a href="clients-home-assistant/">Home Assistant voice</a> - HA Assist integration</p>
+- <a href="getting-started/">Getting started</a> - environment setup, MCP config, and run commands</p>
 <p><strong>Repository map</strong>
-- <a href="components/">Components</a> - monorepo layout and core packages
-- <a href="developer-guide/">Developer guide</a> - core abstractions and new client walkthrough</p>
+- <a href="components/">Components</a> - monorepo layout and core packages</p>
 <p><strong>Reference</strong>
 - <a href="reference/">API reference</a> - mkdocstrings reference for core modules
 - <a href="session-runtime/">Session runtime</a> - shared runtime used by CLI + API</p>
@@ -463,15 +456,13 @@
 <li>Multiple interfaces (chat UI, REST API, Home Assistant, terminal CLI) backed by one core engine.</li>
 <li>Tool registry for local tools plus optional MCP tools.</li>
 <li>Built-in local file and shell tools (Aider adapters) for edit blocks, read, list, and shell execution.</li>
-<li>Session transcripts with auto-compact for long runs and token budget awareness.</li>
+<li>Session transcripts with compaction for long runs and context budget awareness.</li>
 <li>Context snapshots built from recent turns plus summaries of prior activity.</li>
 <li>Session listings filter empty sessions and support archiving via the API.</li>
 <li>Step-level reflection after tool execution to validate outcomes and adjust tool inputs.</li>
 <li>Permission gate with approval callbacks plus lightweight hooks around tool execution.</li>
 <li>Shared session runtime; API exposes polling endpoints while the CLI runs the runtime in-process for sync execution, cancellation, and summaries.</li>
 <li>Event payloads: <code>action_plan</code> steps are <code>{title, description}</code>, tool events use <code>tool_id</code>, <code>operation</code>, and <code>tool_input</code>.</li>
-<li>External MCP servers can be added via <code>configs/mcp.json</code> with schema-aware tool inputs.</li>
-<li>LiteLLM multi-provider support with per-role model selection (plan, tool, default).</li>
 <li>Optional components (Langfuse, Home Assistant) auto-disable when not configured.</li>
 <li>Langfuse tracing is session-scoped when enabled, grouping multi-turn runs.</li>
 </ul>

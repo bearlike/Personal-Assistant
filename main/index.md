@@ -6,20 +6,12 @@ Meeseeks is an AI task agent assistant that breaks a request into small actions,
 
 **Overview**
 - [README](https://github.com/bearlike/Assistant/blob/main/README.md) - high-level product overview and feature highlights
-- [Core orchestration](core-orchestration.md) - execution flow and core features
 
 **Setup and configuration**
 - [Getting started](getting-started.md) - environment setup, MCP config, and run commands
-- [LLM core setup](llm-setup.md) - minimum LLM config and LiteLLM notes
-
-**Clients**
-- [CLI](clients-cli.md) - terminal interface
-- [Web + API](clients-web-api.md) - Streamlit chat UI and REST API
-- [Home Assistant voice](clients-home-assistant.md) - HA Assist integration
 
 **Repository map**
 - [Components](components.md) - monorepo layout and core packages
-- [Developer guide](developer-guide.md) - core abstractions and new client walkthrough
 
 **Reference**
 - [API reference](reference.md) - mkdocstrings reference for core modules
@@ -30,15 +22,13 @@ Meeseeks is an AI task agent assistant that breaks a request into small actions,
 - Multiple interfaces (chat UI, REST API, Home Assistant, terminal CLI) backed by one core engine.
 - Tool registry for local tools plus optional MCP tools.
 - Built-in local file and shell tools (Aider adapters) for edit blocks, read, list, and shell execution.
-- Session transcripts with auto-compact for long runs and token budget awareness.
+- Session transcripts with compaction for long runs and context budget awareness.
 - Context snapshots built from recent turns plus summaries of prior activity.
 - Session listings filter empty sessions and support archiving via the API.
 - Step-level reflection after tool execution to validate outcomes and adjust tool inputs.
 - Permission gate with approval callbacks plus lightweight hooks around tool execution.
 - Shared session runtime; API exposes polling endpoints while the CLI runs the runtime in-process for sync execution, cancellation, and summaries.
 - Event payloads: `action_plan` steps are `{title, description}`, tool events use `tool_id`, `operation`, and `tool_input`.
-- External MCP servers can be added via `configs/mcp.json` with schema-aware tool inputs.
-- LiteLLM multi-provider support with per-role model selection (plan, tool, default).
 - Optional components (Langfuse, Home Assistant) auto-disable when not configured.
 - Langfuse tracing is session-scoped when enabled, grouping multi-turn runs.
 
