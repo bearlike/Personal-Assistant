@@ -1,6 +1,6 @@
 # Web + API Clients
 
-The REST API lives in `apps/meeseeks_api/` and the Streamlit UI lives in `apps/meeseeks_chat/`.
+The REST API lives in `apps/meeseeks_api/` and the Streamlit UI lives in `apps/meeseeks_chat/`. The web client (Meeseeks Console) is built for asynchronous delegation: work runs through the API and the UI polls events for status and output. The distinction from the CLI is execution context and autonomy: the web client executes through the API service, while the CLI runs tools directly on the local machine. Both clients share the same core runtime and can handle long-running tasks.
 
 ## Setup (uv)
 ```bash
@@ -15,10 +15,12 @@ uv run meeseeks-api
 ```
 
 API notes:
+
 - Protected routes require `X-API-Key` matching `api.master_token` in `configs/app.json`.
 - Session runtime endpoints support async runs and event polling.
 
 Core endpoints:
+
 - `POST /api/sessions` create a session
 - `POST /api/sessions/{session_id}/query` enqueue a query or core command
 - `GET /api/sessions/{session_id}/events?after=...` poll events

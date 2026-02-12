@@ -1,6 +1,6 @@
 # Home Assistant Voice (HA Assist)
 
-The Home Assistant integration lives in `meeseeks_ha_conversation/` and proxies voice requests to the API.
+The Home Assistant integration lives in `meeseeks_ha_conversation/` and proxies voice requests to the API. It is designed for hands-free voice control: HA handles wake words and intent capture, then forwards the request to the API for orchestration and responses.
 
 ## Setup (uv)
 ```bash
