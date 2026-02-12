@@ -4,7 +4,7 @@ repo_url: https://github.com/bearlike/Assistant
 repo_name: bearlike/Assistant
 
 theme:
-  name: material
+  name: shadcn
 
 markdown_extensions:
   - pymdownx.superfences:

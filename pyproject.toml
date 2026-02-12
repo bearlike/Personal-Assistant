@@ -38,8 +38,9 @@ dev = [
 docs = [
   "mike",
   "mkdocs",
-  "mkdocs-material",
+  "mkdocs-shadcn>=0.9.9",
   "mkdocstrings[python]",
+  "pymdown-extensions>=10.20.1",
 ]
 
 [tool.uv.workspace]
