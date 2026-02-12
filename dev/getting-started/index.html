@@ -473,8 +473,7 @@
 </ul>
 <h2 id="install-dependencies">Install dependencies</h2>
 <h3 id="user-installation-core-only">User installation (core only)</h3>
-<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>sync
-</code></pre></div>
+<pre class="highlight"><code class="language-bash">uv sync</code></pre>
 <h3 id="optional-components-from-project-root">Optional components (from project root)</h3>
 <ul>
 <li>CLI: <code>uv sync --extra cli</code></li>
@@ -485,19 +484,15 @@
 <li>Everything optional: <code>uv sync --all-extras</code></li>
 </ul>
 <h3 id="developer-installation-all-components-devtestdocs">Developer installation (all components + dev/test/docs)</h3>
-<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>sync<span class="w"> </span>--all-extras<span class="w"> </span>--all-groups
-</code></pre></div>
+<pre class="highlight"><code class="language-bash">uv sync --all-extras --all-groups</code></pre>
 <h2 id="git-hooks-recommended">Git hooks (recommended)</h2>
 <p>Use the repo hook set to enforce commit message format and block pushes that fail linting/tests.</p>
 <p>Install the repo-managed hooks:
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>config<span class="w"> </span>core.hooksPath<span class="w"> </span>scripts/githooks
-</code></pre></div></p>
+<pre class="highlight"><code class="language-bash">git config core.hooksPath scripts/githooks</code></pre></p>
 <p>Optional: enable pre-commit hooks if you use <code>pre-commit</code> locally:
-<div class="highlight"><pre><span></span><code>make<span class="w"> </span>precommit-install
-</code></pre></div></p>
+<pre class="highlight"><code class="language-bash">make precommit-install</code></pre></p>
 <p>Commit message format:
-<div class="highlight"><pre><span></span><code>&lt;emoji&gt; &lt;verb&gt;(&lt;scope&gt;): &lt;message&gt;
-</code></pre></div></p>
+<pre class="highlight"><code>&lt;emoji&gt; &lt;verb&gt;(&lt;scope&gt;): &lt;message&gt;</code></pre></p>
 <p>Pre-push runs:
 - <code>scripts/ci/check.sh</code> (ruff format/check, mypy, pytest)</p>
 <h2 id="configuration-setup">Configuration setup</h2>
@@ -556,15 +551,14 @@
   - <code>GET /api/share/{token}</code> fetch shared session data</p>
 <h2 id="aider-edit-blocks-local-tool">Aider edit blocks (local tool)</h2>
 <p>The edit-block tool expects strict SEARCH/REPLACE blocks and returns format guidance on mismatches.</p>
-<div class="highlight"><pre><span></span><code>&lt;path&gt;
+<pre class="highlight"><code>&lt;path&gt;
 ```text
 &lt;&lt;&lt;&lt;&lt;&lt;&lt; SEARCH
 &lt;exact text to match&gt;
 =======
 &lt;replacement text&gt;
 &gt;&gt;&gt;&gt;&gt;&gt;&gt; REPLACE
-```
-</code></pre></div>
+```</code></pre>
 <p>Rules:
 - Filename line immediately before the opening fence.
 - SEARCH must match exactly (including whitespace/newlines).
@@ -577,9 +571,8 @@
 </ul>
 <h2 id="docs-optional">Docs (optional)</h2>
 <p>If you want to build the docs locally:
-<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>sync<span class="w"> </span>--all-extras<span class="w"> </span>--group<span class="w"> </span>docs
-uv<span class="w"> </span>run<span class="w"> </span>mkdocs<span class="w"> </span>serve
-</code></pre></div></p>
+<pre class="highlight"><code class="language-bash">uv sync --all-extras --group docs
+uv run mkdocs serve</code></pre></p>
   </div>
 </article>
                                 <div class="mx-auto flex flex-wrap h-16 w-full max-w-2xl items-center gap-2 px-4 md:px-0">

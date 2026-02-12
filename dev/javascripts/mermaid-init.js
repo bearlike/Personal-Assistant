@@ -9,7 +9,8 @@ const renderMermaid = () => {
       pre.replaceWith(container);
     }
   });
-  mermaid.initialize({ startOnLoad: true });
+  mermaid.initialize({ startOnLoad: false });
+  mermaid.run({ nodes: document.querySelectorAll(".mermaid") });
 };
 
 if (document.readyState === "loading") {
