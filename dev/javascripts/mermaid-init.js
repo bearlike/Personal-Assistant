@@ -1,16 +1,31 @@
 const renderMermaid = () => {
-  const blocks = document.querySelectorAll("pre.mermaid code");
-  blocks.forEach((code) => {
-    const container = document.createElement("div");
-    container.className = "mermaid";
-    container.textContent = code.textContent || "";
-    const pre = code.parentElement;
-    if (pre) {
-      pre.replaceWith(container);
-    }
-  });
+  if (!window.mermaid) {
+    return;
+  }
   mermaid.initialize({ startOnLoad: false });
-  mermaid.run({ nodes: document.querySelectorAll(".mermaid") });
+  const blocks = Array.from(document.querySelectorAll("pre.mermaid code"));
+  blocks.forEach((code, idx) => {
+    const pre = code.parentElement;
+    if (!pre) {
+      return;
+    }
+    const text = code.textContent || "";
+    const id = `mermaid-${Date.now()}-${idx}`;
+    mermaid
+      .render(id, text)
+      .then(({ svg }) => {
+        const container = document.createElement("div");
+        container.className = "mermaid";
+        container.innerHTML = svg;
+        pre.replaceWith(container);
+      })
+      .catch(() => {
+        const container = document.createElement("div");
+        container.className = "mermaid";
+        container.textContent = text;
+        pre.replaceWith(container);
+      });
+  });
 };
 
 if (document.readyState === "loading") {
