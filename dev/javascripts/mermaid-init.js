@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", () => {
+const renderMermaid = () => {
   const blocks = document.querySelectorAll("pre.mermaid code");
   blocks.forEach((code) => {
     const container = document.createElement("div");
@@ -10,4 +10,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
   mermaid.initialize({ startOnLoad: true });
-});
+};
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", renderMermaid);
+} else {
+  renderMermaid();
+}
