@@ -59,8 +59,7 @@ Pre-push runs:
    - `llm.default_model` and/or `llm.action_plan_model`
    - Optional: `llm.tool_model` for tool execution (falls back to `action_plan_model`, then `default_model`)
    - `runtime.session_dir` (optional, for transcript storage)
-4. If you use an OpenAI-compatible base URL and your model name has no provider
-   prefix, Meeseeks will call `openai/<model>` automatically.
+4. For a minimal LLM walkthrough, see [LLM core setup](llm-setup.md).
 
 ## MCP setup (auto-discovery)
 MCP tools are auto-discovered from `configs/mcp.json`.
@@ -76,29 +75,9 @@ MCP tools are auto-discovered from `configs/mcp.json`.
 - Use `/automatic` or `--auto-approve` to bypass prompts when appropriate.
 
 ## Run interfaces (local)
-- CLI: `uv run meeseeks`
-- API: `uv run meeseeks-api` (or `uv run python -m meeseeks_api.backend`)
-- Chat UI: `uv run meeseeks-chat`
-- Home Assistant integration: install `meeseeks_ha_conversation/` as a custom component and point it at the API.
-
-API notes (polling is API-only; CLI uses the runtime in-process):
-- Session runtime endpoints support async runs with polling:
-  - `POST /api/sessions` create session
-  - `POST /api/sessions/{session_id}/query` enqueue or core commands
-  - `GET /api/sessions/{session_id}/events?after=...` poll events
-  - `GET /api/sessions` list sessions (defaults to non-archived, non-empty)
-  - `GET /api/sessions?include_archived=1` include archived sessions
-  - `POST /api/sessions/{session_id}/archive` archive a session
-  - `DELETE /api/sessions/{session_id}/archive` unarchive a session
-  - `POST /api/query` synchronous endpoint (simple/CLI-compatible)
-  - `GET /api/tools` list tool registry entries
-  - `GET /api/notifications` list notifications
-  - `POST /api/notifications/dismiss` dismiss notifications
-  - `POST /api/notifications/clear` clear notifications
-  - `POST /api/sessions/{session_id}/attachments` upload attachments
-  - `POST /api/sessions/{session_id}/share` create share link
-  - `POST /api/sessions/{session_id}/export` export session payload
-  - `GET /api/share/{token}` fetch shared session data
+- CLI: `uv run meeseeks` (details in [CLI client](clients-cli.md))
+- API + Web: `uv run meeseeks-api` and `uv run meeseeks-chat` (details in [Web + API](clients-web-api.md))
+- Home Assistant: see [Home Assistant voice](clients-home-assistant.md)
 
 ## Aider edit blocks (local tool)
 The edit-block tool expects strict SEARCH/REPLACE blocks and returns format guidance on mismatches.
