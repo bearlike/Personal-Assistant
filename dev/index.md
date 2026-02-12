@@ -5,7 +5,7 @@ Meeseeks is an AI task agent assistant that breaks a request into small actions,
 ## Documentation map
 
 **Overview**
-- [README](../README.md) - high-level product overview and feature highlights
+- [README](https://github.com/bearlike/Assistant/blob/main/README.md) - high-level product overview and feature highlights
 
 **Setup and configuration**
 - [Getting started](getting-started.md) - environment setup, MCP config, and run commands
