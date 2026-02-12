@@ -582,7 +582,12 @@
     </div>
   </div>
   <div class="typography w-full flex-1 *:data-[slot=alert]:first:mt-0">
-    <p>The REST API lives in <code>apps/meeseeks_api/</code> and the Streamlit UI lives in <code>apps/meeseeks_chat/</code>. The web client (Meeseeks Console) is built for asynchronous delegation: work runs through the API and the UI polls events for status and output. The distinction from the CLI is execution context and autonomy: the web client executes through the API service, while the CLI runs tools directly on the local machine. Both clients share the same core runtime and can handle long-running tasks.</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;">
+  <img src="meeseeks-console-01-front.jpg" alt="Meeseeks Console landing page" style="width: 100%; max-width: 520px; height: auto;" />
+  <img src="meeseeks-console-02-tasks.jpg" alt="Meeseeks Console tasks page" style="width: 100%; max-width: 520px; height: auto;" />
+</div>
+
+<p>The REST API lives in <code>apps/meeseeks_api/</code> and the Streamlit UI lives in <code>apps/meeseeks_chat/</code>. The web client (Meeseeks Console) is built for asynchronous delegation: work runs through the API and the UI polls events for status and output. The distinction from the CLI is execution context and autonomy: the web client executes through the API service, while the CLI runs tools directly on the local machine. Both clients share the same core runtime and can handle long-running tasks.</p>
 <h2 id="setup-uv">Setup (uv)</h2>
 <div class="highlight"><pre><span></span><code>uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>api<span class="w"> </span>--extra<span class="w"> </span>chat
 </code></pre></div>

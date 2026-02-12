@@ -1,5 +1,10 @@
 # Web + API Clients
 
+<div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;">
+  <img src="meeseeks-console-01-front.jpg" alt="Meeseeks Console landing page" style="width: 100%; max-width: 520px; height: auto;" />
+  <img src="meeseeks-console-02-tasks.jpg" alt="Meeseeks Console tasks page" style="width: 100%; max-width: 520px; height: auto;" />
+</div>
+
 The REST API lives in `apps/meeseeks_api/` and the Streamlit UI lives in `apps/meeseeks_chat/`. The web client (Meeseeks Console) is built for asynchronous delegation: work runs through the API and the UI polls events for status and output. The distinction from the CLI is execution context and autonomy: the web client executes through the API service, while the CLI runs tools directly on the local machine. Both clients share the same core runtime and can handle long-running tasks.
 
 ## Setup (uv)

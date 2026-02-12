@@ -1,5 +1,10 @@
 # bearlike/Assistant Docs
 
+<div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;">
+  <img src="meeseeks-console-01-front.jpg" alt="Meeseeks Console landing page" style="width: 100%; max-width: 520px; height: auto;" />
+  <img src="meeseeks-console-02-tasks.jpg" alt="Meeseeks Console tasks page" style="width: 100%; max-width: 520px; height: auto;" />
+</div>
+
 bearlike/Assistant (Meeseeks) is an AI task agent assistant that breaks a request into small actions, runs the right tools, and replies with a clean summary. This landing page mirrors the README feature highlights so the overview stays consistent. Update both when core positioning changes.
 
 ## Documentation map

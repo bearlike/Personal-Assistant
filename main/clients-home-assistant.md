@@ -1,5 +1,10 @@
 # Home Assistant Voice (HA Assist)
 
+<div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;">
+  <img src="screenshot_ha_assist_1.png" alt="HA Assist sensor information screenshot" style="width: 100%; max-width: 520px; height: auto;" />
+  <img src="screenshot_ha_assist_2.png" alt="HA Assist control entities screenshot" style="width: 100%; max-width: 520px; height: auto;" />
+</div>
+
 The Home Assistant integration lives in `meeseeks_ha_conversation/` and proxies voice requests to the API. It is designed for hands-free voice control: HA handles wake words and intent capture, then forwards the request to the API for orchestration and responses.
 
 ## Setup (uv)

@@ -1,5 +1,10 @@
 # CLI Client
 
+<video controls preload="metadata" poster="meeseeks-console-01-front.jpg" style="width: 100%; max-width: 960px; height: auto; display: block; margin: 0 auto;">
+  <source src="meeseeks-cli-01-video.mp4" type="video/mp4" />
+  Your browser does not support the video tag.
+</video>
+
 The CLI client lives in `apps/meeseeks_cli/`. It is a terminal-native client for developers working in the local environment, running the core runtime in-process and executing tools directly against local files and shell commands. The key distinction from the Meeseeks Console (web client) is execution context and autonomy: the CLI operates directly on the local machine, while the web client delegates through the API. Both clients share the same core runtime and can run long-lived tasks.
 
 ## Setup (uv)
