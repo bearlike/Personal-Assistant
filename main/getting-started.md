@@ -1,6 +1,6 @@
-# Getting Started
+# Installation
 
-This guide walks through local setup, environment configuration, MCP setup, and how to run each interface.
+This guide covers local installation and environment setup for bearlike/Assistant.
 
 ## Prerequisites
 - Python 3.10+
@@ -41,7 +41,7 @@ make precommit-install
 ```
 
 Commit message format:
-```
+```text
 <emoji> <verb>(<scope>): <message>
 ```
 
@@ -54,17 +54,11 @@ Pre-push runs:
    - `configs/app.json` (runtime + LLM + integrations)
    - `configs/mcp.json` (MCP servers)
    - `configs/*.example.json` are templates for new installs
-3. Update `configs/app.json` with your runtime settings:
-   - `llm.api_key` and `llm.api_base` (required)
-   - `llm.default_model` and/or `llm.action_plan_model`
-   - Optional: `llm.tool_model` for tool execution (falls back to `action_plan_model`, then `default_model`)
-   - `runtime.session_dir` (optional, for transcript storage)
-4. For a minimal LLM walkthrough, see [LLM core setup](llm-setup.md).
+3. Update `configs/app.json` with your runtime settings.
+4. For required LLM keys and a walkthrough, see [LLM setup](llm-setup.md).
 
-## MCP setup (auto-discovery)
-MCP tools are auto-discovered from `configs/mcp.json`.
-1. Set each MCP server `url` and any `headers` needed for auth.
-2. Start any interface once; a tool manifest is auto-generated and cached under `~/.meeseeks/`.
+## MCP setup
+See [LLM setup](llm-setup.md) for MCP configuration and auto-discovery details.
 
 ## Optional components
 - Langfuse: set `langfuse.enabled` + keys in `configs/app.json`.
@@ -82,7 +76,7 @@ MCP tools are auto-discovered from `configs/mcp.json`.
 ## Aider edit blocks (local tool)
 The edit-block tool expects strict SEARCH/REPLACE blocks and returns format guidance on mismatches.
 
-````
+````text
 <path>
 ```text
 <<<<<<< SEARCH

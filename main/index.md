@@ -1,6 +1,6 @@
-# Meeseeks Docs
+# bearlike/Assistant Docs
 
-Meeseeks is an AI task agent assistant that breaks a request into small actions, runs the right tools, and replies with a clean summary. This landing page mirrors the README feature highlights so the overview stays consistent. Update both when core positioning changes.
+bearlike/Assistant (Meeseeks) is an AI task agent assistant that breaks a request into small actions, runs the right tools, and replies with a clean summary. This landing page mirrors the README feature highlights so the overview stays consistent. Update both when core positioning changes.
 
 ## Documentation map
 
@@ -9,8 +9,8 @@ Meeseeks is an AI task agent assistant that breaks a request into small actions,
 - [Core orchestration](core-orchestration.md) - execution flow and core features
 
 **Setup and configuration**
-- [Getting started](getting-started.md) - environment setup, MCP config, and run commands
-- [LLM core setup](llm-setup.md) - minimum LLM config and LiteLLM notes
+- [Installation](getting-started.md) - environment setup and install paths
+- [LLM setup](llm-setup.md) - minimum LLM config and LiteLLM notes
 
 **Clients**
 - [CLI](clients-cli.md) - terminal interface
@@ -19,7 +19,6 @@ Meeseeks is an AI task agent assistant that breaks a request into small actions,
 
 **Developer**
 - [Developer guide](developer-guide.md) - core abstractions and new client walkthrough
-- [Components](components.md) - monorepo layout and core packages
 
 **Reference**
 - [API reference](reference.md) - mkdocstrings reference for core modules
@@ -81,19 +80,7 @@ flowchart LR
 ```
 
 ## Getting started
-See [getting-started.md](getting-started.md) for full setup (env, MCP, configs, and how to run each interface).
-
-## CLI quick commands
-- `/help` show commands
-- `/models` pick a model from your API
-- `/mcp` list MCP servers/tools (use `/mcp select` to filter)
-- `/mcp init` scaffold an MCP config file
-- `/summarize` compact the session
-- `/status` show session status
-- `/terminate` cancel the active run
-- `/new` start a fresh session
-- `/automatic` auto-approve tool actions for the session
-- `/quit` exit the CLI
+See [Installation](getting-started.md) for setup, and [CLI](clients-cli.md) for command reference.
 
 ## Deployment (Docker)
 See [getting-started.md](getting-started.md) for Docker setup and environment requirements.

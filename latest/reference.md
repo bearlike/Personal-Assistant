@@ -1,8 +1,8 @@
 # API Reference
 
-This page is generated from inline docstrings via mkdocstrings.
+This page is generated from inline docstrings via mkdocstrings. The sections below are grouped by package or client.
 
-## Orchestration
+## packages/meeseeks_core (core runtime)
 ::: meeseeks_core.orchestrator
 
 ::: meeseeks_core.task_master
@@ -13,7 +13,6 @@ This page is generated from inline docstrings via mkdocstrings.
 
 ::: meeseeks_core.reflection
 
-## Sessions and context
 ::: meeseeks_core.session_runtime
 
 ::: meeseeks_core.session_store
@@ -24,18 +23,12 @@ This page is generated from inline docstrings via mkdocstrings.
 
 ::: meeseeks_core.token_budget
 
-## Tools and registry
 ::: meeseeks_core.tool_registry
 
 ::: meeseeks_core.classes
 
 ::: meeseeks_core.types
 
-::: meeseeks_tools.integration.mcp
-
-::: meeseeks_tools.integration.homeassistant
-
-## Configuration and components
 ::: meeseeks_core.config
 
 ::: meeseeks_core.components
@@ -44,7 +37,6 @@ This page is generated from inline docstrings via mkdocstrings.
 
 ::: meeseeks_core.hooks
 
-## Utilities
 ::: meeseeks_core.common
 
 ::: meeseeks_core.errors
@@ -55,7 +47,17 @@ This page is generated from inline docstrings via mkdocstrings.
 
 ::: meeseeks_core.llm
 
-## Home Assistant Integration
+## packages/meeseeks_tools (tool integrations)
+::: meeseeks_tools.integration.mcp
+
+::: meeseeks_tools.integration.homeassistant
+
+## Clients (apps/)
+- API entry point: `apps/meeseeks_api/src/meeseeks_api/backend.py`
+- Chat entry point: `apps/meeseeks_chat/src/meeseeks_chat/chat_master.py`
+- CLI entry point: `apps/meeseeks_cli/src/meeseeks_cli/cli_master.py`
+
+## Home Assistant integration (meeseeks_ha_conversation)
 ::: meeseeks_ha_conversation.api
 
 ::: meeseeks_ha_conversation.config_flow

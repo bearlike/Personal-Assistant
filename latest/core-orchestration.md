@@ -1,6 +1,6 @@
 # Core Orchestration and Features
 
-This page summarizes the orchestration loop, core components, and operational features.
+This page summarizes the orchestration loop, core components, and operational features for bearlike/Assistant.
 
 ## Execution flow
 - Input arrives from a client (CLI, API, chat, or Home Assistant integration).

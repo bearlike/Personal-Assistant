@@ -1,13 +1,13 @@
 # Web + API Clients
 
-This page covers the Streamlit chat UI and the REST API. Both use the same core engine.
+The REST API lives in `apps/meeseeks_api/` and the Streamlit UI lives in `apps/meeseeks_chat/`.
 
 ## Setup (uv)
 ```bash
 uv sync --extra api --extra chat
 ```
 
-Confirm LLM configuration first: see `llm-setup.md`.
+Before running, complete [Installation](getting-started.md) and [LLM setup](llm-setup.md).
 
 ## Run the REST API
 ```bash
